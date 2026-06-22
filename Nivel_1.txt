@@ -1,0 +1,38 @@
+Hagamos el primer nivel con 3 tipos de enemigos.
+
+
+
+El primer enemigo se llamara
+
+Baku -> Cuadrado violeta Velocidad x2 se mueve de izquierda a derecha
+Berry -> Cuadrado verde Velocidad normal se mueve de arriba hacia abajo
+Badtz -> Cuadrado amarillo Velocidad x2 y persigue mi personaje cuando lo detecta.
+
+
+El objetivo es crear obstaculos
+
+usaremos como obstaculos 
+
+
+./Assets/img/Pared.png' -> Obstaculo que no se puede atravezar, el cuadrado azul coliciona contra el 
+/Assets/img/Reja.png' -> Obstaculo que no se puede atravezar, el cuadrado azul coliciona contra el y pierde 1 vida
+/Assets/img/Pozo.png' -> -> Obstaculo que no se puede atravezar, el cuadrado azul coliciona contra el y pierde la partida
+
+Hagamos el primer nivel con 3 tipos de enemigos.
+
+
+
+El primer enemigo se llamara
+
+Baku -> Cuadrado violeta Velocidad x2
+Berry -> Cuadrado verde Velocidad normal
+Badtz -> Cuadrado amarillo Velocidad x2 y persigue mi personaje cuando lo detecta.
+
+
+El objetivo es crear obstaculos
+
+usaremos como obstaculos 
+
+
+./Assets/img/DearDaniel_Win.png' -> Cuando el cuadrado azul toca este icono que ahora es kitty con un cuadrado rosa, ganamos la partida.
+

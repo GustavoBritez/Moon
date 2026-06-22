@@ -9,13 +9,39 @@ const GAME_LEVELS = {
     },
     2: {
         type: "grum",
-        title: " Grum 30/6/26",
-        text: "Esquivá a la gente y llegá a la mesa ",
+        title: "¡Llevando los tragos!",
         playerStartX: 50,
-        playerStartY: 300,
-        valuX: 700,        // Dónde te espera la meta
-        valuY: 300,
-        crowdCount: 10     // Cantidad de "bailarines" a esquivar
+        playerStartY: 50,
+        winX: 700,
+        winY: 500,
+        winW: 50,
+        winH: 50,
+        // LISTA DE OBSTÁCULOS FÍSICOS
+        obstaculos: [
+            // Primer bloque: Te obliga a ir hacia abajo
+            { tipo: "pared", x: 150, y: 0, w: 40, h: 450 },
+            // Deja un pasillo chiquito abajo de todo
+            { tipo: "pared", x: 150, y: 530, w: 40, h: 70 },
+
+            // Segundo bloque: Te obliga a volver a subir
+            { tipo: "pared", x: 350, y: 100, w: 40, h: 500 },
+
+            // Tercer bloque: Pasillo final hacia la derecha
+            { tipo: "pared", x: 550, y: 0, w: 40, h: 350 },
+
+            // Trampas en el medio de los pasillos
+            { tipo: "reja", x: 190, y: 250, w: 160, h: 40 },
+            { tipo: "pozo", x: 420, y: 450, w: 80, h: 80 }
+        ],
+        // LISTA DE ENEMIGOS REPOSICIONADOS
+        enemigos: [
+            // Baku patrulla el pasillo de arriba donde está la salida
+            { tipo: "Baku", x: 400, y: 50, w: 40, h: 40, speed: 6, dx: 6, color: "#8a2be2" },
+            // Berry sube y baja molestando cerca de la reja
+            { tipo: "Berry", x: 250, y: 350, w: 40, h: 40, speed: 3, dy: 3, color: "#2ecc71" },
+            // Badtz te espera cerca de la entrada al VIP para perseguirte al final
+            { tipo: "Badtz", x: 600, y: 450, w: 40, h: 40, speed: 3, color: "#f1c40f" }
+        ]
     },
     3: {
         type: "nivel 2", //
