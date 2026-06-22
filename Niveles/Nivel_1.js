@@ -1,3 +1,4 @@
+// https://opengameart.org/content/lpc-house-interior-and-decorations
 class Nivel_1 {
     constructor(canvas, config, onWin) {
         this.canvas = canvas;

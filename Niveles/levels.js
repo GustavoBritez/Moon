@@ -38,9 +38,9 @@ const GAME_LEVELS = {
             // Baku patrulla el pasillo de arriba donde está la salida
             { tipo: "Baku", x: 400, y: 50, w: 40, h: 40, speed: 6, dx: 6, color: "#8a2be2" },
             // Berry sube y baja molestando cerca de la reja
-            { tipo: "Berry", x: 250, y: 350, w: 40, h: 40, speed: 3, dy: 3, color: "#2ecc71" },
+            { tipo: "Badtz", x: 250, y: 350, w: 40, h: 40, speed: 3, dy: 3, color: "#f1c40f" },
             // Badtz te espera cerca de la entrada al VIP para perseguirte al final
-            { tipo: "Badtz", x: 600, y: 450, w: 40, h: 40, speed: 3, color: "#f1c40f" }
+            { tipo: "Berry", x: 600, y: 450, w: 40, h: 40, speed: 3, color: "#2ecc71" }
         ]
     },
     3: {
