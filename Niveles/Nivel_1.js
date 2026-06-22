@@ -251,4 +251,20 @@ class Nivel_1 {
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
     }
+
+    conectarControlesAudio() {
+        const btnMusic = document.getElementById('btnMusic');
+        const volRange = document.getElementById('volRange');
+
+        if (!btnMusic) return; // Por si acaso
+
+        btnMusic.onclick = () => {
+            const playing = window.audioManager.togglePlay();
+            btnMusic.innerText = playing ? "🎵 Music ON" : "🔇 Music OFF";
+        };
+
+        volRange.oninput = (e) => {
+            window.audioManager.setVolume(e.target.value);
+        };
+    } /// ver que onda aqui
 }

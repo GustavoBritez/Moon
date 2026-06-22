@@ -82,6 +82,7 @@ class GameFactory {
                     }
                 };
             case "lobby":
+                // Dentro del case "lobby"
                 let menuHtml = `
                     <div class="lobby-pantalla">
                         <div class="lobby-top">
@@ -92,6 +93,11 @@ class GameFactory {
                                 <div class="recurso-item"><div class="recurso-circulo">☁️</div><span class="recurso-cantidad">150</span></div>
                                 <div class="recurso-item"><div class="recurso-circulo">☕</div><span class="recurso-cantidad">5</span></div>
                             </div>
+                            
+                            <div id="audio-container" style="position: absolute; top: 10px; right: 10px; z-index: 100;">
+                                <button id="btnMusic" style="padding: 10px; border-radius: 5px; cursor: pointer; background: rgba(255,255,255,0.2); color: white; border: 1px solid white;">🎵 Music ON</button>
+                                <input type="range" id="volRange" min="0" max="100" value="50" style="width: 80px; vertical-align: middle;">
+                            </div>
                         </div>
 
                         <div class="lobby-bottom">
@@ -99,7 +105,7 @@ class GameFactory {
                         </div>
                     </div>
 
-                    <div class="modal-overlay" id="modalNiveles">
+                    <div class="modal-overlay" id="modalNiveles" style="opacity: 0; visibility: hidden;">
                         <div class="modal-menu">
                             <button class="btn-cerrar-modal" id="btnCerrarModal">✖</button>
                             <h2 class="modal-titulo">Elegí tu destino</h2>
@@ -118,55 +124,67 @@ class GameFactory {
                 return {
                     template: menuHtml,
                     init: () => {
-                        // Animaciones de entrada del Lobby
-                        gsap.from(".avatar-marco", { duration: 0.8, x: -150, opacity: 0, ease: "power3.out" });
-                        gsap.from(".recurso-item", { duration: 0.6, x: 100, opacity: 0, stagger: 0.2, ease: "back.out(1.2)", delay: 0.2 });
-                        gsap.from(".lobby-bottom", { duration: 1, y: 100, opacity: 0, ease: "elastic.out(1, 0.5)", delay: 0.5 });
+                        setTimeout(() => {
+                            const elementos = {
+                                'modalNiveles': document.getElementById('modalNiveles'),
+                                'btnJugarLobby': document.getElementById('btnJugarLobby'),
+                                'btnCerrarModal': document.getElementById('btnCerrarModal'),
+                                'btnMusic': document.getElementById('btnMusic'),
+                                'volRange': document.getElementById('volRange')
+                            };
 
-                        // Capturamos los elementos
-                        const modal = document.getElementById('modalNiveles');
-                        const btnJugar = document.getElementById('btnJugarLobby');
-                        const btnCerrar = document.getElementById('btnCerrarModal');
-                        const botonesNivel = document.querySelectorAll('.btn-nivel');
-                        const cartel = document.getElementById('cartelAviso'); // Capturamos el cartel acá
-
-                        // 🎬 ABRIR MODAL CON GSAP
-                        btnJugar.addEventListener('click', () => {
-                            gsap.to(modal, { duration: 0.2, autoAlpha: 1, ease: "power2.out" });
-                            gsap.fromTo(".modal-menu",
-                                { scale: 0.5, y: 50 },
-                                { duration: 0.4, scale: 1, y: 0, ease: "back.out(1.5)" }
-                            );
-                        });
-
-                        //  CERRAR MODAL CON GSAP
-                        btnCerrar.addEventListener('click', () => {
-                            gsap.to(modal, { duration: 0.3, autoAlpha: 0, ease: "power2.in" });
-                        });
-
-                        // SALTAR AL NIVEL SELECCIONADO (O MOSTRAR CARTEL)
-                        botonesNivel.forEach(btn => {
-                            btn.addEventListener('click', (e) => {
-                                // 1. Leemos a qué puerta quiere ir el jugador
-                                const idDestino = Number(e.target.getAttribute('data-id'));
-
-                                // 2. VALIDACIÓN TEMPRANA: Si es el Nivel 3 (ID 4)
-                                if (idDestino === 4) {
-                                    // Mostramos el cartel flotante
-                                    gsap.to(cartel, { duration: 0.3, autoAlpha: 1, y: 20, ease: "back.out(2)" });
-
-                                    // Lo escondemos a los 2 segundos
-                                    gsap.to(cartel, { duration: 0.3, autoAlpha: 0, y: 0, delay: 2 });
-
-                                    // Cortamos la función ACÁ para que no viaje al Orquestador
+                            for (const [nombre, elemento] of Object.entries(elementos)) {
+                                if (!elemento) {
+                                    console.error(`¡ERROR! El elemento con ID "${nombre}" no se encuentra en el DOM.`);
                                     return;
                                 }
-                                gsap.to(modal, { duration: 0.2, autoAlpha: 0 });
-                                alSeleccionarNivel(idDestino, 'kitty');
-                            });
-                        });
+                            }
 
-                        return null;
+                            const { modalNiveles: modal, btnJugarLobby: btnJugar, btnCerrarModal: btnCerrar, btnMusic, volRange } = elementos;
+                            const cartel = document.getElementById('cartelAviso');
+                            const botonesNivel = document.querySelectorAll('.btn-nivel');
+
+                            btnJugar.addEventListener('click', () => {
+                                gsap.to(modal, { duration: 0.2, autoAlpha: 1, ease: "power2.out" });
+                                gsap.fromTo(".modal-menu",
+                                    { scale: 0.5, y: 50 },
+                                    { duration: 0.4, scale: 1, y: 0, ease: "back.out(1.5)" }
+                                );
+                            });
+
+                            btnMusic.addEventListener('click', () => {
+                                const playing = window.audioManager.togglePlay();
+                                btnMusic.innerText = playing ? "🎵 Music ON" : "🔇 Music OFF";
+                            });
+
+                            volRange.addEventListener('input', (e) => {
+                                window.audioManager.setVolume(e.target.value);
+                            });
+
+                            btnCerrar.addEventListener('click', () => {
+                                gsap.to(modal, { duration: 0.3, autoAlpha: 0, ease: "power2.in" });
+                            });
+
+                            botonesNivel.forEach(btn => {
+                                btn.addEventListener('click', (e) => {
+                                    const idDestino = Number(e.target.getAttribute('data-id'));
+
+                                    if (idDestino === 4) {
+                                        if (cartel) { // Validamos que el cartel exista por seguridad
+                                            gsap.to(cartel, { duration: 0.3, autoAlpha: 1, y: 20, ease: "back.out(2)" });
+                                            gsap.to(cartel, { duration: 0.3, autoAlpha: 0, y: 0, delay: 2 });
+                                        }
+                                        return;
+                                    }
+
+                                    gsap.to(modal, { duration: 0.2, autoAlpha: 0 });
+                                    alSeleccionarNivel(idDestino, 'kitty');
+                                });
+                            });
+
+                        }, 0); // 🔥 2. ACÁ CERRAMOS EL SETTIMEOUT CORRECTAMENTE
+
+                        return null; // 🔥 3. Y ACÁ TERMINA LA FUNCIÓN INIT
                     }
                 };
             case "grum":
