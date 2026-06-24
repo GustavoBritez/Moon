@@ -1,262 +1,188 @@
-// https://opengameart.org/content/lpc-house-interior-and-decorations
 class Nivel_1 {
     constructor(canvas, config, onWin) {
+        // 1. MODO DETECTIVE: Imprimimos en consola EXACTAMENTE qué llegó
+        console.log("👀 MODO DETECTIVE - Datos recibidos por el motor:", config);
+
+        // 2. LA BARRERA ESTRICTA (Si no hay matriz, el programa explota a propósito)
+        if (!config || !config.matriz || !Array.isArray(config.matriz)) {
+            console.error("🚨 ¡ALTO AHÍ! El Orquestador no envió la matriz.");
+            throw new Error("Arquitectura estricta: Nivel abortado por falta de matriz. Revisá console.log de arriba.");
+        }
+
+        // 3. ASIGNACIONES NORMALES (Solo llega acá si la matriz es válida)
         this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
         this.config = config;
         this.onWin = onWin;
-        this.animationFrameId = null;
+        this.mapaMatriz = config.matriz; // <-- Esta es la única asignación que necesitás
 
-        // 1. CARGA DE IMÁGENES EN CACHÉ
-        this.imagenes = {
-            pared: new Image(),
-            reja: new Image(),
-            pozo: new Image(),
-            win: new Image()
-        };
-        this.imagenes.pared.src = './Assets/img/Nivel_1/muro.png';
-        this.imagenes.reja.src = './Assets/img/Nivel_1/Reja.png';
-        this.imagenes.pozo.src = './Assets/img/Nivel_1/Pozo.png';
-        this.imagenes.win.src = './Assets/img/DearDaniel_Base.svg';
+        // 1. INICIALIZAR PIXI.JS
+        this.app = new PIXI.Application({
+            view: canvas,
+            width: 800,
+            height: 600,
+            backgroundColor: 0xffb7c5,
+            resolution: window.devicePixelRatio || 1,
+        });
 
-        // 2. ESTADO DEL JUGADOR
+        this.tileSize = 50;
+
+        // Capas para mantener el orden visual
+        this.capaFondo = new PIXI.Container();
+        this.capaEntidades = new PIXI.Container();
+        this.app.stage.addChild(this.capaFondo);
+        this.app.stage.addChild(this.capaEntidades);
+
+        // Variables de estado del jugador
         this.player = {
-            x: config.playerStartX,
-            y: config.playerStartY,
-            w: 40,
-            h: 40,
-            color: '#3498db',
-            speed: 5,
-            hp: 3, // Puntos de vida
-            invulnerable: 0 // Temporizador de daño
+            gridX: 0,
+            gridY: 0,
+            sprite: null,
+            isMoving: false
         };
 
-        // Copiamos los enemigos del config para poder modificarlos en tiempo real
-        this.enemigos = JSON.parse(JSON.stringify(config.enemigos));
-
+        // Controles
         this.keys = {};
         this.handleKeyDown = (e) => this.keys[e.key] = true;
         this.handleKeyUp = (e) => this.keys[e.key] = false;
+
+        // Arrancamos
+        this.start();
     }
 
     start() {
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
-        this.gameLoop();
+
+        this.construirMapa();
+
+        this.app.ticker.add(() => this.update());
+
+        this.conectarControlesAudio();
     }
 
-    // 🔥 MOTOR MATEMÁTICO AABB: Comprueba si dos rectángulos se están tocando
-    checkCollision(rect1, rect2) {
-        return (
-            rect1.x < rect2.x + rect2.w &&
-            rect1.x + rect1.w > rect2.x &&
-            rect1.y < rect2.y + rect2.h &&
-            rect1.y + rect1.h > rect2.y
-        );
+    construirMapa() {
+        for (let y = 0; y < this.mapaMatriz.length; y++) {
+            for (let x = 0; x < this.mapaMatriz[y].length; x++) {
+
+                let tipoCelda = this.mapaMatriz[y][x];
+                let posX = x * this.tileSize;
+                let posY = y * this.tileSize;
+
+
+                let suelo = new PIXI.Graphics();
+                suelo.beginFill(0xffe4e1); // Color suelo pastel
+                suelo.drawRect(0, 0, this.tileSize, this.tileSize);
+                suelo.endFill();
+                suelo.x = posX;
+                suelo.y = posY;
+                this.capaFondo.addChild(suelo);
+
+                // Si es PARED (1)
+                if (tipoCelda === 1) {
+                    let pared = new PIXI.Graphics();
+                    pared.beginFill(0xff8b94); // Color pared
+                    pared.drawRoundedRect(0, 0, this.tileSize, this.tileSize, 8); // Bordes redondeados
+                    pared.endFill();
+                    pared.x = posX;
+                    pared.y = posY;
+                    this.capaFondo.addChild(pared);
+                }
+                // Si es META (2)
+                else if (tipoCelda === 2) {
+                    let meta = new PIXI.Graphics();
+                    meta.beginFill(0xffd3b6); // Color meta
+                    meta.drawRect(0, 0, this.tileSize, this.tileSize);
+                    meta.endFill();
+                    meta.x = posX;
+                    meta.y = posY;
+                    this.capaFondo.addChild(meta);
+                }
+                // Si es el JUGADOR (3)
+                else if (tipoCelda === 3) {
+                    // Guardamos sus coordenadas en la libreta lógica de la matriz
+                    this.player.gridX = x;
+                    this.player.gridY = y;
+
+                    // Creamos su gráfico
+                    this.player.sprite = new PIXI.Graphics();
+                    this.player.sprite.beginFill(0x3498db); // Color Azul
+                    this.player.sprite.drawCircle(this.tileSize / 2, this.tileSize / 2, this.tileSize / 2.5);
+                    this.player.sprite.endFill();
+
+                    // Lo posicionamos físicamente en la pantalla
+                    this.player.sprite.x = posX;
+                    this.player.sprite.y = posY;
+
+                    this.capaEntidades.addChild(this.player.sprite);
+
+                    // Limpiamos la matriz para que ese casillero vuelva a ser un "0" (suelo pisable)
+                    this.mapaMatriz[y][x] = 0;
+                }
+            }
+        }
     }
 
     update() {
-        // 🔥 SOLUCIÓN 1: El reloj de invulnerabilidad (Se había borrado por accidente)
-        // Esto le resta 1 en cada frame. Cuando llega a 0, podés volver a recibir daño.
-        if (this.player.invulnerable > 0) {
-            this.player.invulnerable--;
-        }
+        // Si GSAP todavía está animando el movimiento hacia el bloque actual, frenamos el código
+        if (this.player.isMoving) return;
 
-        // --- MOVIMIENTO DEL JUGADOR CON PREDICCIÓN DE COLISIÓN ---
-        let nextX = this.player.x;
-        let nextY = this.player.y;
-        let currentSpeed = this.player.speed;
+        let nextGridX = this.player.gridX;
+        let nextGridY = this.player.gridY;
 
-        if (this.keys['c'] || this.keys['C']) {
-            currentSpeed = 9;
-            this.player.color = '#00ffff';
-        } else {
-            this.player.color = '#3498db';
-        }
+        if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) nextGridY--;
+        else if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) nextGridY++;
+        else if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) nextGridX--;
+        else if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) nextGridX++;
 
-        if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) nextY -= currentSpeed;
-        if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) nextY += currentSpeed;
-        if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) nextX -= currentSpeed;
-        if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) nextX += currentSpeed;
+        // Si el usuario intentó moverse
+        if (nextGridX !== this.player.gridX || nextGridY !== this.player.gridY) {
 
-        // Límites del mapa para el jugador
-        if (nextX < 0) nextX = 0;
-        if (nextY < 0) nextY = 0;
-        if (nextX + this.player.w > this.canvas.width) nextX = this.canvas.width - this.player.w;
-        if (nextY + this.player.h > this.canvas.height) nextY = this.canvas.height - this.player.h;
+            // ¿Qué hay en esa celda futura? (Manejando límites de la matriz para evitar errores de índice)
+            if (nextGridY >= 0 && nextGridY < this.mapaMatriz.length &&
+                nextGridX >= 0 && nextGridX < this.mapaMatriz[0].length) {
 
-        // Caja de colisión futura del JUGADOR
-        let playerFutureRect = { x: nextX, y: nextY, w: this.player.w, h: this.player.h };
-        let chocoContraFisica = false;
+                let destino = this.mapaMatriz[nextGridY][nextGridX];
 
-        for (let obs of this.config.obstaculos) {
-            if (this.checkCollision(playerFutureRect, obs)) {
-                chocoContraFisica = true;
-                this.aplicarEfectoObstaculo(obs.tipo);
-                break;
-            }
-        }
+                // Si NO es una pared (1)
+                if (destino !== 1) {
+                    this.player.isMoving = true; // Bloqueamos nuevas órdenes de teclado
+                    this.player.gridX = nextGridX; // Actualizamos la matriz interna
+                    this.player.gridY = nextGridY;
 
-        if (!chocoContraFisica) {
-            this.player.x = nextX;
-            this.player.y = nextY;
-        }
+                    // GSAP hace la magia visual de deslizar al personaje al siguiente bloque
+                    gsap.to(this.player.sprite, {
+                        x: nextGridX * this.tileSize,
+                        y: nextGridY * this.tileSize,
+                        duration: 0.15, // Velocidad de paso
+                        ease: "power1.inOut",
+                        onComplete: () => {
+                            this.player.isMoving = false; // Liberamos para el próximo paso
 
-        // --- SOLUCIÓN 2: LÓGICA DE ENEMIGOS (Ahora respetan las paredes) ---
-        this.enemigos.forEach(e => {
-            if (e.tipo === "Baku") {
-                // Baku preajusta su futuro en el eje X
-                let futureEnemyRect = { x: e.x + e.dx, y: e.y, w: e.w, h: e.h };
-                let chocaFisica = false;
-
-                // Revisamos si en su próximo paso hay una pared o reja
-                for (let obs of this.config.obstaculos) {
-                    if (this.checkCollision(futureEnemyRect, obs)) { chocaFisica = true; break; }
-                }
-
-                // Si choca contra obstáculo o contra el borde de la pantalla, rebota
-                if (chocaFisica || futureEnemyRect.x <= 0 || futureEnemyRect.x + e.w >= this.canvas.width) {
-                    e.dx *= -1;
-                } else {
-                    e.x += e.dx;
+                            // Chequeo de Victoria
+                            if (destino === 2) {
+                                console.log("¡Llegaste a la mesa VIP!");
+                                this.destroy();
+                                this.onWin();
+                            }
+                        }
+                    });
                 }
             }
-            else if (e.tipo === "Berry") {
-                // Berry preajusta su futuro en el eje Y
-                let futureEnemyRect = { x: e.x, y: e.y + e.dy, w: e.w, h: e.h };
-                let chocaFisica = false;
-
-                for (let obs of this.config.obstaculos) {
-                    if (this.checkCollision(futureEnemyRect, obs)) { chocaFisica = true; break; }
-                }
-
-                if (chocaFisica || futureEnemyRect.y <= 0 || futureEnemyRect.y + e.h >= this.canvas.height) {
-                    e.dy *= -1;
-                } else {
-                    e.y += e.dy;
-                }
-            }
-            else if (e.tipo === "Badtz") {
-                let dist = Math.hypot(this.player.x - e.x, this.player.y - e.y);
-                if (dist < 250) {
-                    // Badtz calcula su paso hacia vos, pero frena si hay pared
-                    let nextEx = e.x, nextEy = e.y;
-                    if (e.x < this.player.x) nextEx += e.speed;
-                    if (e.x > this.player.x) nextEx -= e.speed;
-                    if (e.y < this.player.y) nextEy += e.speed;
-                    if (e.y > this.player.y) nextEy -= e.speed;
-
-                    let futureEnemyRect = { x: nextEx, y: nextEy, w: e.w, h: e.h };
-                    let chocaFisica = false;
-                    for (let obs of this.config.obstaculos) {
-                        if (this.checkCollision(futureEnemyRect, obs)) { chocaFisica = true; break; }
-                    }
-
-                    if (!chocaFisica) {
-                        e.x = nextEx;
-                        e.y = nextEy;
-                    }
-                }
-            }
-
-            // ¿El enemigo tocó al jugador?
-            if (this.checkCollision(this.player, e)) {
-                this.aplicarEfectoObstaculo("enemigo");
-            }
-        });
-
-        // --- CONDICIÓN DE VICTORIA ---
-        let winRect = { x: this.config.winX, y: this.config.winY, w: this.config.winW, h: this.config.winH };
-        if (this.checkCollision(this.player, winRect)) {
-            console.log("¡Llegaste a la mesa VIP!");
-            this.destroy();
-            this.onWin();
         }
-    }
-
-    aplicarEfectoObstaculo(tipo) {
-        if (tipo === "pozo") {
-            console.log("¡Caíste al pozo! Game Over.");
-            this.reiniciarNivel();
-        }
-        else if ((tipo === "reja" || tipo === "enemigo") && this.player.invulnerable <= 0) {
-            this.player.hp -= 1;
-            this.player.invulnerable = 60;
-
-            console.log(`¡Auch! Vidas restantes: ${this.player.hp}`);
-
-            if (this.player.hp <= 0) {
-                console.log("Sin vidas. Game Over.");
-                this.reiniciarNivel();
-            } else {
-                this.player.x = this.config.playerStartX;
-                this.player.y = this.config.playerStartY;
-            }
-        }
-    }
-
-    reiniciarNivel() {
-        this.player.x = this.config.playerStartX;
-        this.player.y = this.config.playerStartY;
-        this.player.hp = 3;
-        this.enemigos = JSON.parse(JSON.stringify(this.config.enemigos)); // Reseteamos posiciones
-    }
-
-    draw() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Dibujar Victoria (Kitty)
-        if (this.imagenes.win.complete) {
-            this.ctx.drawImage(this.imagenes.win, this.config.winX, this.config.winY, this.config.winW, this.config.winH);
-        }
-
-        // Dibujar Obstáculos
-        this.config.obstaculos.forEach(obs => {
-            let img = this.imagenes[obs.tipo];
-            if (img && img.complete) {
-                this.ctx.drawImage(img, obs.x, obs.y, obs.w, obs.h);
-            } else {
-                // Fallback si la imagen no cargó aún
-                this.ctx.fillStyle = "gray";
-                this.ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-            }
-        });
-
-        // Dibujar Enemigos
-        this.enemigos.forEach(e => {
-            this.ctx.fillStyle = e.color;
-            this.ctx.fillRect(e.x, e.y, e.w, e.h);
-        });
-
-        // Dibujar Jugador (Titila si es invulnerable)
-        if (this.player.invulnerable % 10 < 5) {
-            this.ctx.fillStyle = this.player.color;
-            this.ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
-        }
-
-        // Dibujar HUD (Vidas)
-        this.ctx.fillStyle = "white";
-        this.ctx.font = "20px Arial";
-        this.ctx.fillText(`Vidas: ${this.player.hp}`, 20, 30);
-    }
-
-    gameLoop = () => {
-        this.update();
-        this.draw();
-        this.animationFrameId = requestAnimationFrame(this.gameLoop);
     }
 
     destroy() {
-        cancelAnimationFrame(this.animationFrameId);
+        // Limpieza profunda de memoria
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
+        this.app.destroy(true, { children: true, texture: true, baseTexture: true });
     }
 
     conectarControlesAudio() {
         const btnMusic = document.getElementById('btnMusic');
         const volRange = document.getElementById('volRange');
 
-        if (!btnMusic) return; // Por si acaso
+        if (!btnMusic || !volRange) return;
 
         btnMusic.onclick = () => {
             const playing = window.audioManager.togglePlay();
@@ -266,5 +192,96 @@ class Nivel_1 {
         volRange.oninput = (e) => {
             window.audioManager.setVolume(e.target.value);
         };
-    } /// ver que onda aqui
+    }
 }
+
+¡Qué genialidad que ya esté funcionando! Ver ese bloque azul moverse por el mapa generado por código es un hito tremendo.
+
+Y tenés una visión de diseño perfecta.Ese laberinto gigante que pasaste en la segunda imagen es imposible de meter en una pantalla de 800x600 sin que los pasillos queden del tamaño de una hormiga.
+
+Lo que estás pidiendo se conoce en el desarrollo de videojuegos como el Patrón de Cámara(Camera Pattern).
+
+¿Cómo funciona una "Cámara" en 2D ?
+    Acá hay un truco mental espectacular: la cámara en realidad no se mueve, el que se mueve es el mundo entero en la dirección contraria.Imaginate que la pantalla de tu computadora(el canvas de 800x600) es una ventana de vidrio fijo.El nivel(tu laberinto de 40x40) es una cartulina gigante que está detrás.Para que parezca que Kitty / Daniel camina hacia la derecha, lo que hacemos es deslizar la cartulina gigante hacia la izquierda.
+
+Para lograr esto en PixiJS, solo tenemos que meter todas tus capas adentro de una gran "Caja Maestra"(el Mundo) y decirle a GSAP que mueva esa caja al mismo tiempo que mueve al jugador.
+
+Aquí tenés los 3 cambios exactos que tenés que hacer en tu Nivel_1.js para tener una cámara profesional que siga al personaje.
+
+    PASO 1: Crear la "Caja Maestra" del Mundo
+En el constructor de tu Nivel_1.js, buscá donde creás las capas y reemplazalo por esto.Agregamos this.mundo.
+
+    JavaScript
+this.tileSize = 50;
+
+// 🔥 EL TRUCO DE LA CÁMARA: Creamos un Contenedor Maestro
+this.mundo = new PIXI.Container();
+
+// Capas internas (van ADENTRO del mundo, no sueltas en el stage)
+this.capaFondo = new PIXI.Container();
+this.capaEntidades = new PIXI.Container();
+
+this.mundo.addChild(this.capaFondo);
+this.mundo.addChild(this.capaEntidades);
+
+// Y al lienzo principal de Pixi solo le pasamos el Mundo
+this.app.stage.addChild(this.mundo);
+PASO 2: Enfocar la cámara al arrancar el nivel
+Justo al final de tu función construirMapa(), cuando el bucle ya terminó de armar todas las paredes y de posicionar al jugador, agregá estas líneas para que la cámara arranque centrada en vos y no en la esquina del mapa.
+
+    JavaScript
+construirMapa() {
+    // ... (todo tu bucle for que ya tenés) ...
+
+    // 🔥 NUEVO: Centramos la cámara en el jugador apenas arranca
+    const mitadPantallaX = this.app.screen.width / 2;
+    const mitadPantallaY = this.app.screen.height / 2;
+
+    // Movemos el MUNDO en la dirección opuesta al jugador
+    this.mundo.x = mitadPantallaX - (this.player.sprite.x + this.tileSize / 2);
+    this.mundo.y = mitadPantallaY - (this.player.sprite.y + this.tileSize / 2);
+}
+PASO 3: Mover el mundo junto con el jugador
+En tu función update(), donde tenés la animación de GSAP, vamos a decirle que no solo mueva el sprite del jugador, sino que mueva todo el this.mundo al mismo tiempo.
+
+Reemplazá tu bloque de gsap.to por este:
+
+JavaScript
+// GSAP hace la magia visual
+const destinoPixelX = nextGridX * this.tileSize;
+const destinoPixelY = nextGridY * this.tileSize;
+
+// 1. Movemos al personaje
+gsap.to(this.player.sprite, {
+    x: destinoPixelX,
+    y: destinoPixelY,
+    duration: 0.15,
+    ease: "power1.inOut"
+});
+
+// 2. 🔥 Movemos la CÁMARA (El mundo va en reversa)
+const mitadPantallaX = this.app.screen.width / 2;
+const mitadPantallaY = this.app.screen.height / 2;
+
+gsap.to(this.mundo, {
+    x: mitadPantallaX - (destinoPixelX + this.tileSize / 2),
+    y: mitadPantallaY - (destinoPixelY + this.tileSize / 2),
+    duration: 0.15,
+    ease: "power1.inOut",
+    onComplete: () => {
+        this.player.isMoving = false; // Liberamos para el próximo paso
+
+        // Chequeo de Victoria
+        if (destino === 2) {
+            console.log("¡Llegaste a la meta!");
+            this.destroy();
+            this.onWin();
+        }
+    }
+});
+¡El mapa ahora es infinito!
+Con este cambio, podés ir a tu levels.js y hacer una matriz brutal de 30x30 o 50x50 copiando el diseño del laberinto blanco y negro que me pasaste.
+
+El canvas seguirá midiendo 800x600(para no romper la estética de tu web ni saturar la memoria), pero adentro, el jugador va a sentir que está explorando un mapa gigante porque la cámara lo va a seguir suavemente con cada paso que dé.
+
+Avisame cuando implementes esto. ¡La sensación de caminar y que el mapa se revele es increíble!

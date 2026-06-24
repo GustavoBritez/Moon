@@ -27,11 +27,39 @@ class GameFactory {
                             </div>
                         </div>`,
                     init: () => {
-                        document.getElementById('btnNext').addEventListener('click', alTerminarNivel);
-                        return null;
+                        // 1. Capturamos el canvas del HTML
+                        const canvas = document.getElementById('clubCanvas');
+
+                        // 2. Instanciamos el juego pasándole el canvas y la función que se ejecuta al ganar
+                        // (Asumo que "alTerminarNivel" es tu función global del Orquestador)
+                        const juegoNivel1 = new Nivel_1(canvas, {}, alTerminarNivel);
+
+                        // 3. Sistema para conectar los botones táctiles al juego
+                        const conectarBotonMovil = (btnId, tecla) => {
+                            const btn = document.getElementById(btnId);
+                            if (btn) {
+                                // Eventos para Celular (Touch)
+                                btn.addEventListener('touchstart', (e) => { e.preventDefault(); juegoNivel1.keys[tecla] = true; });
+                                btn.addEventListener('touchend', (e) => { e.preventDefault(); juegoNivel1.keys[tecla] = false; });
+
+                                // Eventos para Mouse (Por si testeás en PC)
+                                btn.addEventListener('mousedown', () => juegoNivel1.keys[tecla] = true);
+                                btn.addEventListener('mouseup', () => juegoNivel1.keys[tecla] = false);
+                                btn.addEventListener('mouseleave', () => juegoNivel1.keys[tecla] = false);
+                            }
+                        };
+
+                        // 4. Conectamos cada botón a su letra correspondiente
+                        conectarBotonMovil('btnW', 'w');
+                        conectarBotonMovil('btnS', 's');
+                        conectarBotonMovil('btnA', 'a');
+                        conectarBotonMovil('btnD', 'd');
+                        conectarBotonMovil('btnC', 'c');
+
+                        // 5. Retornamos la instancia para que el Orquestador la pueda destruir si cambiamos de nivel
+                        return juegoNivel1;
                     }
                 };
-
             case "nivel 2":
                 return {
                     template: `
@@ -104,9 +132,9 @@ class GameFactory {
                                 <div class="recurso-item"><div class="recurso-circulo">☕</div><span class="recurso-cantidad">5</span></div>
                             </div>
                             
-                            <div id="audio-container" style="position: absolute; top: 10px; right: 10px; z-index: 100;">
-                                <button id="btnMusic" style="padding: 10px; border-radius: 5px; cursor: pointer; background: rgba(255,255,255,0.2); color: white; border: 1px solid white;">🎵 Music ON</button>
-                                <input type="range" id="volRange" min="0" max="100" value="50" style="width: 80px; vertical-align: middle;">
+                            <div id="audio-container" style="position: absolute; bottom: 20px; right: 20px; z-index: 100; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.4); padding: 10px 15px; border-radius: 16px; backdrop-filter: blur(5px); border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                                <button id="btnMusic" style="background: none; border: none; font-weight: bold; color: #d11a5b; cursor: pointer; font-size: 1rem;">🎵 Music ON</button>
+                                <input type="range" id="volRange" min="0" max="100" value="50" style="width: 80px; cursor: pointer;">
                             </div>
                         </div>
 
@@ -158,39 +186,39 @@ class GameFactory {
                             }
 
                             // 3. Extraemos TODAS las variables
-                            const { 
-                                modalNiveles: modal, 
-                                btnHistoriaLobby: btnJugar, 
-                                btnPuzzleLobby: btnPuzzle, 
-                                btnCerrarModal: btnCerrar, 
-                                btnMusic, 
-                                volRange, 
-                                avatarDiv, 
-                                btnCambiarAvatar 
+                            const {
+                                modalNiveles: modal,
+                                btnHistoriaLobby: btnJugar,
+                                btnPuzzleLobby: btnPuzzle,
+                                btnCerrarModal: btnCerrar,
+                                btnMusic,
+                                volRange,
+                                avatarDiv,
+                                btnCambiarAvatar
                             } = elementos;
-                            
+
                             const cartel = document.getElementById('cartelAviso');
                             const botonesNivel = document.querySelectorAll('.btn-nivel');
 
                             // --- LÓGICA DE AVATARES ---
                             if (avatarDiv && btnCambiarAvatar) {
                                 const catalogoAvatares = ['daniel-oficial-avatar', 'kitty-oficial-avatar'];
-                                
+
                                 let avatarGuardado = localStorage.getItem('avatarPreferido') || 'daniel-oficial-avatar';
                                 avatarDiv.className = avatarGuardado;
 
                                 btnCambiarAvatar.addEventListener('click', () => {
                                     let indiceActual = catalogoAvatares.indexOf(avatarGuardado);
-                                    
+
                                     indiceActual = (indiceActual + 1) % catalogoAvatares.length;
                                     avatarGuardado = catalogoAvatares[indiceActual];
-                                    
+
                                     avatarDiv.className = avatarGuardado;
-                                    
+
                                     localStorage.setItem('avatarPreferido', avatarGuardado);
 
-                                    gsap.fromTo(avatarDiv, 
-                                        { scale: 0.8, rotation: -10 }, 
+                                    gsap.fromTo(avatarDiv,
+                                        { scale: 0.8, rotation: -10 },
                                         { duration: 0.4, scale: 1, rotation: 0, ease: "back.out(1.5)" }
                                     );
                                 });
@@ -207,9 +235,9 @@ class GameFactory {
 
                             // --- LÓGICA DEL BOTÓN PUZZLE ---
                             btnPuzzle.addEventListener('click', () => {
-                                gsap.to(".lobby-pantalla", { 
-                                    duration: 0.5, 
-                                    opacity: 0, 
+                                gsap.to(".lobby-pantalla", {
+                                    duration: 0.5,
+                                    opacity: 0,
                                     onComplete: () => {
                                         console.log("¡Yendo a los Puzzles!");
                                         // window.juego.renderCurrentLevel('puzzle'); // Descomentar cuando exista el nivel
@@ -238,7 +266,7 @@ class GameFactory {
                                     const idDestino = Number(e.target.getAttribute('data-id'));
 
                                     if (idDestino === 4) {
-                                        if (cartel) { 
+                                        if (cartel) {
                                             gsap.to(cartel, { duration: 0.3, autoAlpha: 1, y: 20, ease: "back.out(2)" });
                                             gsap.to(cartel, { duration: 0.3, autoAlpha: 0, y: 0, delay: 2 });
                                         }
@@ -251,25 +279,60 @@ class GameFactory {
                                 });
                             });
 
-                        }, 0); // 🔥 Cerramos el setTimeout con el 0
+                        }, 0);
 
-                        return null; 
+                        return null;
                     }
                 };
             case "grum":
                 return {
                     template: `
-                        <div class="slide active" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1a1a2e;">
+                        <div class="slide active" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1a1a2e; overflow: hidden;">
                             <h2 style="color: #ffb7c5; margin-bottom: 10px;">${datosNivel.title}</h2>
-                            <canvas id="clubCanvas" width="800" height="600" style="background: #16213e; border: 4px solid #d11a5b; border-radius: 12px; box-shadow: 0 0 20px rgba(209,26,91,0.3);"></canvas>
-                            <p style="color: white; margin-top: 15px; font-weight: bold;">Usa W A S D o las Flechas para moverte</p>
+                            
+                            <canvas id="clubCanvas" width="800" height="600" style="background: #16213e; border: 4px solid #d11a5b; border-radius: 12px; max-width: 100%; max-height: 70vh; box-shadow: 0 0 20px rgba(209,26,91,0.3);"></canvas>
+                            
+                            <div id="mobileControls" style="display: flex; width: 100%; max-width: 800px; justify-content: space-between; padding: 20px; position: absolute; bottom: 0; box-sizing: border-box; z-index: 10; touch-action: none;">
+                                
+                                <div style="display: grid; grid-template-columns: 60px 60px 60px; grid-gap: 5px;">
+                                    <div></div>
+                                    <button id="btnW" style="height: 60px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; touch-action: none;">W</button>
+                                    <div></div>
+                                    <button id="btnA" style="height: 60px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; touch-action: none;">A</button>
+                                    <button id="btnS" style="height: 60px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; touch-action: none;">S</button>
+                                    <button id="btnD" style="height: 60px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; touch-action: none;">D</button>
+                                </div>
+
+                                <div style="display: flex; align-items: flex-end;">
+                                    <button id="btnC" style="width: 80px; height: 80px; background: rgba(52,152,219,0.4); border: 2px solid #3498db; border-radius: 50%; color: white; font-weight: bold; font-size: 16px; touch-action: none;">SPRINT</button>
+                                </div>
+                            </div>
                         </div>`,
                     init: () => {
                         const canvasEl = document.getElementById('clubCanvas');
-                        // Instanciamos el nuevo motor pasándole el canvas y la config
+
+                        // Instanciamos el motor. IMPORTANTE: No llamamos a engine.start() porque ya se llama solo.
                         const engine = new Nivel_1(canvasEl, datosNivel, alTerminarNivel);
-                        engine.start();
-                        return engine; // Devolvemos el motor para que el Orquestador lo pueda destruir después
+
+                        // Conexión de botones táctiles
+                        const conectarBotonMovil = (btnId, tecla) => {
+                            const btn = document.getElementById(btnId);
+                            if (btn) {
+                                btn.addEventListener('touchstart', (e) => { e.preventDefault(); engine.keys[tecla] = true; });
+                                btn.addEventListener('touchend', (e) => { e.preventDefault(); engine.keys[tecla] = false; });
+                                btn.addEventListener('mousedown', () => engine.keys[tecla] = true);
+                                btn.addEventListener('mouseup', () => engine.keys[tecla] = false);
+                                btn.addEventListener('mouseleave', () => engine.keys[tecla] = false);
+                            }
+                        };
+
+                        conectarBotonMovil('btnW', 'w');
+                        conectarBotonMovil('btnS', 's');
+                        conectarBotonMovil('btnA', 'a');
+                        conectarBotonMovil('btnD', 'd');
+                        conectarBotonMovil('btnC', 'c');
+
+                        return engine;
                     }
                 };
             default:
