@@ -134,7 +134,7 @@ export class GameFactory {
                     }
                 };
 
-            case "grum":
+            case "Nivel_1":
                 return {
                     template: `
                         <div class="slide active" style="position: relative; width: 100vw; height: 100vh; background: #1a1a2e; overflow: hidden;">

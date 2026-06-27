@@ -31,11 +31,9 @@ export class TilemapRenderer {
     // 2. EL MOTOR GRÁFICO (Se llama 60 veces por segundo)
     // --------------------------------------------------------
     actualizarVista(camaraX, camaraY) {
-        // 1. Calculamos la esquina superior izquierda de la vista actual en coordenadas de matriz
         const startCol = Math.floor((camaraX - window.innerWidth / 2) / this.tileSize);
         const startRow = Math.floor((camaraY - window.innerHeight / 2) / this.tileSize);
 
-        // 2. Reciclamos los objetos del pool para dibujar la zona visible
         let index = 0;
         for (let row = 0; row < this.filasPantalla; row++) {
             for (let col = 0; col < this.colsPantalla; col++) {
@@ -43,11 +41,9 @@ export class TilemapRenderer {
                 const mRow = startRow + row;
                 const mCol = startCol + col;
 
-                // Verificamos límites
                 if (mRow >= 0 && mRow < this.matriz.length && mCol >= 0 && mCol < this.matriz[0].length) {
                     const tipo = this.matriz[mRow][mCol];
-                    
-                    // Solo dibujamos si es pared (ejemplo: tipo 1)
+
                     if (tipo === 1) {
                         bloque.clear();
                         bloque.beginFill(0x444444); // Color gris pared
@@ -67,11 +63,11 @@ export class TilemapRenderer {
     // --------------------------------------------------------
     // 3. MÉTODOS DE SEGURIDAD Y SOPORTE
     // --------------------------------------------------------
-    
+
     // Un método vital para evitar que el juego explote si la cámara 
     // intenta leer la posición -1 o la 101 (fuera de la matriz de 100x100)
     obtenerDatosTileProtegido(gridX, gridY) {
-        if (gridY < 0 || gridY >= this.matriz.length || 
+        if (gridY < 0 || gridY >= this.matriz.length ||
             gridX < 0 || gridX >= this.matriz[0].length) {
             return null; // Si está fuera de los límites, devolvemos vacío (un abismo negro)
         }

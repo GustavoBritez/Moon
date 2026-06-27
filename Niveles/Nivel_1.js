@@ -1,5 +1,10 @@
-import { TILE_DICT } from '../Enemigo/EnemigoDecorator.js';
-import { TilemapRenderer } from './TilemapRenderer.js';
+import { TilemapRenderer } from '.TilemapRenderer.js';
+import { UIManager } from './UiManager/UiManager.js';
+import { InputManager } from './PlayerControladorCarpet/InputManager.js';
+import { CollisionManager } from './PlayerControladorCarpet/CollisionManager.js';
+import { EnemyManager } from './Enemigo/EnemyManager.js';
+import { Player } from './PlayerControladorCarpet/Player.js';
+import { PlayerController } from './PlayerControladorCarpet/PlayerControllator.js';
 
 export class Nivel_1 {
     constructor(canvas, config, eventBus) {
@@ -7,13 +12,17 @@ export class Nivel_1 {
             throw new Error("Arquitectura estricta: Nivel abortado por falta de matriz.");
         }
 
-        this.renderizador = new TilemapRenderer(this.capaFondo, this.mapaData, this.tileSize);
         this.canvas = canvas;
         this.config = config;
         this.eventBus = eventBus;
-        this.mapaMatriz = config.matriz.map((fila) => fila.slice());
-        this.settings = window.GAME_TUNING;
+        this.projectiles = [];
 
+        // Clonamos la matriz para proteger los datos originales de nivel
+        this.mapaMatriz = config.matriz.map((fila) => fila.slice());
+        this.settings = window.GAME_TUNING || { tileSize: 32, playerSpeed: 170, playerLives: 3 };
+        this.tileSize = this.settings.tileSize;
+
+        // 1. Inicializar el motor gráfico PixiJS
         this.app = new PIXI.Application({
             view: canvas,
             resizeTo: window,
@@ -23,274 +32,209 @@ export class Nivel_1 {
             resolution: window.devicePixelRatio || 1,
         });
 
-        this.tileSize = this.settings.tileSize;
-        this.worldWidth = this.mapaMatriz[0].length * this.tileSize;
-        this.worldHeight = this.mapaMatriz.length * this.tileSize;
-
+        // 2. Estructurar el árbol de nodos de PixiJS (Capas)
         this.mundo = new PIXI.Container();
         this.capaFondo = new PIXI.Container();
         this.capaEntidades = new PIXI.Container();
         this.capaUI = new PIXI.Container();
+
         this.mundo.addChild(this.capaFondo, this.capaEntidades);
         this.app.stage.addChild(this.mundo, this.capaUI);
 
+        // 3. Inicializar el Modelo de Datos del Jugador (Datos puros)
+        this.player = new Player(
+            1.5 * this.tileSize,
+            1.5 * this.tileSize,
+            this.settings.playerSpeed,
+            this.settings.playerLives
+        );
 
-        
-        this.player = {
-            gridX: 0, gridY: 0, sprite: null, x: 0, y: 0, vx: 0, vy: 0,
-            lives: this.settings.playerLives, speed: this.settings.playerSpeed,
-            turboMultiplier: this.settings.turboMultiplier, turboUntil: 0,
-            fireCooldownUntil: 0, direction: { x: 0, y: 1 }
-        };
-        
+        // 4. Inyección de dependencias y desacoplamiento de Gerentes (Managers)
+        this.inputManager = new InputManager();
+        this.collisionManager = new CollisionManager(this.mapaMatriz, this.tileSize);
+
+        // El controlador asume la lógica del jugador usando sus dependencias
+        this.playerController = new PlayerController(this.player, this.inputManager, this.collisionManager);
+
+        this.renderizador = new TilemapRenderer(this.capaFondo, this.mapaMatriz, this.tileSize);
+        this.uiManager = new UIManager(this.capaUI);
+        this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, this.config.enemigos);
+
+        // La cámara inicia siguiendo las coordenadas lógicas iniciales de Kitty
         this.camara = {
-            x: 1.5 * this.tileSize,
-            y: 1.5 * this.tileSize
+            x: this.player.x,
+            y: this.player.y
         };
 
-        this.enemies = []; 
-        this.projectiles = [];
-        this.keys = {};
         this.gameOver = false;
         this.isPaused = false;
 
-        this.handleKeyDown = (e) => this.onKeyDown(e);
-        this.handleKeyUp = (e) => this.onKeyUp(e);
+        // Cachear la función resize para poder removerla correctamente en el destroy
         this.handleResize = () => this.redimensionarEscena();
 
+        // Lanzar la puesta a punto del nivel
         this.start();
     }
-    
+
+    start() {
+        // Suscribirse a eventos del navegador
+        window.addEventListener('resize', this.handleResize);
+
+        // Preparar buffers de memoria y pools de objetos gráficos
+        this.renderizador.inicializarPool(window.innerWidth, window.innerHeight);
+        this.enemyManager.inicializar();
+
+        // Crear la representación visual (Sprite) de Kitty y enlazarla al modelo
+        let graficoKitty = new PIXI.Graphics();
+        graficoKitty.beginFill(0xff6584); // Rosado característico
+        graficoKitty.drawCircle(0, 0, this.tileSize * 0.25);
+        graficoKitty.endFill();
+
+        this.player.sprite = graficoKitty;
+        this.player.sprite.x = this.player.x;
+        this.player.sprite.y = this.player.y;
+        this.capaEntidades.addChild(this.player.sprite);
+
+        // Forzar actualización visual inicial del HUD
+        this.uiManager.actualizar(this.player);
+
+        // Iniciar el Ticker principal (Game Loop) sincronizado a los hercios de la pantalla
+        this.app.ticker.add((delta) => this.update(delta));
+    }
+
     update(delta) {
         if (this.gameOver || this.isPaused) return;
 
+        // Convertir el delta frame de PixiJS a Delta Time en segundos lógicos
         const dt = delta / this.app.ticker.FPS;
-        const velocity = this.calcularVelocidadActual();
 
-        this.moverJugador(dt, velocity);
-
-        this.actualizarEnemigos(dt);
-
-        this.renderizador.actualizarVista(this.camara.x, this.camara.y);
-
+        // 1. Actualización en cascada de la lógica de los componentes autónomos
+        this.playerController.update(dt);
+        this.enemyManager.update(dt, this.player, this);
         this.actualizarProyectiles(dt);
-        this.verificarColisionesJugadorEnemigo();
+
+        // 2. Evaluación de reglas del juego globales
         this.verificarVictoria();
-        this.verificarPortales();
-        this.actualizarCamara() ;
-        this.actualizarHud();
+
+        // 3. Procesamiento físico de la posición de la cámara (Caja de zona muerta)
+        this.actualizarCamara();
+
+        // 4. Sincronización final de la vista gráfica y la interfaz de usuario
+        this.renderizador.actualizarVista(this.camara.x, this.camara.y);
+        this.uiManager.actualizar(this.player);
     }
 
-    crearEnemigos() {
-        const definitions = Array.isArray(this.config.enemigos) ? this.config.enemigos : [];
-        
-        definitions.forEach((data) => {
-            let enemigo = this.fabricaDeEnemigos(data); 
-            
-            enemigo.sprite = this.crearCirculo(data.color, this.tileSize * 0.22);
-            enemigo.sprite.x = enemigo.x;
-            enemigo.sprite.y = enemigo.y;
-            this.capaEntidades.addChild(enemigo.sprite);
-            
-            this.enemies.push(enemigo);
-        });
-    }
+    dispararProyectil(direccionX, direccionY) {
+        const velocidadBala = 400;
+        let bala = {
+            x: this.player.x, y: this.player.y,
+            vx: direccionX * velocidadBala, vy: direccionY * velocidadBala,
+            sprite: new PIXI.Graphics()
+        };
 
-    actualizarEnemigos(dt) {
-        for (let i = this.enemies.length - 1; i >= 0; i--) {
-            const enemy = this.enemies[i];
-            
-            enemy.update(dt, this.player, this); 
-        }
-    }
+        bala.sprite.beginFill(0xffff00); // Amarillo brillante
+        bala.sprite.drawCircle(0, 0, this.tileSize * 0.15);
+        bala.sprite.endFill();
+        bala.sprite.x = bala.x; bala.sprite.y = bala.y;
 
-    fabricaDeEnemigos(data) {
-        let enemigo;
+        this.capaEntidades.addChild(bala.sprite);
+        this.projectiles.push(bala);
+    } s
 
-        // 1. Instanciamos la clase base (el "personaje")
-        switch (data.tipo) {
-            case 'Baku':
-                enemigo = new EnemigoBaku(data, this.tileSize);
-                break;
-            case 'Splitter': // <--- Añade esto
-                enemigo = new EnemigoBase(data, this.tileSize);
-                break;
-            default:
-                enemigo = new EnemigoBase(data, this.tileSize);
-                break;
-        }
+    actualizarProyectiles(dt) {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            let bala = this.projectiles[i];
+            bala.x += bala.vx * dt;
+            bala.y += bala.vy * dt;
+            bala.sprite.x = bala.x;
+            bala.sprite.y = bala.y;
 
-        // 2. Aplicamos Decoradores (las "capas" de comportamiento)
-        // El orden aquí es importante: primero el Splitter, luego fuego si tuviera
-        if (data.esSplitter) {
-            enemigo = new SplitterDecorator(enemigo, data.vidas || 2);
-        }
+            // Choca contra pared
+            if (this.collisionManager.esPared(bala.x, bala.y)) {
+                bala.sprite.destroy();
+                this.projectiles.splice(i, 1);
+                continue;
+            }
 
-        if (data.tieneFuego) {
-            enemigo = new FireDecorator(enemigo);
-        }
-        
-        if (data.esRapido) {
-            enemigo = new SpeedDecorator(enemigo);
-        }
+            // Choca contra enemigo
+            for (let j = 0; j < this.enemyManager.enemies.length; j++) {
+                let enemigo = this.enemyManager.enemies[j];
+                let dist = Math.hypot(bala.x - enemigo.x, bala.y - enemigo.y);
 
-        return enemigo;
-    }
-    
-    destroy() {
-        window.removeEventListener('keydown', this.handleKeyDown);
-        window.removeEventListener('keyup', this.handleKeyUp);
-        window.removeEventListener('resize', this.handleResize);
-
-        this.projectiles.forEach((bullet) => bullet.sprite.destroy());
-        this.enemies.forEach((enemy) => enemy.sprite.destroy());
-
-        this.app.destroy(true, { children: true, texture: true, baseTexture: true });
-    }
-    crearHud() {
-        // 1. Definimos un estilo de texto (Cute y legible)
-        const estiloTexto = new PIXI.TextStyle({
-            fontFamily: 'Comic Sans MS', // O la fuente que uses
-            fontSize: 28,
-            fill: '#ff6584', // Un rosado estilo Kitty
-            stroke: '#ffffff',
-            strokeThickness: 4,
-            fontWeight: 'bold',
-            dropShadow: true,
-            dropShadowColor: '#000000',
-            dropShadowBlur: 4,
-            dropShadowDistance: 2,
-        });
-
-        // 2. Creamos el texto de las vidas
-        this.textoVidas = new PIXI.Text('Vidas: ' + this.player.lives, estiloTexto);
-        this.textoVidas.x = 20;
-        this.textoVidas.y = 20;
-
-        // 3. Lo agregamos a la capa UI (¡Importante! No a la capa del mundo)
-        this.capaUI.addChild(this.textoVidas);
-    }
-    redimensionarEscena() {
-        // Le decimos al motor de PixiJS que ajuste el lienzo al tamaño actual de la ventana
-        if (this.app && this.app.renderer) {
-            this.app.renderer.resize(window.innerWidth, window.innerHeight);
-        }
-    }
-    actualizarHud() {
-        // Este método se llama 60 veces por segundo en el update()
-        // Solo actualizamos el texto si el valor cambió para ahorrar recursos
-        if (this.textoVidas) {
-            this.textoVidas.text = 'Vidas: ' + this.player.lives;
-        }
-    }
-    calcularVelocidadActual() {
-        let vx = 0;
-        let vy = 0;
-        const velocidad = this.player.speed; // Los 170 que definiste en tu GAME_TUNING
-
-        // Leemos el objeto this.keys que llenan onKeyDown y onKeyUp
-        if (this.keys['w']) vy -= velocidad;
-        if (this.keys['s']) vy += velocidad;
-        if (this.keys['a']) vx -= velocidad;
-        if (this.keys['d']) vx += velocidad;
-
-        // Normalizamos la velocidad en diagonal para que no corra más rápido al presionar W+D
-        if (vx !== 0 && vy !== 0) {
-            const factorSuma = Math.sqrt(0.5);
-            vx *= factorSuma;
-            vy *= factorSuma;
-        }
-
-        return { vx, vy };
-    }
-    
-    moverJugador(dt, velocity) {
-        // Si no te estás moviendo, no hacemos cálculos
-        if (velocity.vx === 0 && velocity.vy === 0) return;
-
-        // 1. Calculamos las posiciones tentativas en el siguiente frame
-        let nuevoX = this.player.x + velocity.vx * dt;
-        let nuevoY = this.player.y + velocity.vy * dt;
-
-        // Tamaño aproximado del hitbox de tu personaje (un recuadro imaginario)
-        const radioHitbox = this.tileSize * 0.25; 
-
-        // 2. SISTEMA DE COLISIONES BÁSICO (Contra tu array this.paredes)
-        let chocaX = false;
-        let chocaY = false;
-
-        if (this.paredes) {
-            for (let i = 0; i < this.paredes.length; i++) {
-                const pared = this.paredes[i];
-
-                // Chequeo en el eje X
-                if (nuevoX + radioHitbox > pared.x &&
-                    nuevoX - radioHitbox < pared.x + pared.width &&
-                    this.player.y + radioHitbox > pared.y &&
-                    this.player.y - radioHitbox < pared.y + pared.height) {
-                    chocaX = true;
-                }
-
-                // Chequeo en el eje Y
-                if (this.player.x + radioHitbox > pared.x &&
-                    this.player.x - radioHitbox < pared.x + pared.width &&
-                    nuevoY + radioHitbox > pared.y &&
-                    nuevoY - radioHitbox < pared.y + pared.height) {
-                    chocaY = true;
+                if (dist < (this.tileSize * 0.15 + this.tileSize * 0.22)) {
+                    enemigo.recibirGolpe(this);
+                    bala.sprite.destroy();
+                    this.projectiles.splice(i, 1);
+                    break; // Rompemos el bucle del enemigo actual
                 }
             }
         }
-
-        // 3. Si no hay colisión, aplicamos el movimiento a las coordenadas lógicas
-        if (!chocaX) this.player.x = nuevoX;
-        if (!chocaY) this.player.y = nuevoY;
-
-        // 4. Sincronizamos la posición lógica con el Sprite gráfico de PixiJS
-        if (this.player.sprite) {
-            this.player.sprite.x = this.player.x;
-            this.player.sprite.y = this.player.y;
-        }
     }
-    
-    actualizarProyectiles(dt) { }
-
-    verificarVictoria() { }
-    
-    verificarPortales() { }
-    
     actualizarCamara() {
         const pantallaW = window.innerWidth;
         const pantallaH = window.innerHeight;
 
-        // 1. Definimos el tamaño de la "Zona Muerta" (Caja invisible)
-        // 100 píxeles significa que Kitty puede moverse 100px a la izquierda o derecha 
-        // del centro antes de que la cámara empiece a seguirla.
-        const zonaMuertaX = 150; 
+        // Límites de libertad de movimiento para Kitty en el centro del encuadre
+        const zonaMuertaX = 150;
         const zonaMuertaY = 100;
 
-        // 2. Comprobamos si Kitty empuja el borde DERECHO de la zona muerta
+        // Comprobación de empuje lateral izquierdo o derecho
         if (this.player.x > this.camara.x + zonaMuertaX) {
             this.camara.x = this.player.x - zonaMuertaX;
-        } 
-        // Comprobamos si empuja el borde IZQUIERDO
-        else if (this.player.x < this.camara.x - zonaMuertaX) {
+        } else if (this.player.x < this.camara.x - zonaMuertaX) {
             this.camara.x = this.player.x + zonaMuertaX;
         }
 
-        // 3. Comprobamos si empuja el borde INFERIOR
+        // Comprobación de empuje vertical superior o inferior
         if (this.player.y > this.camara.y + zonaMuertaY) {
             this.camara.y = this.player.y - zonaMuertaY;
-        } 
-        // Comprobamos si empuja el borde SUPERIOR
-        else if (this.player.y < this.camara.y - zonaMuertaY) {
+        } else if (this.player.y < this.camara.y - zonaMuertaY) {
             this.camara.y = this.player.y + zonaMuertaY;
         }
 
-        // 4. Movemos el mundo en dirección contraria para centrar la vista en this.camara
-        const objetivoX = (pantallaW / 2) - this.camara.x;
-        const objetivoY = (pantallaH / 2) - this.camara.y;
+        // Mover el contenedor global en sentido inverso para crear la ilusión de scroll orgánico
+        this.mundo.x = (pantallaW / 2) - this.camara.x;
+        this.mundo.y = (pantallaH / 2) - this.camara.y;
+    }
 
-        this.mundo.x = objetivoX;
-        this.mundo.y = objetivoY;
+    verificarVictoria() {
+        // Si el mánager reporta que la lista está limpia, el nivel se da por concluido
+        if (this.enemyManager.enemies.length === 0 && !this.gameOver) {
+            this.gameOver = true;
+            if (this.eventBus) {
+                this.eventBus.emit('LEVEL_VICTORY');
+            }
+        }
+    }
+
+    redimensionarEscena() {
+        if (this.app && this.app.renderer) {
+            this.app.renderer.resize(window.innerWidth, window.innerHeight);
+
+            // Si el renderizador soporta redimensionado dinámico del pool, se lo notificamos
+            if (this.renderizador && typeof this.renderizador.redimensionarPantalla === 'function') {
+                this.renderizador.redimensionarPantalla(window.innerWidth, window.innerHeight);
+            }
+        }
+    }
+
+    destroy() {
+        // 1. Desvincular listeners para prevenir fugas de memoria (Memory Leaks)
+        window.removeEventListener('resize', this.handleResize);
+
+        // 2. Solicitar limpieza de recursos internos de forma descendente
+        if (this.inputManager && typeof this.inputManager.destroy === 'function') this.inputManager.destroy();
+        if (this.renderizador && typeof this.renderizador.destroy === 'function') this.renderizador.destroy();
+        if (this.uiManager && typeof this.uiManager.destroy === 'function') this.uiManager.destroy();
+
+        this.enemyManager.destroy();
+
+        // 3. Remover sprites explícitos de la memoria de texturas
+        if (this.player && this.player.sprite) {
+            this.player.sprite.destroy();
+        }
+
+        // 4. Apagar por completo el ticker de PixiJS y liberar buffers de la GPU
+        this.app.destroy(true, { children: true, texture: true, baseTexture: true });
     }
 }

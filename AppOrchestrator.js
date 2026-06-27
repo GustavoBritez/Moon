@@ -1,9 +1,5 @@
-// --- IMPORTACIONES MODULARES ---
-// Como AppOrchestrator.js está en la raíz, bajamos a la carpeta Niveles y Service
 import { GAME_LEVELS } from './Niveles/levels.js';
 import { GameFactory } from './Service/GameFactory.js';
-// Si vas a usar el AudioManager en el orquestador, descomenta la siguiente línea:
-// import { AudioManager } from './Service/AudioManager.js'; 
 
 export class AppOrchestrator {
     constructor(contenedorId) {
@@ -11,10 +7,8 @@ export class AppOrchestrator {
         this.currentEngine = null;
         this.gameState = "MENU";
 
-        // 🔥 ARREGLO: Anotador temporal del nivel actual (por defecto 1)
         this.currentLevelId = 1;
 
-        // Crea la cortina visual negra para los saltos
         this.crearCortinaTransicion();
     }
 
@@ -89,11 +83,11 @@ export class AppOrchestrator {
         this.mostrarPantallaFinal(true);
     }
 
-    procesarDerrota() {
+    /*procesarDerrota() {
         if (this.gameState === "GAMEOVER") return;
         this.gameState = "GAMEOVER";
         this.mostrarPantallaFinal(false);
-    }
+    }*/
 
     // 🔥 EL SISTEMA DE PANTALLA FINAL CUTE
     mostrarPantallaFinal(esVictoria) {
