@@ -6,11 +6,27 @@ using System.Windows.Forms;
 
 namespace CreadorMapas
 {
+
     public partial class CreadorMapa : Form
     {
+        public class TileItem
+        {
+            public int Id { get; set; }
+            public string Nombre { get; set; }
+        }
+        public class EnemigoSpawn
+        {
+            public string tipo { get; set; }
+            public int gridX { get; set; }
+            public int gridY { get; set; }
+            public int vida { get; set; }
+        }
+
+        private List<EnemigoSpawn> listaEnemigos = new List<EnemigoSpawn>();
+        private bool modoColocarEnemigo = false;
         public static readonly Dictionary<int, TileData> TILE_DICT = new Dictionary<int, TileData>
         {
-    { 0, new TileData { name = "Suelo", color = 0x2c3e50, solido = false } },
+    { 0, new TileData { name = "Suelo", color = 0xFFFFFF, solido = false } },
     { 1, new TileData { name = "Pared_Base", color = 0x7f8c8d, solido = true } },
     { 2, new TileData { name = "Meta", color = 0xf1c40f, solido = false } },
     { 3, new TileData { name = "Spawn", color = 0x00ffff, solido = false } },
@@ -45,18 +61,22 @@ namespace CreadorMapas
         {
             InitializeComponent();
 
-            // 1. Configurar ComboBox
-            comboBox1.DataSource = new BindingSource(TILE_DICT, null);
-            comboBox1.DisplayMember = "Value.name";
-            comboBox1.ValueMember = "Key";
+            // Configuración del ComboBox (Lógica robusta)
+            var lista = new List<object>();
+            foreach (var tile in TILE_DICT)
+            {
+                lista.Add(new { Id = tile.Key, Nombre = tile.Value.name });
+            }
 
-            // 2. Eventos de ratón para el pincel
+            comboBox1.DataSource = lista;
+            comboBox1.DisplayMember = "Nombre";
+            comboBox1.ValueMember = "Id";
+            // Eventos de Pincel
             dataGridView1.MouseDown += (s, e) => isMouseDown = true;
             dataGridView1.MouseUp += (s, e) => isMouseDown = false;
-            dataGridView1.CellMouseEnter += DataGridView1_CellMouseEnter;
-            dataGridView1.CellMouseDown += DataGridView1_CellMouseDown;
 
-            // 3. Activar Doble Buffer para eliminar el lag/delay
+
+            // Optimización de rendimiento (Doble Buffer)
             typeof(DataGridView).InvokeMember("DoubleBuffered",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
                 null, dataGridView1, new object[] { true });
@@ -67,19 +87,22 @@ namespace CreadorMapas
         {
             if (comboBox1.SelectedValue != null)
             {
+                // Forzamos la conversión de tipo (si usaste BindingSource, SelectedValue es un int)
                 int idTile = (int)comboBox1.SelectedValue;
 
                 if (TILE_DICT.ContainsKey(idTile))
                 {
                     int colorInt = TILE_DICT[idTile].color;
-                    // Convertir hex a Color de C#
                     Color color = Color.FromArgb(255,
-                                  (colorInt >> 16) & 0xFF,
-                                  (colorInt >> 8) & 0xFF,
-                                  colorInt & 0xFF);
+                                    (colorInt >> 16) & 0xFF,
+                                    (colorInt >> 8) & 0xFF,
+                                    colorInt & 0xFF);
 
-                    dataGridView1.Rows[fila].Cells[columna].Style.BackColor = color;
-                    dataGridView1.Rows[fila].Cells[columna].Value = idTile;
+                    // IMPORTANTE: Asignamos el estilo a la celda específica, no a la fila o al grid
+                    var celda = dataGridView1.Rows[fila].Cells[columna];
+                    celda.Style.BackColor = color;
+                    celda.Style.SelectionBackColor = color; // Para que no cambie al seleccionar
+                    celda.Value = idTile;
                 }
             }
         }
@@ -89,26 +112,38 @@ namespace CreadorMapas
             dataGridView1.Columns.Clear();
             dataGridView1.Rows.Clear();
 
-            // Crear columnas
+            // 1. Crear columnas
             for (int i = 0; i < tamano; i++)
             {
                 dataGridView1.Columns.Add(new DataGridViewTextBoxColumn { Width = 30 });
             }
 
-            // Crear filas
-            dataGridView1.Rows.Add(tamano);
-            foreach (DataGridViewRow row in dataGridView1.Rows)
+            // 2. Crear filas (Bucle necesario)
+            for (int i = 0; i < tamano; i++)
             {
-                row.Height = 30;
+                int index = dataGridView1.Rows.Add();
+                dataGridView1.Rows[index].Height = 30;
             }
 
-            // Aplicar estilo inicial
-            dataGridView1.DefaultCellStyle.BackColor = coloresPincel["Suelo (0)"];
+            // 3. Inicializar TODAS las celdas con el ID 0 (Suelo)
+            // Esto es crucial para que luego GenerarCodigoJS() no encuentre valores nulos
+            int colorSuelo = TILE_DICT[0].color;
+            Color color = Color.FromArgb(255, (colorSuelo >> 16) & 0xFF, (colorSuelo >> 8) & 0xFF, colorSuelo & 0xFF);
+
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                foreach (DataGridViewCell cell in row.Cells)
+                {
+                    cell.Value = 0; // ID del suelo
+                    cell.Style.BackColor = color;
+                }
+            }
+
             dataGridView1.ClearSelection();
         }
-        
 
-    private void dataGridView1_CellClick_1(object sender, DataGridViewCellEventArgs e)
+
+        private void dataGridView1_CellClick_1(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
             {
@@ -138,12 +173,34 @@ namespace CreadorMapas
             }
         }
 
-        private void dataGridView1_CellMouseEnter(object sender, DataGridViewCellEventArgs e)
+        private void DataGridView1_CellMouseEnter(object sender, DataGridViewCellEventArgs e)
         {
-            if (isMouseDown && e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            if (isMouseDown && e.RowIndex >= 0 && e.ColumnIndex >= 0 && !modoColocarEnemigo)
             {
                 PintarCelda(e.RowIndex, e.ColumnIndex);
             }
+        }
+
+        private void ColocarEnemigo(int fila, int columna)
+        {
+            // Verificamos si ya hay un enemigo en esa celda
+            var existente = listaEnemigos.Find(en => en.gridX == columna && en.gridY == fila);
+
+            if (existente != null)
+            {
+                listaEnemigos.Remove(existente); // Si ya hay uno, el clic lo borra
+            }
+            else
+            {
+                listaEnemigos.Add(new EnemigoSpawn
+                {
+                    tipo = "BAKU", // Por ahora estático, luego lo puedes elegir
+                    gridX = columna,
+                    gridY = fila,
+                    vida = 200
+                });
+            }
+            dataGridView1.InvalidateCell(columna, fila);
         }
         public string GenerarCodigoJS()
         {
@@ -164,6 +221,40 @@ namespace CreadorMapas
             }
             js += "];";
             return js;
+        }
+
+        private void BtnCrearEnemigo_Click(object sender, EventArgs e)
+        {
+            modoColocarEnemigo = !modoColocarEnemigo;
+
+            // Cambiamos el cursor al instante
+            dataGridView1.Cursor = modoColocarEnemigo ? Cursors.Hand : Cursors.Default;
+
+            // Feedback visual en el botón
+            BtnCrearEnemigo.BackColor = modoColocarEnemigo ? Color.SeaGreen : Color.FromArgb(0, 122, 204);
+        }
+
+        private void dataGridView1_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                if (modoColocarEnemigo)
+                {
+                    ColocarEnemigo(e.RowIndex, e.ColumnIndex);
+                }
+                else
+                {
+                    PintarCelda(e.RowIndex, e.ColumnIndex);
+                }
+            }
+        }
+
+        private void dataGridView1_CellMouseEnter(object sender, DataGridViewCellEventArgs e)
+        {
+            if (isMouseDown && e.RowIndex >= 0 && e.ColumnIndex >= 0 && !modoColocarEnemigo)
+            {
+                PintarCelda(e.RowIndex, e.ColumnIndex);
+            }
         }
     }
 }

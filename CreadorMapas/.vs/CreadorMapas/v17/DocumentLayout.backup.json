@@ -1,26 +1,26 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\",
+  "WorkspaceRootPath": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\navegador\\desktop\\nueva carpeta\\166\\creadormapas\\creadormapa.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\danie\\desktop\\git\\166\\creadormapas\\creadormapa.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|solutionrelative:creadormapa.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\navegador\\desktop\\nueva carpeta\\166\\creadormapas\\creadormapa.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|solutionrelative:creadormapa.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\navegador\\desktop\\nueva carpeta\\166\\creadormapas\\tiledata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|solutionrelative:tiledata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\navegador\\desktop\\nueva carpeta\\166\\creadormapas\\creadormapa.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\danie\\desktop\\git\\166\\creadormapas\\creadormapa.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|solutionrelative:creadormapa.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\navegador\\desktop\\nueva carpeta\\166\\creadormapas\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\danie\\desktop\\git\\166\\creadormapas\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\danie\\desktop\\git\\166\\creadormapas\\creadormapa.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|solutionrelative:creadormapa.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|c:\\users\\danie\\desktop\\git\\166\\creadormapas\\tiledata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4A9D5EA3-6454-457C-8899-A0000996144F}|CreadorMapas.csproj|solutionrelative:tiledata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -30,66 +30,77 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 4,
           "Children": [
             {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "CreadorMapa.cs [Dise\u00F1o]",
-              "DocumentMoniker": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\CreadorMapa.cs",
+              "DocumentMoniker": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\CreadorMapa.cs",
               "RelativeDocumentMoniker": "CreadorMapa.cs",
-              "ToolTip": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\CreadorMapa.cs [Dise\u00F1o]",
-              "RelativeToolTip": "CreadorMapa.cs [Dise\u00F1o]",
+              "ToolTip": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\CreadorMapa.cs [Dise\u00F1o]*",
+              "RelativeToolTip": "CreadorMapa.cs [Dise\u00F1o]*",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T01:40:39.179Z",
+              "WhenOpened": "2026-06-30T05:23:26.803Z",
               "EditorCaption": " [Dise\u00F1o]"
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "CreadorMapa.cs",
-              "DocumentMoniker": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\CreadorMapa.cs",
+              "DocumentMoniker": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\CreadorMapa.cs",
               "RelativeDocumentMoniker": "CreadorMapa.cs",
-              "ToolTip": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\CreadorMapa.cs",
-              "RelativeToolTip": "CreadorMapa.cs",
-              "ViewState": "AgIAAFsAAAAAAAAAAAAUwGwAAAAIAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\CreadorMapa.cs*",
+              "RelativeToolTip": "CreadorMapa.cs*",
+              "ViewState": "AgIAACoAAAAAAAAAAAAcwDYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-30T01:30:54.292Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "TileData.cs",
-              "DocumentMoniker": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\TileData.cs",
+              "DocumentMoniker": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\TileData.cs",
               "RelativeDocumentMoniker": "TileData.cs",
-              "ToolTip": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\TileData.cs",
+              "ToolTip": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\TileData.cs",
               "RelativeToolTip": "TileData.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T01:54:26.656Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-30T01:54:26.656Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
               "Title": "CreadorMapa.Designer.cs",
-              "DocumentMoniker": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\CreadorMapa.Designer.cs",
+              "DocumentMoniker": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\CreadorMapa.Designer.cs",
               "RelativeDocumentMoniker": "CreadorMapa.Designer.cs",
-              "ToolTip": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\CreadorMapa.Designer.cs",
+              "ToolTip": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\CreadorMapa.Designer.cs",
               "RelativeToolTip": "CreadorMapa.Designer.cs",
-              "ViewState": "AgIAAFQAAAAAAAAAAAAlwGEAAAAMAAAAAAAAAA==",
+              "ViewState": "AgIAAFkAAAAAAAAAAAAcwGgAAAAPAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-30T01:30:02.553Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 2,
               "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\Program.cs",
+              "DocumentMoniker": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "C:\\Users\\Navegador\\Desktop\\Nueva carpeta\\166\\CreadorMapas\\Program.cs",
+              "ToolTip": "C:\\Users\\Danie\\Desktop\\GIT\\166\\CreadorMapas\\Program.cs",
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAAUAAAAAAAAAAAApwA4AAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
