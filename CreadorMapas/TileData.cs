@@ -9,7 +9,7 @@ namespace CreadorMapas
     public class TileData
     {
         public string name { get; set; }
-        public int color { get; set; } // En C# los colores Hex son enteros
+        public int color { get; set; }
         public bool solido { get; set; }
     }
 }

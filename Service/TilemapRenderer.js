@@ -1,3 +1,4 @@
+
 export class TilemapRenderer {
     constructor(contenedor, matriz, tileSize) {
         this.contenedor = contenedor;
@@ -42,7 +43,7 @@ export class TilemapRenderer {
     // --------------------------------------------------------
     // 2. EL MOTOR GRÁFICO (O(M) - Donde M es la pantalla visible)
     // --------------------------------------------------------
-    actualizarVista(camaraX, camaraY) {
+actualizarVista(camaraX, camaraY) {
         const startCol = Math.floor((camaraX - window.innerWidth / 2) / this.tileSize);
         const startRow = Math.floor((camaraY - window.innerHeight / 2) / this.tileSize);
 
@@ -59,20 +60,23 @@ export class TilemapRenderer {
                 // Si estamos dentro del mapa válido
                 if (mRow >= 0 && mRow < this.matriz.length && mCol >= 0 && mCol < this.matriz[0].length) {
 
-                    // 1. Leemos el número de la matriz (ej. 4 para Lava)
+                    // 1. Leemos el número de la matriz (ej. 4 para Hielo)
                     const tipoNumero = this.matriz[mRow][mCol];
 
-                    // 2. Buscamos sus reglas en el catálogo de forma ultra rápida
-                    const visual = TILE_VISUALS[tipoNumero] || TILE_VISUALS[0]; // Fallback por si hay un error
+                    // 2. ¡CORREGIDO!: Buscamos sus reglas usando el nombre correcto del catálogo
+                    const visual = TILE_DICT[tipoNumero] || TILE_DICT[0]; // Fallback al Suelo (0) por si hay un error
 
-                    // 3. Aplicamos el visual sin usar condicionales complejos
-                    if (visual.dibuja) {
-                        sprite.tint = visual.color; // Pintamos del color correspondiente
+                    // 3. Aplicamos el visual de forma dinámica utilizando sus propiedades
+                    // Si el tile es el ID 1 (Pared_Base), no tiene propiedad "dibuja" explícita, 
+                    // pero al existir en el diccionario podemos validar si queremos renderizarlo.
+                    // Tip: Asegúrate de que tus objetos del diccionario tengan propiedades consistentes 
+                    // o simplemente usa el color si existe.
+                    if (visual) {
+                        sprite.tint = visual.color; // Pintamos del color correspondiente (ej: 0xe67e22 para Lava)
                         sprite.x = mCol * this.tileSize;
                         sprite.y = mRow * this.tileSize;
                         if (!sprite.visible) sprite.visible = true;
                     } else {
-                        // Es suelo invisible (1), escondemos el bloque para no gastar GPU
                         if (sprite.visible) sprite.visible = false;
                     }
                 } else {
@@ -81,7 +85,6 @@ export class TilemapRenderer {
             }
         }
     }
-
     // --------------------------------------------------------
     // 3. MÉTODOS DE SEGURIDAD Y SOPORTE
     // --------------------------------------------------------
@@ -115,6 +118,8 @@ export class TilemapRenderer {
         this.matriz = null;
     }
 }
+
+
 
 export const TILE_DICT = {
     // Básicos y Sistema (0-3)

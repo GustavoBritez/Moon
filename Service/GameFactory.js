@@ -196,19 +196,17 @@ export class GameFactory {
                         if (btnSpace) { btnSpace.addEventListener('touchstart', (e) => { e.preventDefault(); engine.disparar(); }); btnSpace.addEventListener('mousedown', () => engine.disparar()); }
                         if (btnShift) { btnShift.addEventListener('touchstart', (e) => { e.preventDefault(); engine.activarTurbo(); }); btnShift.addEventListener('mousedown', () => engine.activarTurbo()); }
 
-                        // 🔥 NUEVO: CONECTAMOS LOS BOTONES DEL MENÚ
                         const btnContinuar = document.getElementById('btnContinuar');
                         const btnSalirLobby = document.getElementById('btnSalirLobby');
 
                         if (btnContinuar) {
                             btnContinuar.addEventListener('click', () => {
-                                engine.togglePause(); // Le avisa al motor que quite la pausa
+                                engine.togglePause(); 
                             });
                         }
 
                         if (btnSalirLobby) {
                             btnSalirLobby.addEventListener('click', () => {
-                                // Salto directo al lobby usando el orquestador global
                                 window.orquestador.transitionTo(1);
                             });
                         }

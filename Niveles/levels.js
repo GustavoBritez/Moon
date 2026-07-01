@@ -1,5 +1,6 @@
 
-// 2. TUS NIVELES
+import { MATRIZ_NIVEL as MatrizNivel2, ENEMIGOS_NIVEL as EnemigosNivel2, ENEMIGOS_NIVEL } from './Mapa_1.js';
+
 export const GAME_LEVELS = {
     1: {
         type: "lobby",
@@ -7,10 +8,10 @@ export const GAME_LEVELS = {
         text: " Hola soy tu avatar ",
     },
     2: {
-        type: "grum",
+        type: "Nivel_1",
         title: "¡Prueba de Estrés 100x100!",
-        matriz: datosEstres.matriz,
-        enemigos: datosEstres.enemigos
+        matriz: MatrizNivel2,
+        enemigos: ENEMIGOS_NIVEL
     }
 };
 // 3. CONFIGURACIÓN GLOBAL DE FÍSICAS

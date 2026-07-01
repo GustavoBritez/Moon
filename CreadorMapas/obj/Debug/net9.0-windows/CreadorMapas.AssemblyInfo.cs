@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CreadorMapas")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a5f5ca2dcf33b4ce3355f8ef43b081b68fa5bb26")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+88c139eadb5677180e7d7172f4af7a2f740fc9fb")]
 [assembly: System.Reflection.AssemblyProductAttribute("CreadorMapas")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CreadorMapas")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

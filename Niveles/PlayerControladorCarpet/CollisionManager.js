@@ -1,3 +1,5 @@
+import { TILE_DICT } from '../../Service/TilemapRenderer.js';
+
 export class CollisionManager {
     constructor(mapaMatriz, tileSize) {
         this.mapaMatriz = mapaMatriz;

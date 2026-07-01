@@ -1,4 +1,4 @@
-import { EnemigoBase } from './EnemigoBase.js'; // Asegúrate de tener la ruta correcta
+import { EnemigoBase, ENEMY_CLASSES, FireDecorator } from './EnemigoBase.js';
 export class EnemyManager {
     constructor(capaEntidades, tileSize, configEnemigos) {
         this.capaEntidades = capaEntidades;

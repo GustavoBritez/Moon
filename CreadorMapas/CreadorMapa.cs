@@ -1,175 +1,131 @@
-﻿using Microsoft.VisualBasic; // Asegúrate de tener esta referencia agregada al proyecto
+﻿using CreadorMapas.Config;
+using Microsoft.VisualBasic; // Asegúrate de tener esta referencia agregada al proyecto
+using System;
 using System;
 using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Windows.Forms;
+using System.IO;
 
 namespace CreadorMapas
 {
-
     public partial class CreadorMapa : Form
     {
-        public class TileItem
-        {
-            public int Id { get; set; }
-            public string Nombre { get; set; }
-        }
-        public class EnemigoSpawn
-        {
-            public string tipo { get; set; }
-            public int gridX { get; set; }
-            public int gridY { get; set; }
-            public int vida { get; set; }
-        }
-
-        private List<EnemigoSpawn> listaEnemigos = new List<EnemigoSpawn>();
-        private bool modoColocarEnemigo = false;
-        public static readonly Dictionary<int, TileData> TILE_DICT = new Dictionary<int, TileData>
-        {
-    { 0, new TileData { name = "Suelo", color = 0xFFFFFF, solido = false } },
-    { 1, new TileData { name = "Pared_Base", color = 0x7f8c8d, solido = true } },
-    { 2, new TileData { name = "Meta", color = 0xf1c40f, solido = false } },
-    { 3, new TileData { name = "Spawn", color = 0x00ffff, solido = false } },
-    
-    // Hielo
-    { 4, new TileData { name = "Hielo", color = 0xa4ebf3, solido = false } },
-    { 5, new TileData { name = "Nieve", color = 0xffffff, solido = false } },
-    { 6, new TileData { name = "Pared_Hielo", color = 0x2980b9, solido = true } },
-    { 7, new TileData { name = "Agua_Congelada", color = 0x1abc9c, solido = false } },
-
-    // Volcánico
-    { 8, new TileData { name = "Piedra_Volcanica", color = 0x34495e, solido = false } },
-    { 9, new TileData { name = "Lava", color = 0xe67e22, solido = false } },
-    { 10, new TileData { name = "Ceniza", color = 0x111111, solido = false } },
-    { 11, new TileData { name = "Muro_Obsidiana", color = 0x000000, solido = true } },
-
-    // Pantano
-    { 12, new TileData { name = "Pasto", color = 0x2ecc71, solido = false } },
-    { 13, new TileData { name = "Pantano", color = 0x145a32, solido = false } },
-    { 14, new TileData { name = "Tronco", color = 0x8e44ad, solido = true } },
-    { 15, new TileData { name = "Veneno", color = 0x00ff00, solido = false } },
-
-    // Tech
-    { 16, new TileData { name = "Baldosa_Metal", color = 0xbdc3c7, solido = false } },
-    { 17, new TileData { name = "Muro_Titanio", color = 0x2c3e50, solido = true } },
-    { 18, new TileData { name = "Acido", color = 0x39ff14, solido = false } },
-    { 19, new TileData { name = "Portal_Lab", color = 0x9b59b6, solido = false } }
-};
+        // Estado de la aplicación
         private bool isMouseDown = false;
+        private bool modoColocarEnemigo = false;
+
+        // La lista de enemigos pertenece al estado del mapa actual
+        private List<EnemigoSpawn> listaEnemigos = new List<EnemigoSpawn>();
 
         public CreadorMapa()
         {
             InitializeComponent();
+            ConfigurarEditor();
+        }
 
-            // Configuración del ComboBox (Lógica robusta)
-            var lista = new List<object>();
-            foreach (var tile in TILE_DICT)
+        private void ConfigurarEditor()
+        {
+            // --- 1. CONFIGURACIÓN DEL COMBOBOX DE BALDOSAS (TILES) ---
+            // Usamos el diccionario de TileConfig para llenar comboBox1
+            var listaTiles = new List<TileItem>();
+            foreach (var tile in TileConfig.TILE_DICT)
             {
-                lista.Add(new { Id = tile.Key, Nombre = tile.Value.name });
+                listaTiles.Add(new TileItem { Id = tile.Key, Nombre = tile.Value.name });
             }
 
-            comboBox1.DataSource = lista;
-            comboBox1.DisplayMember = "Nombre";
-            comboBox1.ValueMember = "Id";
-            // Eventos de Pincel
+            comboBox1.DataSource = listaTiles;
+            comboBox1.DisplayMember = "Nombre"; // Lo que ve el usuario
+            comboBox1.ValueMember = "Id";       // El valor (int) que usamos para pintar y exportar
+
+
+            // --- 2. CONFIGURACIÓN DEL COMBOBOX DE ENEMIGOS ---
+            // Usamos el diccionario de EnemyConfig para llenar cmbEnemigos
+            var listaEnemies = new List<KeyValuePair<string, EnemigoSpawn>>(EnemyConfig.ENEMY_DICT);
+
+            cmbEnemigos.DataSource = listaEnemies;
+            cmbEnemigos.DisplayMember = "Key";  // Lo que ve el usuario (ej: "Baku de Fuego")
+            cmbEnemigos.ValueMember = "Value";  // El objeto EnemigoSpawn completo que copiamos al colocar
+
+
+            // --- 3.  DE EVENTOS DE LA GRILLA ---
             dataGridView1.MouseDown += (s, e) => isMouseDown = true;
             dataGridView1.MouseUp += (s, e) => isMouseDown = false;
 
+            dataGridView1.CellMouseDown += DataGridView1_CellMouseDown;
+            dataGridView1.CellMouseEnter += DataGridView1_CellMouseEnter;
+            dataGridView1.CellPainting += DataGridView1_CellPainting;
+            dataGridView1.KeyDown += DataGridView1_KeyDown;
 
-            // Optimización de rendimiento (Doble Buffer)
+
             typeof(DataGridView).InvokeMember("DoubleBuffered",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
-                null, dataGridView1, new object[] { true });
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.SetProperty,
+                null,
+                dataGridView1,
+                new object[] { true });
         }
 
-        // EL MÉTODO PINCEL (Lógica central de pintado)
+        // --- SISTEMA DE PINTADO ---
+
         private void PintarCelda(int fila, int columna)
         {
             if (comboBox1.SelectedValue != null)
             {
-                // Forzamos la conversión de tipo (si usaste BindingSource, SelectedValue es un int)
                 int idTile = (int)comboBox1.SelectedValue;
 
-                if (TILE_DICT.ContainsKey(idTile))
+                if (TileConfig.TILE_DICT.ContainsKey(idTile))
                 {
-                    int colorInt = TILE_DICT[idTile].color;
-                    Color color = Color.FromArgb(255,
-                                    (colorInt >> 16) & 0xFF,
-                                    (colorInt >> 8) & 0xFF,
-                                    colorInt & 0xFF);
+                    int colorInt = TileConfig.TILE_DICT[idTile].color;
+                    Color color = Color.FromArgb(255, (colorInt >> 16) & 0xFF, (colorInt >> 8) & 0xFF, colorInt & 0xFF);
 
-                    // IMPORTANTE: Asignamos el estilo a la celda específica, no a la fila o al grid
                     var celda = dataGridView1.Rows[fila].Cells[columna];
                     celda.Style.BackColor = color;
-                    celda.Style.SelectionBackColor = color; // Para que no cambie al seleccionar
+                    celda.Style.SelectionBackColor = color;
                     celda.Value = idTile;
                 }
             }
         }
 
-        private void GenerarGrilla(int tamano)
+        private void ColocarEnemigo(int fila, int columna)
         {
-            dataGridView1.Columns.Clear();
-            dataGridView1.Rows.Clear();
+            var existente = listaEnemigos.Find(en => en.gridX == columna && en.gridY == fila);
 
-            // 1. Crear columnas
-            for (int i = 0; i < tamano; i++)
+            if (existente != null)
             {
-                dataGridView1.Columns.Add(new DataGridViewTextBoxColumn { Width = 30 });
+                listaEnemigos.Remove(existente);
             }
-
-            // 2. Crear filas (Bucle necesario)
-            for (int i = 0; i < tamano; i++)
+            else
             {
-                int index = dataGridView1.Rows.Add();
-                dataGridView1.Rows[index].Height = 30;
-            }
-
-            // 3. Inicializar TODAS las celdas con el ID 0 (Suelo)
-            // Esto es crucial para que luego GenerarCodigoJS() no encuentre valores nulos
-            int colorSuelo = TILE_DICT[0].color;
-            Color color = Color.FromArgb(255, (colorSuelo >> 16) & 0xFF, (colorSuelo >> 8) & 0xFF, colorSuelo & 0xFF);
-
-            foreach (DataGridViewRow row in dataGridView1.Rows)
-            {
-                foreach (DataGridViewCell cell in row.Cells)
+                if (cmbEnemigos.SelectedValue is EnemigoSpawn plantilla)
                 {
-                    cell.Value = 0; // ID del suelo
-                    cell.Style.BackColor = color;
+                    listaEnemigos.Add(new EnemigoSpawn
+                    {
+                        type = plantilla.type,
+                        gridX = columna,
+                        gridY = fila,
+                        vida = plantilla.vida,
+                        velocidad = plantilla.velocidad,
+                        decoradores = plantilla.decoradores,
+                        colorEditor = plantilla.colorEditor // <--- Pasamos el color
+                    });
                 }
             }
-
-            dataGridView1.ClearSelection();
+            dataGridView1.InvalidateCell(columna, fila);
         }
 
+        // --- EVENTOS DE LA INTERFAZ ---
 
-        private void dataGridView1_CellClick_1(object sender, DataGridViewCellEventArgs e)
+        private void DataGridView1_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
         {
             if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
             {
-                PintarCelda(e.RowIndex, e.ColumnIndex);
-            }
-        }
-
-        private void dataGridView1_KeyDown_1(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.Handled = true;
-                if (dataGridView1.CurrentCell != null)
-                {
-                    PintarCelda(dataGridView1.CurrentCell.RowIndex, dataGridView1.CurrentCell.ColumnIndex);
-                }
-            }
-        }
-
-        private void BtnCrearMapa_Click(object sender, EventArgs e)
-        {
-            string input = Microsoft.VisualBasic.Interaction.InputBox("Ingresa el tamaño del mapa (ej: 20):", "Nuevo Mapa", "20");
-
-            if (int.TryParse(input, out int tamano))
-            {
-                GenerarGrilla(tamano);
+                if (modoColocarEnemigo) ColocarEnemigo(e.RowIndex, e.ColumnIndex);
+                else PintarCelda(e.RowIndex, e.ColumnIndex);
             }
         }
 
@@ -181,31 +137,107 @@ namespace CreadorMapas
             }
         }
 
-        private void ColocarEnemigo(int fila, int columna)
+        private void DataGridView1_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            // Verificamos si ya hay un enemigo en esa celda
-            var existente = listaEnemigos.Find(en => en.gridX == columna && en.gridY == fila);
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                // 1. Dibuja el color normal de la baldosa de fondo
+                e.Paint(e.CellBounds, DataGridViewPaintParts.All);
 
-            if (existente != null)
-            {
-                listaEnemigos.Remove(existente); // Si ya hay uno, el clic lo borra
-            }
-            else
-            {
-                listaEnemigos.Add(new EnemigoSpawn
+                // 2. Buscamos si hay un enemigo en esta coordenada
+                var enemigoEnCelda = listaEnemigos.Find(en => en.gridX == e.ColumnIndex && en.gridY == e.RowIndex);
+
+                if (enemigoEnCelda != null)
                 {
-                    tipo = "BAKU", // Por ahora estático, luego lo puedes elegir
-                    gridX = columna,
-                    gridY = fila,
-                    vida = 200
-                });
+                    // Convertimos el Hexadecimal a un Color de C#
+                    int c = enemigoEnCelda.colorEditor;
+                    Color colorEnemigo = Color.FromArgb(255, (c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF);
+
+                    // Creamos un pincel dinámico con ese color
+                    using (Brush pincel = new SolidBrush(colorEnemigo))
+                    {
+                        Rectangle rect = new Rectangle(e.CellBounds.X + 5, e.CellBounds.Y + 5, e.CellBounds.Width - 10, e.CellBounds.Height - 10);
+                        e.Graphics.FillEllipse(pincel, rect);
+                    }
+                }
+
+                e.Handled = true;
             }
-            dataGridView1.InvalidateCell(columna, fila);
         }
+
+        private void DataGridView1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true;
+                if (dataGridView1.CurrentCell != null && !modoColocarEnemigo)
+                {
+                    PintarCelda(dataGridView1.CurrentCell.RowIndex, dataGridView1.CurrentCell.ColumnIndex);
+                }
+            }
+        }
+
+        // --- CREACIÓN Y EXPORTACIÓN ---
+
+        private void BtnCrearMapa_Click(object sender, EventArgs e)
+        {
+            string input = Microsoft.VisualBasic.Interaction.InputBox("Ingresa el tamaño del mapa (ej: 20):", "Nuevo Mapa", "20");
+
+            if (int.TryParse(input, out int tamano))
+            {
+                listaEnemigos.Clear(); // Limpiar enemigos al crear mapa nuevo
+                GenerarGrilla(tamano);
+            }
+        }
+        private void GenerarGrilla(int tamano)
+        {
+            // Limpiamos cualquier grilla anterior
+            dataGridView1.Columns.Clear();
+            dataGridView1.Rows.Clear();
+
+            // 1. Crear columnas
+            for (int i = 0; i < tamano; i++)
+            {
+                dataGridView1.Columns.Add(new DataGridViewTextBoxColumn { Width = 30 });
+            }
+
+            // 2. Crear filas
+            for (int i = 0; i < tamano; i++)
+            {
+                int index = dataGridView1.Rows.Add();
+                dataGridView1.Rows[index].Height = 30;
+            }
+
+            // 3. Inicializar TODAS las celdas con el ID 0 (Suelo)
+            int colorSuelo = TileConfig.TILE_DICT[0].color;
+            Color color = Color.FromArgb(255, (colorSuelo >> 16) & 0xFF, (colorSuelo >> 8) & 0xFF, colorSuelo & 0xFF);
+
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                foreach (DataGridViewCell cell in row.Cells)
+                {
+                    cell.Value = 0; // Guardamos el ID del suelo
+                    cell.Style.BackColor = color; // Pintamos la celda
+                    cell.Style.SelectionBackColor = color; // Evitamos el fondo azul nativo al seleccionar
+                }
+            }
+
+            // Quitamos el foco de la primera celda para que se vea limpio
+            dataGridView1.ClearSelection();
+        }
+        private void BtnCrearEnemigo_Click(object sender, EventArgs e)
+        {
+            modoColocarEnemigo = !modoColocarEnemigo;
+            dataGridView1.Cursor = modoColocarEnemigo ? Cursors.Hand : Cursors.Default;
+            // Opcional: btnCrearEnemigo.BackColor = modoColocarEnemigo ? Color.SeaGreen : Color.FromArgb(0, 122, 204);
+        }
+
         public string GenerarCodigoJS()
         {
             int filas = dataGridView1.RowCount;
             int cols = dataGridView1.ColumnCount;
+
+            // --- 1. CONSTRUIR LA MATRIZ DE BALDOSAS ---
             string js = "export const MATRIZ_NIVEL = [\n";
 
             for (int i = 0; i < filas; i++)
@@ -213,48 +245,74 @@ namespace CreadorMapas
                 js += "    [";
                 for (int j = 0; j < cols; j++)
                 {
-                    // Si la celda está vacía, asumimos tipo 0 (Suelo)
+                    // Leemos el ID guardado en la celda. Si es null, por seguridad ponemos 0 (Suelo)
                     var val = dataGridView1.Rows[i].Cells[j].Value;
-                    js += (val ?? 0).ToString() + (j < cols - 1 ? ", " : "");
+                    js += (val != null ? val.ToString() : "0");
+
+                    // Agrega coma si no es la última columna
+                    if (j < cols - 1) js += ", ";
                 }
-                js += "]" + (i < filas - 1 ? "," : "") + "\n";
+
+                js += "]";
+                // Agrega coma y salto de línea si no es la última fila
+                if (i < filas - 1) js += ",\n";
+                else js += "\n";
             }
-            js += "];";
+            js += "];\n\n";
+
+            // --- 2. CONSTRUIR LOS ENEMIGOS ---
+            js += "export const ENEMIGOS_NIVEL = [\n";
+
+            for (int i = 0; i < listaEnemigos.Count; i++)
+            {
+                var en = listaEnemigos[i];
+
+                // Formatear array de decoradores si existe (ej: ['FIRE', 'SPEED'])
+                string decoradoresStr = "null";
+                if (en.decoradores != null && en.decoradores.Length > 0)
+                {
+                    decoradoresStr = "['" + string.Join("', '", en.decoradores) + "']";
+                }
+
+                js += $"    {{ type: '{en.type}', gridX: {en.gridX}, gridY: {en.gridY}, vida: {en.vida}, velocidad: {en.velocidad}, decoradores: {decoradoresStr} }}";
+
+                // Agrega coma y salto de línea si no es el último enemigo
+                if (i < listaEnemigos.Count - 1) js += ",\n";
+                else js += "\n";
+            }
+            js += "];\n";
+
             return js;
         }
 
-        private void BtnCrearEnemigo_Click(object sender, EventArgs e)
+        private void btnExportar_Click(object sender, EventArgs e)
         {
-            modoColocarEnemigo = !modoColocarEnemigo;
-
-            // Cambiamos el cursor al instante
-            dataGridView1.Cursor = modoColocarEnemigo ? Cursors.Hand : Cursors.Default;
-
-            // Feedback visual en el botón
-            BtnCrearEnemigo.BackColor = modoColocarEnemigo ? Color.SeaGreen : Color.FromArgb(0, 122, 204);
-        }
-
-        private void dataGridView1_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
-        {
-            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            if (dataGridView1.RowCount == 0)
             {
-                if (modoColocarEnemigo)
+                MessageBox.Show("Primero debes crear un mapa.", "Atención", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (SaveFileDialog dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "Archivos JavaScript (*.js)|*.js"; 
+                dialog.Title = "Guardar nivel exportado";
+                dialog.FileName = "Nivel_Nuevo.js"; 
+
+                if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    ColocarEnemigo(e.RowIndex, e.ColumnIndex);
-                }
-                else
-                {
-                    PintarCelda(e.RowIndex, e.ColumnIndex);
+                    string codigoJS = GenerarCodigoJS();
+
+                    System.IO.File.WriteAllText(dialog.FileName, codigoJS);
+
+                    MessageBox.Show("¡Nivel guardado correctamente en:\n" + dialog.FileName,
+                                    "Exportación Exitosa",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Information);
                 }
             }
         }
 
-        private void dataGridView1_CellMouseEnter(object sender, DataGridViewCellEventArgs e)
-        {
-            if (isMouseDown && e.RowIndex >= 0 && e.ColumnIndex >= 0 && !modoColocarEnemigo)
-            {
-                PintarCelda(e.RowIndex, e.ColumnIndex);
-            }
-        }
+
     }
 }

@@ -73,10 +73,7 @@ export class EnemigoBase {
         if (this.sprite) this.sprite.visible = false;
     }
 }
-const ENEMY_CLASSES = {
-    'BAKU': Baku,
-    'BASE': EnemigoBase
-};
+
 export class Baku extends EnemigoBase {
     constructor(data, tileSize) {
         // Llamamos al constructor del padre (EnemigoBase)
@@ -112,7 +109,7 @@ export class Baku extends EnemigoBase {
     }
 }
 // --- DECORADOR BASE (Delegación directa, sin Proxy para ganar rendimiento) ---
-class EnemigoDecorator {
+export class EnemigoDecorator {
     constructor(enemigo) {
         this.enemigo = enemigo;
     }
@@ -135,7 +132,7 @@ class EnemigoDecorator {
 }
 
 // --- CONCRETO: Decorador de Fuego ---
-class FireDecorator extends EnemigoDecorator {
+export class FireDecorator extends EnemigoDecorator {
     update(dt, player, engine) {
         super.update(dt, player, engine);
 
@@ -149,7 +146,7 @@ class FireDecorator extends EnemigoDecorator {
 }
 
 // --- CONCRETO: Decorador de Velocidad ---
-class SpeedDecorator extends EnemigoDecorator {
+export class SpeedDecorator extends EnemigoDecorator {
     constructor(enemigo, factor = 1.5) {
         super(enemigo);
         this.factor = factor;
@@ -165,7 +162,7 @@ class SpeedDecorator extends EnemigoDecorator {
 }
 
 // --- CONCRETO: Decorador Splitter (Optimizado para POOL) ---
-class SplitterDecorator extends EnemigoDecorator {
+export class SplitterDecorator extends EnemigoDecorator {
     constructor(enemigo, engineRef) {
         super(enemigo);
         this.engine = engineRef;
@@ -201,3 +198,8 @@ class SplitterDecorator extends EnemigoDecorator {
         }
     }
 }
+
+export const ENEMY_CLASSES = {
+    'BAKU': Baku,
+    'BASE': EnemigoBase
+};
