@@ -1,4 +1,3 @@
-
 export class TilemapRenderer {
     constructor(contenedor, matriz, tileSize) {
         this.contenedor = contenedor;
@@ -12,29 +11,35 @@ export class TilemapRenderer {
     // --------------------------------------------------------
     // 1. EL CONSTRUCTOR DEL POOL (O(N) - Solo al inicio)
     // --------------------------------------------------------
+    
     inicializarPool(ancho, alto) {
         this.colsPantalla = Math.ceil(ancho / this.tileSize) + 2;
         this.filasPantalla = Math.ceil(alto / this.tileSize) + 2;
         const totalBloques = this.colsPantalla * this.filasPantalla;
 
-        // TRUCO POKI: PixiJS tiene una textura de 1x1 píxel en memoria.
-        // No necesitas cargar imágenes PNG externas (ahorras muchísimos KB).
-        const texturaBase = PIXI.Texture.WHITE;
+        // LA MAGIA: Dibujamos una baldosa 3D con bordes redondeados, sombra y bisel usando SVG
+        const svgTile = `
+        <svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="7" width="58" height="55" rx="12" fill="#000000" opacity="0.3"/>
+            <rect x="3" y="3" width="58" height="53" rx="12" fill="#ffffff"/>
+            <rect x="3" y="3" width="58" height="12" rx="12" fill="#ffffff" opacity="0.7"/>
+        </svg>`;
+        
+        // PixiJS lee el código de arriba y crea una textura nativa
+        const urlTextura = 'data:image/svg+xml;charset=utf8,' + encodeURIComponent(svgTile);
+        const texturaBase = PIXI.Texture.from(urlTextura);
 
         for (let i = 0; i < totalBloques; i++) {
-            // Usamos Sprites, que la GPU procesa miles de veces más rápido que Graphics
             const sprite = new PIXI.Sprite(texturaBase);
 
-            // Escalamos el píxel de 1x1 al tamaño de tu bloque (ej: 48x48)
+            // Ya no necesitamos restar márgenes matemáticos, el SVG ya trae su propio espaciado interno
             sprite.width = this.tileSize;
             sprite.height = this.tileSize;
 
-            // Tintamos el sprite blanco al color que queramos (gris pared)
             sprite.tint = 0x444444;
-
-            // Optimización: Desactivamos eventos del ratón para este bloque
             sprite.eventMode = 'none';
             sprite.visible = false;
+            
             this.poolBloques.push(sprite);
             this.contenedor.addChild(sprite);
         }
@@ -43,13 +48,14 @@ export class TilemapRenderer {
     // --------------------------------------------------------
     // 2. EL MOTOR GRÁFICO (O(M) - Donde M es la pantalla visible)
     // --------------------------------------------------------
-actualizarVista(camaraX, camaraY) {
+
+    actualizarVista(camaraX, camaraY) {
         const startCol = Math.floor((camaraX - window.innerWidth / 2) / this.tileSize);
         const startRow = Math.floor((camaraY - window.innerHeight / 2) / this.tileSize);
-
+        
         let index = 0;
+        const tiempo = performance.now() / 1000;
 
-        // Aquí es donde recorremos la porción VISIBLE de la matriz
         for (let row = 0; row < this.filasPantalla; row++) {
             for (let col = 0; col < this.colsPantalla; col++) {
 
@@ -57,24 +63,50 @@ actualizarVista(camaraX, camaraY) {
                 const mRow = startRow + row;
                 const mCol = startCol + col;
 
-                // Si estamos dentro del mapa válido
                 if (mRow >= 0 && mRow < this.matriz.length && mCol >= 0 && mCol < this.matriz[0].length) {
 
-                    // 1. Leemos el número de la matriz (ej. 4 para Hielo)
                     const tipoNumero = this.matriz[mRow][mCol];
+                    const visual = TILE_DICT[tipoNumero] || TILE_DICT[0]; 
 
-                    // 2. ¡CORREGIDO!: Buscamos sus reglas usando el nombre correcto del catálogo
-                    const visual = TILE_DICT[tipoNumero] || TILE_DICT[0]; // Fallback al Suelo (0) por si hay un error
-
-                    // 3. Aplicamos el visual de forma dinámica utilizando sus propiedades
-                    // Si el tile es el ID 1 (Pared_Base), no tiene propiedad "dibuja" explícita, 
-                    // pero al existir en el diccionario podemos validar si queremos renderizarlo.
-                    // Tip: Asegúrate de que tus objetos del diccionario tengan propiedades consistentes 
-                    // o simplemente usa el color si existe.
                     if (visual) {
-                        sprite.tint = visual.color; // Pintamos del color correspondiente (ej: 0xe67e22 para Lava)
+                        sprite.tint = visual.color; 
+                        
+                        // Posición directa y exacta
                         sprite.x = mCol * this.tileSize;
                         sprite.y = mRow * this.tileSize;
+
+                        sprite.blendMode = PIXI.BLEND_MODES.NORMAL;
+                        let opacidadFinal = visual.alpha || 1.0;
+
+                        // SHADERS
+                        if (tipoNumero === 4) { 
+                            const semillaDestello = Math.sin(mRow * 12.9898 + mCol * 78.233 + tiempo * 8);
+                            if (semillaDestello > 0.98) {
+                                sprite.tint = 0xFFFFFF;
+                                sprite.blendMode = PIXI.BLEND_MODES.ADD;
+                                opacidadFinal = 1.0;
+                            } else {
+                                sprite.tint = visual.color; 
+                                sprite.blendMode = PIXI.BLEND_MODES.NORMAL;
+                                const olaFrio = Math.sin((mRow + mCol) * 0.5 - tiempo * 3); 
+                                opacidadFinal = 0.6 + (olaFrio * 0.2); 
+                            }
+                        } else if (tipoNumero === 9) { 
+                            sprite.blendMode = PIXI.BLEND_MODES.ADD;
+                            opacidadFinal = 0.7 + (Math.sin(tiempo * 5) * 0.3); 
+                        } else if (tipoNumero === 19) { 
+                            sprite.blendMode = PIXI.BLEND_MODES.ADD;
+                            opacidadFinal = Math.random() > 0.05 ? 1.0 : 0.2;
+                            sprite.tint = (Math.sin(tiempo * 10) > 0) ? 0x9b59b6 : 0x8e44ad;
+                        } else if (tipoNumero === 2) {
+                            sprite.blendMode = PIXI.BLEND_MODES.ADD;
+                            opacidadFinal = 0.8 + (Math.abs(Math.cos(tiempo * 8)) * 0.2);
+                        } else if (!visual.solido) {
+                            // Suelos base
+                            if ((mRow + mCol) % 2 === 0) opacidadFinal *= 0.85; 
+                        }
+
+                        sprite.alpha = opacidadFinal;
                         if (!sprite.visible) sprite.visible = true;
                     } else {
                         if (sprite.visible) sprite.visible = false;
@@ -85,6 +117,7 @@ actualizarVista(camaraX, camaraY) {
             }
         }
     }
+    
     // --------------------------------------------------------
     // 3. MÉTODOS DE SEGURIDAD Y SOPORTE
     // --------------------------------------------------------
@@ -99,14 +132,11 @@ actualizarVista(camaraX, camaraY) {
     }
 
     redimensionarPantalla(nuevoAncho, nuevoAlto) {
-        // Limpiar el pool viejo para evitar Memory Leaks
         for (const sprite of this.poolBloques) {
             sprite.destroy();
         }
         this.poolBloques = [];
         this.contenedor.removeChildren();
-
-        // Reconstruir con el nuevo tamaño
         this.inicializarPool(nuevoAncho, nuevoAlto);
     }
 
@@ -118,7 +148,6 @@ actualizarVista(camaraX, camaraY) {
         this.matriz = null;
     }
 }
-
 
 
 export const TILE_DICT = {
