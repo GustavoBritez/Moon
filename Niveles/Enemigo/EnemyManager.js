@@ -1,4 +1,5 @@
 import { EnemigoBase, ENEMY_CLASSES, FireDecorator } from './EnemigoBase.js';
+
 export class EnemyManager {
     constructor(capaEntidades, tileSize, configEnemigos) {
         this.capaEntidades = capaEntidades;
@@ -30,27 +31,45 @@ export class EnemyManager {
 
     fabricaDeEnemigos(data) {
         // 1. Instanciamos la clase que corresponda
-        // Si es un Baku, instancia Baku. Si es Base, instancia EnemigoBase.
         const EnemyClass = ENEMY_CLASSES[data.type] || EnemigoBase;
         let enemigo = new EnemyClass(data, this.tileSize);
 
-        // 2. Si el enemigo DEBE llevar decoración extra (ej: un Baku de fuego),
-        // se la ponemos aquí, pero solo si es necesario.
+        // 2. Si el enemigo DEBE llevar decoración extra
         if (data.decoradores) {
             for (const dec of data.decoradores) {
                 if (dec === 'FIRE') enemigo = new FireDecorator(enemigo);
             }
         }
-        // 3. Posicionamiento (Independiente de qué clase sea)
+        
+        // 3. Posicionamiento 
         enemigo.x = data.gridX * this.tileSize + (this.tileSize / 2);
         enemigo.y = data.gridY * this.tileSize + (this.tileSize / 2);
 
-        this.enemies.push(enemigo);
+        // ==========================================
+        // 4. ¡LA SOLUCIÓN! DARLES CUERPO GRÁFICO (PIXI.Graphics)
+        // ==========================================
+        const cuerpoEnemigo = new PIXI.Graphics();
+        
+        // Verificamos el tipo para darle distinta forma y color
+        if (data.type === 'BAKU' || enemigo.tipo === 'BAKU') {
+            cuerpoEnemigo.beginFill(0x8e44ad); // Morado para Baku
+            cuerpoEnemigo.drawRect(-12, -12, 24, 24); // Cuadrado
+        } else {
+            cuerpoEnemigo.beginFill(0xff0000); // Rojo para Enemigo Base
+            cuerpoEnemigo.drawCircle(0, 0, 12); // Círculo
+        }
+        cuerpoEnemigo.endFill();
+
+        enemigo.sprite = cuerpoEnemigo;
+        
+        // Los agregamos a la escena para que se puedan ver
+        this.capaEntidades.addChild(enemigo.sprite);
+        // ==========================================
+
         return enemigo;
     }
 
     inicializar() {
-        // Validación de seguridad para evitar errores si la config está vacía
         if (!this.configEnemigos || !Array.isArray(this.configEnemigos)) {
             console.warn("EnemyManager: No se encontraron configuraciones de enemigos para inicializar.");
             return;
@@ -61,7 +80,7 @@ export class EnemyManager {
             this.enemies.push(nuevoEnemigo);
         }
 
-        console.log(`EnemyManager: Inicializados ${this.enemies.length} enemigos.`);
+        console.log(`EnemyManager: Inicializados ${this.enemies.length} enemigos visibles.`);
     }
 
     destroy() {

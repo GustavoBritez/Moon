@@ -145,18 +145,21 @@ export class GameFactory {
                                 ${datosNivel.title}
                             </h2>
                             
-                            <div id="mobileControls" style="display: flex; width: 100%; justify-content: space-between; padding: 30px; position: absolute; bottom: 0; box-sizing: border-box; z-index: 10; touch-action: none;">
+                            <div id="mobileControls" style="display: flex; width: 100%; justify-content: space-between; padding: 30px; position: absolute; bottom: 0; box-sizing: border-box; z-index: 10; touch-action: none; pointer-events: none;">
+                                <!-- Joystick WASD -->
                                 <div style="display: grid; grid-template-columns: 60px 60px 60px; grid-gap: 5px;">
                                     <div></div>
-                                    <button id="btnW" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px);">W</button>
+                                    <button id="btnW" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px); pointer-events: auto;">W</button>
                                     <div></div>
-                                    <button id="btnA" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px);">A</button>
-                                    <button id="btnS" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px);">S</button>
-                                    <button id="btnD" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px);">D</button>
+                                    <button id="btnA" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px); pointer-events: auto;">A</button>
+                                    <button id="btnS" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px); pointer-events: auto;">S</button>
+                                    <button id="btnD" style="height: 60px; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.5); border-radius: 10px; color: white; font-weight: bold; font-size: 20px; backdrop-filter: blur(4px); pointer-events: auto;">D</button>
                                 </div>
+                                
+                                <!-- Botones de Acción -->
                                 <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 10px;">
-                                    <button id="btnShift" style="width: 80px; height: 50px; background: rgba(241,196,15,0.6); border: 2px solid #f1c40f; border-radius: 12px; color: white; font-weight: bold; backdrop-filter: blur(4px);">TURBO</button>
-                                    <button id="btnSpace" style="width: 80px; height: 80px; background: rgba(52,152,219,0.6); border: 2px solid #3498db; border-radius: 50%; color: white; font-weight: bold; backdrop-filter: blur(4px);">DISPARO</button>
+                                    <button id="btnShift" style="width: 80px; height: 50px; background: rgba(241,196,15,0.6); border: 2px solid #f1c40f; border-radius: 12px; color: white; font-weight: bold; backdrop-filter: blur(4px); pointer-events: auto;">TURBO</button>
+                                    <button id="btnSpace" style="width: 80px; height: 80px; background: rgba(52,152,219,0.6); border: 2px solid #3498db; border-radius: 50%; color: white; font-weight: bold; backdrop-filter: blur(4px); pointer-events: auto;">DISPARO</button>
                                 </div>
                             </div>
 

@@ -17,7 +17,6 @@ export class Nivel_1 {
         this.eventBus = eventBus;
         this.projectiles = [];
 
-        // Clonamos la matriz para proteger los datos originales de nivel
         this.mapaMatriz = config.matriz.map((fila) => fila.slice());
         this.settings = window.GAME_TUNING || { tileSize: 32, playerSpeed: 170, playerLives: 3 };
         this.tileSize = this.settings.tileSize;
@@ -26,23 +25,22 @@ export class Nivel_1 {
         this.app = new PIXI.Application({
             view: canvas,
             resizeTo: window,
-            backgroundColor: 0x14121f,
+            backgroundColor: 0xfff4f8,
             antialias: true,
             autoDensity: true,
             resolution: window.devicePixelRatio || 1,
         });
 
-        // 2. Estructurar el árbol de nodos de PixiJS (Capas)
+        // 2. Estructurar el árbol de nodos
         this.mundo = new PIXI.Container();
         this.capaFondo = new PIXI.Container();
         this.capaEntidades = new PIXI.Container();
         this.capaUI = new PIXI.Container();
 
-
         this.mundo.addChild(this.capaFondo, this.capaEntidades);
         this.app.stage.addChild(this.mundo, this.capaUI);
 
-        // 3. Inicializar el Modelo de Datos del Jugador (Datos puros)
+        // 3. Inicializar el Modelo de Datos del Jugador
         this.player = new Player(
             1.5 * this.tileSize,
             1.5 * this.tileSize,
@@ -50,114 +48,234 @@ export class Nivel_1 {
             this.settings.playerLives
         );
 
-        // 4. Inyección de dependencias y desacoplamiento de Gerentes (Managers)
+        // 4. Mánagers
         this.inputManager = new InputManager();
         this.collisionManager = new CollisionManager(this.mapaMatriz, this.tileSize);
-
-        // El controlador asume la lógica del jugador usando sus dependencias
         this.playerController = new PlayerController(this.player, this.inputManager, this.collisionManager);
-
         this.renderizador = new TilemapRenderer(this.capaFondo, this.mapaMatriz, this.tileSize);
         this.uiManager = new UIManager(this.capaUI);
         this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, this.config.enemigos);
 
-        this.camara = {
-            x: this.player.x,
-            y: this.player.y
-        };
+        this.camara = { x: this.player.x, y: this.player.y };
         this.gameOver = false;
         this.isPaused = false;
 
         this.handleResize = () => this.redimensionarEscena();
+        
+        // ========================================================
+        // VARIABLES DE CONTROL DE DISPARO Y RATÓN
+        // ========================================================
+        this.isShooting = false;
+        this.fireRate = 0.15; 
+        this.fireTimer = 0;
+        this.mouseX = window.innerWidth / 2;
+        this.mouseY = window.innerHeight / 2;
+
+        // 1. Rastreador global del ratón
+        this.handlePointerMove = (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
+        };
+
+        // 2. Detectores globales de clic (Forzando el disparo inicial)
+        this.handlePointerDown = (e) => { 
+            if (e.button === 0) { 
+                this.isShooting = true; 
+                
+                // Disparo inmediato al hacer clic (rompe la latencia del bucle)
+                if (this.fireTimer <= 0) {
+                    this.disparar();
+                    this.fireTimer = this.fireRate;
+                }
+            }
+        };
+        
+        this.handlePointerUp = (e) => { 
+            if (e.button === 0) {
+                this.isShooting = false; 
+            }
+        };
+
         this.start();
     }
 
     start() {
-        // Suscribirse a eventos del navegador
         window.addEventListener('resize', this.handleResize);
+        
+        // Atrapamos eventos a nivel ventana
+        window.addEventListener('pointermove', this.handlePointerMove);
+        window.addEventListener('pointerdown', this.handlePointerDown);
+        window.addEventListener('pointerup', this.handlePointerUp);
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Preparar buffers de memoria y pools de objetos gráficos
         this.renderizador.inicializarPool(window.innerWidth, window.innerHeight);
         this.enemyManager.inicializar();
 
-        // Crear la representación visual (Sprite) de Kitty y enlazarla al modelo
-        let graficoKitty = new PIXI.Graphics();
-        graficoKitty.beginFill(0xff6584); // Rosado característico
-        graficoKitty.drawCircle(0, 0, this.tileSize * 0.25);
-        graficoKitty.endFill();
+        const radioBase = this.tileSize * 0.36;
+        const bolaKitty = new PIXI.Container();
 
-        this.player.setSprite(graficoKitty);
+        const sombra = new PIXI.Graphics();
+        sombra.beginFill(0x000000, 0.22);
+        sombra.drawEllipse(4, radioBase * 0.78, radioBase * 0.92, radioBase * 0.38);
+        sombra.endFill();
+
+        const brilloExterior = new PIXI.Graphics();
+        brilloExterior.beginFill(0xff9ab4, 0.22);
+        brilloExterior.drawCircle(0, 0, radioBase + 3);
+        brilloExterior.endFill();
+
+        const cuerpo = new PIXI.Graphics();
+        cuerpo.beginFill(0xff6584);
+        cuerpo.drawCircle(0, 0, radioBase);
+        cuerpo.endFill();
+
+        const nucleo = new PIXI.Graphics();
+        nucleo.beginFill(0xff89a4, 0.95);
+        nucleo.drawCircle(-radioBase * 0.18, -radioBase * 0.18, radioBase * 0.62);
+        nucleo.endFill();
+
+        const brillo = new PIXI.Graphics();
+        brillo.beginFill(0xffffff, 0.92);
+        brillo.drawCircle(-radioBase * 0.28, -radioBase * 0.28, radioBase * 0.18);
+        brillo.endFill();
+
+        const destello = new PIXI.Graphics();
+        destello.beginFill(0xffffff, 0.18);
+        destello.drawCircle(-radioBase * 0.42, -radioBase * 0.42, radioBase * 0.42);
+        destello.endFill();
+
+        bolaKitty.addChild(sombra, brilloExterior, cuerpo, nucleo, destello, brillo);
+
+        this.player.setSprite(bolaKitty);
         this.capaEntidades.addChild(this.player.sprite);
 
-        // Forzar actualización visual inicial del HUD
         this.uiManager.actualizar(this.player);
-
-        // Iniciar el Ticker principal (Game Loop) sincronizado a los hercios de la pantalla
         this.app.ticker.add((delta) => this.update(delta));
     }
+
+    // ========================================================
+    // HABILIDADES DEL JUGADOR
+    // ========================================================
+
+    disparar() {
+        if (this.gameOver || this.isPaused || this.player.isDead) return;
+
+        const mouseMundoX = this.mouseX - this.mundo.x;
+        const mouseMundoY = this.mouseY - this.mundo.y;
+
+        const dx = mouseMundoX - this.player.x;
+        const dy = mouseMundoY - this.player.y;
+
+        const angulo = Math.atan2(dy, dx);
+        const velocidadBala = 600;
+
+        const spriteBala = new PIXI.Graphics();
+        spriteBala.lineStyle(2, 0xffffff); // Borde blanco añadido para mayor visibilidad
+        spriteBala.beginFill(0x00ffff); 
+        spriteBala.drawCircle(0, 0, 5);
+        spriteBala.endFill();
+        spriteBala.blendMode = PIXI.BLEND_MODES.ADD; 
+
+        const bala = {
+            x: this.player.x,
+            y: this.player.y,
+            vx: Math.cos(angulo) * velocidadBala,
+            vy: Math.sin(angulo) * velocidadBala,
+            sprite: spriteBala
+        };
+
+        bala.sprite.x = bala.x;
+        bala.sprite.y = bala.y;
+        this.capaEntidades.addChild(bala.sprite);
+        this.projectiles.push(bala);
+
+        console.log(`¡Pew! Bala disparada hacia X:${Math.floor(mouseMundoX)} Y:${Math.floor(mouseMundoY)}`);
+    }
+
+    activarTurbo() {
+        if (this.gameOver || this.isPaused || this.player.isDead || this.player.isTurbo) return;
+
+        this.player.isTurbo = true;
+        const velocidadOriginal = this.player.speed;
+        this.player.speed *= 2.5; 
+
+        setTimeout(() => {
+            if (this.player) {
+                this.player.speed = velocidadOriginal;
+                this.player.isTurbo = false;
+            }
+        }, 300);
+    }
+
+    // ========================================================
+    // CICLO DE JUEGO
+    // ========================================================
 
     update(delta) {
         if (this.gameOver || this.isPaused) return;
 
         const dt = delta / this.app.ticker.FPS;
 
-        // 1. Actualización en cascada de la lógica de los componentes autónomos
+        // ¡AQUÍ FALTABA ESTO! Gestión del reloj de disparo
+        if (this.fireTimer > 0) {
+            this.fireTimer -= dt;
+        }
+
+        if (this.isShooting && this.fireTimer <= 0) {
+            this.disparar();
+            this.fireTimer = this.fireRate; 
+        }
+
         this.playerController.update(dt);
         this.enemyManager.update(dt, this.player, this);
         this.actualizarProyectiles(dt);
 
-        // 2. Evaluación de reglas del juego globales
         this.verificarVictoria();
-
-        // 3. Procesamiento físico de la posición de la cámara (Caja de zona muerta)
         this.actualizarCamara();
 
-        // 4. Sincronización final de la vista gráfica y la interfaz de usuario
         this.renderizador.actualizarVista(this.camara.x, this.camara.y);
         this.uiManager.actualizar(this.player);
     }
 
     actualizarProyectiles(dt) {
-        // OPTIMIZACIÓN 1: Sacamos la matemática constante fuera de los bucles.
-        // Sumamos los radios (0.15 + 0.22 = 0.37) y elevamos el resultado al cuadrado.
         const radioColision = this.tileSize * 0.37;
         const colisionSq = radioColision * radioColision;
 
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             let bala = this.projectiles[i];
 
+            if (isNaN(bala.vx) || isNaN(bala.vy)) {
+                console.error("⚠️ ERROR: La velocidad de la bala es NaN.");
+            }
+
             bala.x += bala.vx * dt;
             bala.y += bala.vy * dt;
             bala.sprite.x = bala.x;
             bala.sprite.y = bala.y;
 
-            // Choca contra pared
             if (this.collisionManager.esPared(bala.x, bala.y)) {
                 bala.sprite.destroy();
                 this.projectiles.splice(i, 1);
                 continue;
             }
 
-            // Choca contra enemigo
             let impactoConfirmado = false;
 
             for (let j = 0; j < this.enemyManager.enemies.length; j++) {
                 let enemigo = this.enemyManager.enemies[j];
 
-                // OPTIMIZACIÓN 2: Teorema de Pitágoras sin raíz cuadrada (O(1) ultrarrápido)
                 let dx = bala.x - enemigo.x;
                 let dy = bala.y - enemigo.y;
                 let distSq = (dx * dx) + (dy * dy);
 
-                // Comparamos los cuadrados directamente
                 if (distSq < colisionSq) {
                     enemigo.recibirGolpe(25, 'FISICO');
                     impactoConfirmado = true;
-                    break; // Rompemos el bucle del enemigo actual
+                    break; 
                 }
             }
 
-            // Limpieza de la bala tras confirmar el impacto
             if (impactoConfirmado) {
                 bala.sprite.destroy();
                 this.projectiles.splice(i, 1);
@@ -166,8 +284,8 @@ export class Nivel_1 {
     }
 
     actualizarCamara() {
-        const zonaMuertaW = 150; // 100px a cada lado
-        const zonaMuertaH = 100;  // 80px arriba/abajo
+        const zonaMuertaW = 150; 
+        const zonaMuertaH = 100; 
 
         const dx = this.player.x - this.camara.x;
         const dy = this.player.y - this.camara.y;
@@ -185,10 +303,18 @@ export class Nivel_1 {
     }
 
     verificarVictoria() {
-        // Si el mánager reporta que la lista está limpia, el nivel se da por concluido
+        // Si no quedan enemigos y el juego no ha terminado...
         if (this.enemyManager.enemies.length === 0 && !this.gameOver) {
             this.gameOver = true;
-            if (this.eventBus) {
+            
+            console.log("🏆 ¡Todos los enemigos eliminados! Nivel completado.");
+
+            // Verificamos si lo que nos pasó el GameFactory es una función (Callback)
+            if (typeof this.eventBus === 'function') {
+                this.eventBus('LEVEL_VICTORY'); // La ejecutamos directamente
+            } 
+            // Por si en el futuro decides cambiar la arquitectura a un EventBus real
+            else if (this.eventBus && typeof this.eventBus.emit === 'function') {
                 this.eventBus.emit('LEVEL_VICTORY');
             }
         }
@@ -201,16 +327,12 @@ export class Nivel_1 {
 
         this.resizeTimeout = setTimeout(() => {
             if (this.app && this.app.renderer) {
-                // 3. Ajustamos el tamaño del renderizador de PixiJS a la nueva ventana
                 this.app.renderer.resize(window.innerWidth, window.innerHeight);
 
-                // 4. Si nuestro renderizador de mapas tiene una piscina de objetos (pool),
-                // le notificamos para que ajuste sus buffers de memoria y no se desborden.
                 if (this.renderizador && typeof this.renderizador.redimensionarPantalla === 'function') {
                     this.renderizador.redimensionarPantalla(window.innerWidth, window.innerHeight);
                 }
 
-                // Opcional: Si tienes elementos de UI que necesiten reposicionarse
                 if (this.uiManager && typeof this.uiManager.reajustarUI === 'function') {
                     this.uiManager.reajustarUI(window.innerWidth, window.innerHeight);
                 }
@@ -219,29 +341,28 @@ export class Nivel_1 {
     }
 
     destroy() {
-        // 1. Limpieza de eventos y temporizadores (Evita ejecuciones fantasma)
         clearTimeout(this.resizeTimeout);
         window.removeEventListener('resize', this.handleResize);
+        window.removeEventListener('pointermove', this.handlePointerMove);
+        window.removeEventListener('pointerdown', this.handlePointerDown);
+        window.removeEventListener('pointerup', this.handlePointerUp);
+        window.removeEventListener('contextmenu', (e) => e.preventDefault());
 
-        // 2. Destrucción de managers (Inyección de dependencias)
-        // Usamos una lista para evitar repetir el 'if' constantemente
-        const managers = [this.inputManager, this.renderizador, this.uiManager, this.enemyManager, this.projectileManager];
+        const managers = [this.inputManager, this.renderizador, this.uiManager, this.enemyManager];
         for (const manager of managers) {
             if (manager && typeof manager.destroy === 'function') {
                 manager.destroy();
             }
         }
 
-        // 3. Limpieza profunda del modelo y sprites
         if (this.player) {
             if (this.player.sprite) {
-                this.player.sprite.destroy(true); // 'true' asegura destruir texturas/hijos
+                this.player.sprite.destroy(true);
                 this.player.sprite = null;
             }
-            this.player = null; // Eliminamos la referencia al objeto del jugador
+            this.player = null;
         }
 
-        // 4. Liberación total de PixiJS (Destrucción jerárquica)
         if (this.app) {
             this.app.destroy(true, {
                 children: true,
@@ -251,8 +372,6 @@ export class Nivel_1 {
             this.app = null;
         }
 
-        // 5. Nulificación final de referencias (La técnica clave)
-        // Esto es lo que realmente permite que el Garbage Collector libere la RAM
         this.mapaMatriz = null;
         this.config = null;
         this.eventBus = null;

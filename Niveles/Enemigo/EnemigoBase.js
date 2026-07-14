@@ -24,7 +24,6 @@ export class EnemigoBase {
         if (this.isDead) return;
 
         const porcentajeResistencia = this.resistencias[tipoElemento] || 0;
-
         const bonusDefensa = this.defensaBase * porcentajeResistencia;
         const defensaTotal = this.defensaBase + bonusDefensa;
 
@@ -41,7 +40,6 @@ export class EnemigoBase {
 
     update(dt, player, engine) {
         if (this.isDead) return;
-
 
         this.recalcularTimer -= dt;
 
@@ -76,26 +74,24 @@ export class EnemigoBase {
 
 export class Baku extends EnemigoBase {
     constructor(data, tileSize) {
-        // Llamamos al constructor del padre (EnemigoBase)
         super(data, tileSize);
 
-        // Sobreescribimos los valores específicos de Baku
-        // Si el JSON no trae valores, estos serán sus "por defecto"
         this.tipo = 'BAKU';
-        this.velocidad = 150; // Es más rápido que un enemigo base
-
-        // Stats específicos de Baku
+        this.velocidad = 150; 
         this.vidaMaxima = 200;
         this.vidaActual = 200;
         this.defensaBase = 15;
+        
+        // ¡LA SOLUCIÓN PARA BAKU! (Le damos una dirección inicial)
+        this.dirX = 1; 
     }
+    
     update(dt, player, engine) {
         // 1. Calculamos hacia dónde queremos ir
         this.vx = this.dirX * this.velocidad;
         const nextX = this.x + (this.vx * dt);
 
         // 2. LE PREGUNTAMOS AL INSPECTOR (CollisionManager)
-        // Usamos el método que ya tienes en tu engine (asumiendo que engine trae el collisionManager)
         const hayPared = engine.collisionManager.esPared(nextX, this.y);
 
         if (hayPared) {
@@ -105,22 +101,27 @@ export class Baku extends EnemigoBase {
         }
 
         // 3. Actualizamos visual
-        if (this.sprite) this.sprite.x = this.x;
+        if (this.sprite) {
+            this.sprite.x = this.x;
+            this.sprite.y = this.y; // Agregado para que no pierda su Y
+        }
     }
 }
-// --- DECORADOR BASE (Delegación directa, sin Proxy para ganar rendimiento) ---
+
+// --- DECORADOR BASE ---
 export class EnemigoDecorator {
     constructor(enemigo) {
         this.enemigo = enemigo;
     }
 
-    // Delegamos todas las llamadas al objeto decorado
     get x() { return this.enemigo.x; }
     get y() { return this.enemigo.y; }
     set x(val) { this.enemigo.x = val; }
     set y(val) { this.enemigo.y = val; }
     get sprite() { return this.enemigo.sprite; }
     set sprite(val) { this.enemigo.sprite = val; }
+    get isDead() { return this.enemigo.isDead; } // Importante para el manager
+    get tipo() { return this.enemigo.tipo; }
 
     recibirGolpe(cantidadDaño, tipoElemento) {
         this.enemigo.recibirGolpe(cantidadDaño, tipoElemento);
@@ -138,8 +139,8 @@ export class FireDecorator extends EnemigoDecorator {
 
         const dx = player.x - this.enemigo.x;
         const dy = player.y - this.enemigo.y;
-        // Math.hypot es lento, usamos distSq manual
-        if ((dx * dx + dy * dy) < 1600) { // 40 al cuadrado
+        
+        if ((dx * dx + dy * dy) < 1600) { 
             console.log("¡Jugador quemándose!");
         }
     }
@@ -153,24 +154,20 @@ export class SpeedDecorator extends EnemigoDecorator {
     }
 
     update(dt, player, engine) {
-        // Multiplicamos la velocidad solo una vez por frame
         this.enemigo.velocidad *= this.factor;
         super.update(dt, player, engine);
-        // Reseteamos para que no se multiplique exponencialmente
         this.enemigo.velocidad /= this.factor;
     }
 }
 
-// --- CONCRETO: Decorador Splitter (Optimizado para POOL) ---
+// --- CONCRETO: Decorador Splitter ---
 export class SplitterDecorator extends EnemigoDecorator {
     constructor(enemigo, engineRef) {
         super(enemigo);
         this.engine = engineRef;
     }
 
-    // El Splitter intercepta el golpe para decidir si muere o se divide
     recibirGolpe(cantidadDaño, tipoElemento) {
-        // Reducimos vida interna del decorador
         this.enemigo.vidaActual -= cantidadDaño;
 
         if (this.enemigo.vidaActual <= 0 && !this.enemigo.isDead) {
@@ -180,7 +177,6 @@ export class SplitterDecorator extends EnemigoDecorator {
     }
 
     dividirse() {
-        // Usamos la fábrica del Manager para sacar hijos del POOL
         for (let i = 0; i < 4; i++) {
             const dataHijo = {
                 gridX: Math.floor(this.enemigo.x / this.engine.tileSize),
@@ -189,12 +185,13 @@ export class SplitterDecorator extends EnemigoDecorator {
                 velocidad: this.enemigo.velocidad * 0.5
             };
 
-            // Creamos el hijo a través del manager para asegurar que viene del POOL
             const hijo = this.engine.fabricaDeEnemigos(dataHijo);
 
-            // Ajuste fino de posición
             hijo.x += (Math.random() - 0.5) * 20;
             hijo.y += (Math.random() - 0.5) * 20;
+            
+            // Reinsertamos al hijo en la lista (esto lo maneja normalmente el engine/manager)
+            this.engine.enemies.push(hijo);
         }
     }
 }
