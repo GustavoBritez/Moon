@@ -71,10 +71,10 @@ export class AppOrchestrator {
         gsap.to(this.cortina, { opacity: 0, duration: 0.4 });
     }
 
-    procesarVictoria() {
-        if (this.gameState === "VICTORY") return;
-        this.gameState = "VICTORY";
-        this.mostrarPantallaFinal(true);
+    procesarVictoria(esVictoria = true) {
+        if (this.gameState === "VICTORY" || this.gameState === "DEFEAT") return;
+        this.gameState = esVictoria ? "VICTORY" : "DEFEAT";
+        this.mostrarPantallaFinal(esVictoria);
     }
 
 

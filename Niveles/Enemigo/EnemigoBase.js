@@ -12,12 +12,23 @@ export class EnemigoBase {
 
         this.resistencias = data.resistencias || {};
 
+        // Sistema de daño por porcentaje
+        this.danioBase = data.danioBase || 2;
+        this.tipoDanio = data.tipoDanio || 'PORCENTAJE_BASE';
+
         this.isDead = false;
 
         this.vx = 0;
         this.vy = 0;
 
         this.recalcularTimer = Math.random() * 0.2;
+    }
+
+    calcularDanio(player) {
+        if (this.tipoDanio === 'PORCENTAJE_VIDA_TOTAL') {
+            return player.vidaActual * (this.danioBase / 100);
+        }
+        return player.vidaMaxima * (this.danioBase / 100);
     }
 
     recibirGolpe(cantidadDaño, tipoElemento = 'FISICO') {
@@ -196,7 +207,145 @@ export class SplitterDecorator extends EnemigoDecorator {
     }
 }
 
+export class ExplosiveShooter extends EnemigoBase {
+    constructor(data, tileSize) {
+        super(data, tileSize);
+        this.tipo = 'EXPLOSIVE_SHOOTER';
+        this.velocidad = data.velocidad || 70;
+        this.vidaMaxima = data.vida || 300;
+        this.vidaActual = this.vidaMaxima;
+
+        this.shootCooldown = 1.5; // dispara cada 1.5 segundos
+        this.shootTimer = Math.random() * 1.5; // timer aleatorio para que no disparen todos a la vez
+    }
+
+    update(dt, player, engine) {
+        if (this.isDead) return;
+
+        // Comportamiento base (perseguir al jugador)
+        super.update(dt, player, engine);
+
+        // Lógica de disparo
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0) {
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const dist = Math.hypot(dx, dy);
+
+            // Rango de disparo: 400px
+            if (dist < 400 && !player.isDead) {
+                this.disparar(dx, dy, engine);
+            }
+            this.shootTimer = this.shootCooldown;
+        }
+    }
+
+    disparar(dx, dy, engine) {
+        const angulo = Math.atan2(dy, dx);
+        const velocidadBala = 300;
+
+        const spriteBala = new PIXI.Graphics();
+        spriteBala.lineStyle(2, 0xffffff);
+        spriteBala.beginFill(0xe74c3c); // Rojo para balas enemigas
+        spriteBala.drawCircle(0, 0, 5);
+        spriteBala.endFill();
+
+        const bala = {
+            x: this.x,
+            y: this.y,
+            vx: Math.cos(angulo) * velocidadBala,
+            vy: Math.sin(angulo) * velocidadBala,
+            sprite: spriteBala,
+            owner: 'ENEMY',
+            enemigoOrigen: this
+        };
+
+        bala.sprite.x = bala.x;
+        bala.sprite.y = bala.y;
+        engine.capaEntidades.addChild(bala.sprite);
+        engine.projectiles.push(bala);
+    }
+
+    recibirGolpe(cantidadDaño, tipoElemento = 'FISICO') {
+        if (this.isDead) return;
+        this.vidaActual -= cantidadDaño;
+        if (this.vidaActual <= 0) {
+            this.morir();
+        }
+    }
+
+    morir() {
+        if (this.isDead) return;
+        super.morir();
+
+        // 1. Explosión visual y daño en área a Kitty
+        if (window.orquestador && window.orquestador.currentEngine) {
+            const engine = window.orquestador.currentEngine;
+            const player = engine.player;
+
+            // Daño en área unicamente a Kitty
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const dist = Math.hypot(dx, dy);
+
+            const radioExplosion = 120;
+            if (dist < radioExplosion) {
+                const danioExplosion = this.calcularDanio(player);
+                player.recibirDanio(danioExplosion);
+            }
+
+            // Efecto visual de explosión
+            const graficoExplosion = new PIXI.Graphics();
+            graficoExplosion.lineStyle(4, 0xffa500, 0.8);
+            graficoExplosion.beginFill(0xff4500, 0.4);
+            graficoExplosion.drawCircle(this.x, this.y, radioExplosion);
+            graficoExplosion.endFill();
+            engine.capaEntidades.addChild(graficoExplosion);
+
+            // Desvanecer la explosión
+            let t = 0.3;
+            const animarExplosion = () => {
+                t -= 0.016; // aprox 1 frame a 60fps
+                graficoExplosion.alpha = t / 0.3;
+                if (t <= 0) {
+                    PIXI.Ticker.shared.remove(animarExplosion);
+                    graficoExplosion.destroy();
+                }
+            };
+            PIXI.Ticker.shared.add(animarExplosion);
+
+            // 2. Crear 3 hijos
+            for (let i = 0; i < 3; i++) {
+                const dataHijo = {
+                    type: 'SHOOTER_CHILD',
+                    gridX: Math.floor(this.x / engine.tileSize),
+                    gridY: Math.floor(this.y / engine.tileSize),
+                    vida: 50,
+                    velocidad: 110,
+                    decoradores: []
+                };
+                const hijo = engine.enemyManager.fabricaDeEnemigos(dataHijo);
+                // Esparcirlos un poco
+                hijo.x += (Math.random() - 0.5) * 40;
+                hijo.y += (Math.random() - 0.5) * 40;
+            }
+        }
+    }
+}
+
+export class ShooterChild extends EnemigoBase {
+    constructor(data, tileSize) {
+        super(data, tileSize);
+        this.tipo = 'SHOOTER_CHILD';
+        this.velocidad = data.velocidad || 110;
+        this.vidaMaxima = data.vida || 50;
+        this.vidaActual = this.vidaMaxima;
+    }
+}
+
 export const ENEMY_CLASSES = {
     'BAKU': Baku,
-    'BASE': EnemigoBase
+    'BASE': EnemigoBase,
+    'EXPLOSIVE_SHOOTER': ExplosiveShooter,
+    'SHOOTER_CHILD': ShooterChild
 };

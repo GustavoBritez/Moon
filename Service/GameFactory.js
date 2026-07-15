@@ -204,7 +204,7 @@ export class GameFactory {
 
                         if (btnContinuar) {
                             btnContinuar.addEventListener('click', () => {
-                                engine.togglePause(); 
+                                engine.togglePause();
                             });
                         }
 

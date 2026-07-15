@@ -1,5 +1,5 @@
 
-import { MATRIZ_NIVEL as MatrizNivel2, ENEMIGOS_NIVEL as EnemigosNivel2, ENEMIGOS_NIVEL } from './Mapa_1.js';
+import { NIVEL_PACK } from './Mapa_1.js';
 
 export const GAME_LEVELS = {
     1: {
@@ -10,14 +10,13 @@ export const GAME_LEVELS = {
     2: {
         type: "Nivel_1",
         title: "¡Prueba de Estrés 100x100!",
-        matriz: MatrizNivel2,
-        enemigos: ENEMIGOS_NIVEL
+        pack: NIVEL_PACK
     }
 };
 // 3. CONFIGURACIÓN GLOBAL DE FÍSICAS
 window.GAME_TUNING = window.GAME_TUNING || {
     tileSize: 48,
-    playerLives: 3,
+    playerHP: 100,
     playerSpeed: 170,
     berrySpeedBoost: 0.5,
     berryVisionTiles: 5,

@@ -1,104 +1,102 @@
 export class UIManager {
-    // + constructor(capaUI: PIXI.Container)
     constructor(capaUI) {
         this.capaUI = capaUI;
 
-        // Elementos visuales
-        this.textoVidas = null;
-        this.barraTurbo = null;
+        this.barraVidaFondo = null;
+        this.barraVidaRelleno = null;
+        this.textoVida = null;
 
-        // Variables de caché (Dirty Flags) iniciadas en valores imposibles
-        // para forzar el primer renderizado
-        this.vidasCacheadas = -1;
-        this.turboCacheados = -1;
+        this.vidaCacheada = -1;
+        this.parpadeoTimer = 0;
 
-        // Construimos la interfaz al instanciar
         this.inicializarElementos();
     }
 
-    // - inicializarElementos(): void
     inicializarElementos() {
-        // 1. Crear el texto de las Vidas
-        this.textoVidas = new PIXI.Text('Vidas: 3', {
+        // 1. Barra de vida - Fondo gris
+        this.barraVidaFondo = new PIXI.Graphics();
+        this.barraVidaFondo.beginFill(0x333333, 0.8);
+        this.barraVidaFondo.drawRoundedRect(0, 0, 200, 22, 6);
+        this.barraVidaFondo.endFill();
+        this.barraVidaFondo.x = 20;
+        this.barraVidaFondo.y = 20;
+        this.capaUI.addChild(this.barraVidaFondo);
+
+        // 2. Barra de vida - Relleno rojo
+        this.barraVidaRelleno = new PIXI.Graphics();
+        this.barraVidaRelleno.x = 20;
+        this.barraVidaRelleno.y = 20;
+        this.capaUI.addChild(this.barraVidaRelleno);
+
+        // 3. Texto HP superpuesto
+        this.textoVida = new PIXI.Text('HP: 100/100', {
             fontFamily: 'Arial',
-            fontSize: 24,
+            fontSize: 14,
             fill: 0xFFFFFF,
-            align: 'left',
+            align: 'center',
             fontWeight: 'bold',
             dropShadow: true,
             dropShadowColor: '#000000',
-            dropShadowBlur: 4,
-            dropShadowDistance: 2
+            dropShadowBlur: 2,
+            dropShadowDistance: 1
         });
-        this.textoVidas.x = 20;
-        this.textoVidas.y = 20;
-        this.capaUI.addChild(this.textoVidas);
-
-        // 2. Crear la barra de Turbo (vacía por ahora)
-        this.barraTurbo = new PIXI.Graphics();
-        this.barraTurbo.x = 20;
-        this.barraTurbo.y = 60;
-        this.capaUI.addChild(this.barraTurbo);
+        this.textoVida.x = 20 + 100;
+        this.textoVida.y = 22;
+        this.textoVida.anchor.set(0.5, 0);
+        this.capaUI.addChild(this.textoVida);
     }
 
-    // + actualizar(player: Object): void
     actualizar(player) {
         if (!player) return;
 
-        // COMPROBACIÓN DE DIRTY FLAGS (Optimización extrema)
-        // Solo redibujamos si el valor del modelo es distinto al de nuestra caché
-
-        if (player.vidas !== this.vidasCacheadas) {
-            this.actualizarVidas(player.vidas);
-            this.vidasCacheadas = player.vidas; // Actualizamos la caché
-        }
-
-        // Asumiendo que player.turbo es un valor de 0 a 100
-        if (player.turbo !== this.turboCacheados) {
-            this.actualizarTurbo(player.turbo);
-            this.turboCacheados = player.turbo; // Actualizamos la caché
+        if (player.vidaActual !== this.vidaCacheada) {
+            this.actualizarBarraVida(player);
+            this.vidaCacheada = player.vidaActual;
         }
     }
 
-    // - actualizarVidas(vidas: Number): void
-    actualizarVidas(vidas) {
-        // Modificar el string de un PIXI.Text es costoso, por eso
-        // damos gracias a que los Dirty Flags evitan hacerlo en cada frame.
-        this.textoVidas.text = `Vidas: ${vidas}`;
+    actualizarBarraVida(player) {
+        this.barraVidaRelleno.clear();
 
-        // Efecto visual rápido cuando cambia la vida (Feedback al jugador)
-        if (vidas <= 1) {
-            this.textoVidas.style.fill = 0xFF0000; // Rojo peligro
+        const porcentaje = Math.max(0, player.vidaActual / player.vidaMaxima);
+        const anchoRelleno = porcentaje * 200;
+
+        // Color progresivo: Verde > Amarillo > Rojo
+        let colorBarra;
+        if (porcentaje > 0.5) {
+            colorBarra = 0xe74c3c; // Rojo estándar
+        } else if (porcentaje > 0.25) {
+            colorBarra = 0xc0392b; // Rojo más oscuro
         } else {
-            this.textoVidas.style.fill = 0xFFFFFF; // Blanco normal
+            colorBarra = 0x8b0000; // Rojo crítico
         }
-    }
 
-    // - actualizarTurbo(turboRestante: Number): void
-    actualizarTurbo(turboRestante) {
-        // Limpiamos el gráfico anterior
-        this.barraTurbo.clear();
+        this.barraVidaRelleno.beginFill(colorBarra);
+        this.barraVidaRelleno.drawRoundedRect(0, 0, anchoRelleno, 22, 6);
+        this.barraVidaRelleno.endFill();
 
-        // Dibujamos el fondo de la barra (Gris oscuro)
-        this.barraTurbo.beginFill(0x333333);
-        this.barraTurbo.drawRect(0, 0, 150, 15);
-        this.barraTurbo.endFill();
+        // Brillito superior
+        this.barraVidaRelleno.beginFill(0xffffff, 0.2);
+        this.barraVidaRelleno.drawRoundedRect(2, 2, anchoRelleno - 4, 8, 4);
+        this.barraVidaRelleno.endFill();
 
-        // Dibujamos el relleno (Cian)
-        // Calculamos el ancho basado en el porcentaje (0 a 100)
-        const porcentaje = Math.max(0, Math.min(100, turboRestante));
-        const anchoRelleno = (porcentaje / 100) * 150;
+        // Texto
+        const vidaRedondeada = Math.ceil(player.vidaActual);
+        this.textoVida.text = `HP: ${vidaRedondeada}/${player.vidaMaxima}`;
 
-        this.barraTurbo.beginFill(0x00FFFF);
-        this.barraTurbo.drawRect(0, 0, anchoRelleno, 15);
-        this.barraTurbo.endFill();
+        // Parpadeo si vida crítica (< 25%)
+        if (porcentaje < 0.25 && porcentaje > 0) {
+            this.barraVidaRelleno.alpha = 0.5 + Math.abs(Math.sin(performance.now() / 200)) * 0.5;
+        } else {
+            this.barraVidaRelleno.alpha = 1;
+        }
     }
 
     mostrarMensajeFlotante(texto, x, y) {
         const mensaje = new PIXI.Text(texto, {
             fontFamily: 'Arial',
             fontSize: 20,
-            fill: 0xFFFF00, // Amarillo
+            fill: 0xFFFF00,
             fontWeight: 'bold'
         });
 
@@ -106,13 +104,11 @@ export class UIManager {
         mensaje.y = y;
         this.capaUI.addChild(mensaje);
 
-        // Pequeña animación de desvanecimiento hacia arriba
         const animarMensaje = () => {
-            mensaje.y -= 1; // Sube
-            mensaje.alpha -= 0.02; // Se vuelve transparente
+            mensaje.y -= 1;
+            mensaje.alpha -= 0.02;
 
             if (mensaje.alpha <= 0) {
-                // Cuando es invisible, lo destruimos y quitamos el ticker
                 PIXI.Ticker.shared.remove(animarMensaje);
                 mensaje.destroy();
             }
@@ -121,16 +117,14 @@ export class UIManager {
         PIXI.Ticker.shared.add(animarMensaje);
     }
 
-    destroy() {
-        if (this.textoVidas) {
-            this.textoVidas.destroy(true);
-            this.textoVidas = null;
-        }
+    reajustarUI(ancho, alto) {
+        // Los elementos ya usan posiciones absolutas, no necesitan ajuste extra
+    }
 
-        if (this.barraTurbo) {
-            this.barraTurbo.destroy(true);
-            this.barraTurbo = null;
-        }
+    destroy() {
+        if (this.barraVidaFondo) { this.barraVidaFondo.destroy(true); this.barraVidaFondo = null; }
+        if (this.barraVidaRelleno) { this.barraVidaRelleno.destroy(true); this.barraVidaRelleno = null; }
+        if (this.textoVida) { this.textoVida.destroy(true); this.textoVida = null; }
 
         if (this.capaUI) {
             this.capaUI.removeChildren();

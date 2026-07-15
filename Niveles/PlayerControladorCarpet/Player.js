@@ -1,28 +1,43 @@
 export class Player {
-    constructor(x, y, speed, vidas) {
+    constructor(x, y, speed, vidaMaxima) {
         this.x = x;
         this.y = y;
 
         this.speed = speed;
-        this.vidas = vidas;
+        this.vidaMaxima = vidaMaxima;
+        this.vidaActual = vidaMaxima;
         this.sprite = null;
 
-        // Estado actual
         this.isDead = false;
     }
 
-    // Método que gestiona su propia parte visual
-    setSprite(grafico) {
-        this.sprite = grafico;
-        this.sprite.x = this.x;
-        this.sprite.y = this.y;
+    recibirDanio(cantidad) {
+        if (this.isDead) return;
+        this.vidaActual -= cantidad;
+        if (this.vidaActual <= 0) {
+            this.vidaActual = 0;
+            this.isDead = true;
+        }
     }
 
-    // Método para actualizar la posición visual basándose en la lógica
-    actualizarPosicionVisual() {
-        if (this.sprite) {
+    setSprite(grafico) {
+        this.sprite = grafico;
+        if (this.sprite.position && typeof this.sprite.position.set === 'function') {
+            this.sprite.position.set(this.x, this.y);
+        } else {
             this.sprite.x = this.x;
             this.sprite.y = this.y;
+        }
+    }
+
+    actualizarPosicionVisual() {
+        if (this.sprite) {
+            if (this.sprite.position && typeof this.sprite.position.set === 'function') {
+                this.sprite.position.set(this.x, this.y);
+            } else {
+                this.sprite.x = this.x;
+                this.sprite.y = this.y;
+            }
         }
     }
 }
