@@ -9,31 +9,20 @@ import { PlayerController } from './PlayerControladorCarpet/PlayerControllator.j
 export class Nivel_1 {
     constructor(canvas, config, eventBus) {
         this.canvas = canvas;
-        this.config = config;
+        this.config = config || {};
         this.eventBus = eventBus;
         this.projectiles = [];
+        this.pack = this.config.pack || null;
 
-<<<<<<< HEAD
-        this.mapaMatriz = config.matriz.map((fila) => fila.slice());
+        const mapaInicial = this.obtenerMapaInicial(this.config);
+
+        this.mapaMatriz = mapaInicial.matriz.map((fila) => fila.slice());
+        this.portales = mapaInicial.portales || [];
+        this.enemigos = mapaInicial.enemigos || [];
+
         this.settings = window.GAME_TUNING || { tileSize: 32, playerSpeed: 170, playerLives: 3 };
-=======
-        if (config.pack) {
-            this.pack = config.pack;
-            this.subMapaActual = 'principal';
-            this.mapaMatriz = this.pack.principal.matriz.map((fila) => fila.slice());
-            this.config.enemigos = this.pack.principal.enemigos;
-            this.portales = this.pack.principal.portales || [];
-        } else {
-            if (!config || !config.matriz || !Array.isArray(config.matriz)) {
-                throw new Error("Arquitectura estricta: Nivel abortado por falta de matriz.");
-            }
-            this.mapaMatriz = config.matriz.map((fila) => fila.slice());
-            this.portales = [];
-        }
-
-        this.settings = window.GAME_TUNING || { tileSize: 48, playerSpeed: 170, playerHP: 100 };
->>>>>>> 5e9e805 (stonk)
         this.tileSize = this.settings.tileSize;
+        const spawn = this.obtenerSpawnInicial(this.mapaMatriz);
 
         // 1. Inicializar el motor gráfico PixiJS
         this.app = new PIXI.Application({
@@ -54,25 +43,10 @@ export class Nivel_1 {
         this.mundo.addChild(this.capaFondo, this.capaEntidades);
         this.app.stage.addChild(this.mundo, this.capaUI);
 
-<<<<<<< HEAD
         // 3. Inicializar el Modelo de Datos del Jugador
-=======
-        // 3. Buscar el Spawn (tile 3) en la matriz para posicionar a Kitty
-        let spawnX = 1.5 * this.tileSize;
-        let spawnY = 1.5 * this.tileSize;
-        for (let f = 0; f < this.mapaMatriz.length; f++) {
-            for (let c = 0; c < this.mapaMatriz[f].length; c++) {
-                if (this.mapaMatriz[f][c] === 3) {
-                    spawnX = c * this.tileSize + this.tileSize / 2;
-                    spawnY = f * this.tileSize + this.tileSize / 2;
-                }
-            }
-        }
-
->>>>>>> 5e9e805 (stonk)
         this.player = new Player(
-            spawnX,
-            spawnY,
+            spawn.x,
+            spawn.y,
             this.settings.playerSpeed,
             this.settings.playerHP || 100
         );
@@ -83,7 +57,7 @@ export class Nivel_1 {
         this.playerController = new PlayerController(this.player, this.inputManager, this.collisionManager);
         this.renderizador = new TilemapRenderer(this.capaFondo, this.mapaMatriz, this.tileSize);
         this.uiManager = new UIManager(this.capaUI);
-        this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, this.config.enemigos);
+        this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, this.enemigos);
         this.enemyManager.engine = this;
 
         this.camara = { x: this.player.x, y: this.player.y };
@@ -91,36 +65,28 @@ export class Nivel_1 {
         this.isPaused = false;
 
         this.handleResize = () => this.redimensionarEscena();
-<<<<<<< HEAD
-        
+
         // ========================================================
         // VARIABLES DE CONTROL DE DISPARO Y RATÓN
         // ========================================================
         this.isShooting = false;
-        this.fireRate = 0.15; 
+        this.fireRate = 0.15;
         this.fireTimer = 0;
         this.mouseX = window.innerWidth / 2;
         this.mouseY = window.innerHeight / 2;
 
         // 1. Rastreador global del ratón
-=======
-
-        // ¡NUEVO! Registramos la posición del puntero de forma global para poder apuntar
-        this.mouseX = window.innerWidth / 2;
-        this.mouseY = window.innerHeight / 2;
->>>>>>> 5e9e805 (stonk)
         this.handlePointerMove = (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left;
             this.mouseY = e.clientY - rect.top;
         };
 
-<<<<<<< HEAD
         // 2. Detectores globales de clic (Forzando el disparo inicial)
-        this.handlePointerDown = (e) => { 
-            if (e.button === 0) { 
-                this.isShooting = true; 
-                
+        this.handlePointerDown = (e) => {
+            if (e.button === 0) {
+                this.isShooting = true;
+
                 // Disparo inmediato al hacer clic (rompe la latencia del bucle)
                 if (this.fireTimer <= 0) {
                     this.disparar();
@@ -128,41 +94,50 @@ export class Nivel_1 {
                 }
             }
         };
-        
-        this.handlePointerUp = (e) => { 
+
+        this.handlePointerUp = (e) => {
             if (e.button === 0) {
-                this.isShooting = false; 
+                this.isShooting = false;
             }
         };
-=======
-        // ¡NUEVO! Lógica para el disparo con clic
-        this.isShooting = false;
-        this.fireRate = 0.15; // 0.15 segundos entre cada bala (Ajusta para hacerla más metralleta o escopeta)
-        this.fireTimer = 0;
-
-        this.handlePointerDown = (e) => { this.isShooting = true; };
-        this.handlePointerUp = (e) => { this.isShooting = false; };
->>>>>>> 5e9e805 (stonk)
 
         this.start();
     }
 
+    obtenerMapaInicial(config) {
+        if (config?.pack?.principal) {
+            return config.pack.principal;
+        }
+
+        return config || { matriz: [] };
+    }
+
+    obtenerSpawnInicial(matriz) {
+        for (let fila = 0; fila < matriz.length; fila++) {
+            for (let col = 0; col < matriz[fila].length; col++) {
+                if (matriz[fila][col] === 3) {
+                    return {
+                        x: col * this.settings.tileSize + (this.settings.tileSize / 2),
+                        y: fila * this.settings.tileSize + (this.settings.tileSize / 2)
+                    };
+                }
+            }
+        }
+
+        return {
+            x: this.settings.tileSize / 2,
+            y: this.settings.tileSize / 2
+        };
+    }
+
     start() {
         window.addEventListener('resize', this.handleResize);
-<<<<<<< HEAD
-        
+
         // Atrapamos eventos a nivel ventana
         window.addEventListener('pointermove', this.handlePointerMove);
         window.addEventListener('pointerdown', this.handlePointerDown);
         window.addEventListener('pointerup', this.handlePointerUp);
         window.addEventListener('contextmenu', (e) => e.preventDefault());
-=======
-        // Escuchamos el movimiento del ratón/dedo en el canvas
-        this.canvas.addEventListener('pointermove', this.handlePointerMove);
-
-        this.canvas.addEventListener('pointerdown', this.handlePointerDown);
-        this.canvas.addEventListener('pointerup', this.handlePointerUp);
->>>>>>> 5e9e805 (stonk)
 
         this.renderizador.inicializarPool(window.innerWidth, window.innerHeight);
         this.enemyManager.inicializar();
@@ -210,17 +185,12 @@ export class Nivel_1 {
     }
 
     // ========================================================
-<<<<<<< HEAD
     // HABILIDADES DEL JUGADOR
-=======
-    // HABILIDADES DEL JUGADOR (Disparo y Turbo)
->>>>>>> 5e9e805 (stonk)
     // ========================================================
 
     disparar() {
         if (this.gameOver || this.isPaused || this.player.isDead) return;
 
-<<<<<<< HEAD
         const mouseMundoX = this.mouseX - this.mundo.x;
         const mouseMundoY = this.mouseY - this.mundo.y;
 
@@ -232,77 +202,34 @@ export class Nivel_1 {
 
         const spriteBala = new PIXI.Graphics();
         spriteBala.lineStyle(2, 0xffffff); // Borde blanco añadido para mayor visibilidad
-        spriteBala.beginFill(0x00ffff); 
+        spriteBala.beginFill(0x00ffff);
         spriteBala.drawCircle(0, 0, 5);
         spriteBala.endFill();
-        spriteBala.blendMode = PIXI.BLEND_MODES.ADD; 
+        spriteBala.blendMode = PIXI.BLEND_MODES.ADD;
 
-=======
-        // 1. Traducir coordenadas de pantalla a coordenadas del MUNDO
-        const mouseMundoX = this.mouseX - this.mundo.x;
-        const mouseMundoY = this.mouseY - this.mundo.y;
-
-        // 2. Calcular los deltas
-        const dx = mouseMundoX - this.player.x;
-        const dy = mouseMundoY - this.player.y;
-
-        // 3. Trigonometría para obtener el ángulo
-        const angulo = Math.atan2(dy, dx);
-
-        // 4. Parámetros de la bala
-        const velocidadBala = 600;
-
-        // 5. Crear el láser visualmente
-        const spriteBala = new PIXI.Graphics();
-        spriteBala.lineStyle(2, 0xffffff); // Borde blanco
-        spriteBala.beginFill(0x00ffff);    // Núcleo Cyan
-        spriteBala.drawCircle(0, 0, 6);    // Un poco más grande
-        spriteBala.endFill();
-
-        // 6. Construir el objeto lógico usando Seno y Coseno
->>>>>>> 5e9e805 (stonk)
         const bala = {
             x: this.player.x,
             y: this.player.y,
             vx: Math.cos(angulo) * velocidadBala,
             vy: Math.sin(angulo) * velocidadBala,
-<<<<<<< HEAD
             sprite: spriteBala
-=======
-            sprite: spriteBala,
-            owner: 'PLAYER'
->>>>>>> 5e9e805 (stonk)
         };
 
         bala.sprite.x = bala.x;
         bala.sprite.y = bala.y;
         this.capaEntidades.addChild(bala.sprite);
         this.projectiles.push(bala);
-<<<<<<< HEAD
 
         console.log(`¡Pew! Bala disparada hacia X:${Math.floor(mouseMundoX)} Y:${Math.floor(mouseMundoY)}`);
-=======
->>>>>>> 5e9e805 (stonk)
     }
 
     activarTurbo() {
         if (this.gameOver || this.isPaused || this.player.isDead || this.player.isTurbo) return;
 
-<<<<<<< HEAD
         this.player.isTurbo = true;
-        const velocidadOriginal = this.player.speed;
-        this.player.speed *= 2.5; 
-
-=======
-        // Bloqueamos la habilidad para no aplicarla 100 veces por segundo
-        this.player.isTurbo = true;
-
-        // Multiplicamos la velocidad simulando un "Dash" o derrape
         const velocidadOriginal = this.player.speed;
         this.player.speed *= 2.5;
 
-        // Retornamos la velocidad a la normalidad después de 300 milisegundos
->>>>>>> 5e9e805 (stonk)
         setTimeout(() => {
             if (this.player) {
                 this.player.speed = velocidadOriginal;
@@ -320,38 +247,21 @@ export class Nivel_1 {
 
         const dt = delta / this.app.ticker.FPS;
 
-<<<<<<< HEAD
         // ¡AQUÍ FALTABA ESTO! Gestión del reloj de disparo
-=======
-        // ¡NUEVO! Temporizador de disparo
->>>>>>> 5e9e805 (stonk)
         if (this.fireTimer > 0) {
             this.fireTimer -= dt;
         }
 
-<<<<<<< HEAD
         if (this.isShooting && this.fireTimer <= 0) {
             this.disparar();
-            this.fireTimer = this.fireRate; 
-=======
-        // Si mantienes presionado el clic y ya pasó el tiempo de recarga...
-        if (this.isShooting && this.fireTimer <= 0) {
-            this.disparar();
-            this.fireTimer = this.fireRate; // Reiniciamos el reloj (0.15s)
->>>>>>> 5e9e805 (stonk)
+            this.fireTimer = this.fireRate;
         }
 
         this.playerController.update(dt);
         this.enemyManager.update(dt, this.player, this);
         this.actualizarProyectiles(dt);
 
-<<<<<<< HEAD
         this.verificarVictoria();
-=======
-        this.verificarPortales();
-
-        this.verificarVictoriaODerrota();
->>>>>>> 5e9e805 (stonk)
         this.actualizarCamara();
 
         this.renderizador.actualizarVista(this.camara.x, this.camara.y);
@@ -382,7 +292,6 @@ export class Nivel_1 {
 
             let impactoConfirmado = false;
 
-<<<<<<< HEAD
             for (let j = 0; j < this.enemyManager.enemies.length; j++) {
                 let enemigo = this.enemyManager.enemies[j];
 
@@ -390,35 +299,11 @@ export class Nivel_1 {
                 let dy = bala.y - enemigo.y;
                 let distSq = (dx * dx) + (dy * dy);
 
-=======
-            if (bala.owner === 'ENEMY') {
-                let dx = bala.x - this.player.x;
-                let dy = bala.y - this.player.y;
-                let distSq = (dx * dx) + (dy * dy);
->>>>>>> 5e9e805 (stonk)
                 if (distSq < colisionSq) {
                     const danio = bala.enemigoOrigen ? bala.enemigoOrigen.calcularDanio(this.player) : 2;
                     this.player.recibirDanio(danio);
                     impactoConfirmado = true;
-<<<<<<< HEAD
-                    break; 
-=======
-                }
-            } else {
-                // Colisión con enemigos
-                for (let j = 0; j < this.enemyManager.enemies.length; j++) {
-                    let enemigo = this.enemyManager.enemies[j];
-
-                    let dx = bala.x - enemigo.x;
-                    let dy = bala.y - enemigo.y;
-                    let distSq = (dx * dx) + (dy * dy);
-
-                    if (distSq < colisionSq) {
-                        enemigo.recibirGolpe(25, 'FISICO');
-                        impactoConfirmado = true;
-                        break;
-                    }
->>>>>>> 5e9e805 (stonk)
+                    break;
                 }
             }
 
@@ -430,13 +315,8 @@ export class Nivel_1 {
     }
 
     actualizarCamara() {
-<<<<<<< HEAD
-        const zonaMuertaW = 150; 
-        const zonaMuertaH = 100; 
-=======
         const zonaMuertaW = 150;
         const zonaMuertaH = 100;
->>>>>>> 5e9e805 (stonk)
 
         const dx = this.player.x - this.camara.x;
         const dy = this.player.y - this.camara.y;
@@ -453,43 +333,20 @@ export class Nivel_1 {
         this.mundo.y = (window.innerHeight / 2) - this.camara.y;
     }
 
-<<<<<<< HEAD
     verificarVictoria() {
         // Si no quedan enemigos y el juego no ha terminado...
         if (this.enemyManager.enemies.length === 0 && !this.gameOver) {
             this.gameOver = true;
-            
+
             console.log("🏆 ¡Todos los enemigos eliminados! Nivel completado.");
 
             // Verificamos si lo que nos pasó el GameFactory es una función (Callback)
             if (typeof this.eventBus === 'function') {
                 this.eventBus('LEVEL_VICTORY'); // La ejecutamos directamente
-            } 
+            }
             // Por si en el futuro decides cambiar la arquitectura a un EventBus real
             else if (this.eventBus && typeof this.eventBus.emit === 'function') {
                 this.eventBus.emit('LEVEL_VICTORY');
-=======
-    verificarVictoriaODerrota() {
-        if (this.gameOver) return;
-
-        if (this.enemyManager.enemies.length === 0) {
-            this.gameOver = true;
-            if (this.eventBus) {
-                if (typeof this.eventBus === 'function') {
-                    this.eventBus(true);
-                } else if (typeof this.eventBus.emit === 'function') {
-                    this.eventBus.emit('LEVEL_VICTORY');
-                }
-            }
-        } else if (this.player.isDead) {
-            this.gameOver = true;
-            if (this.eventBus) {
-                if (typeof this.eventBus === 'function') {
-                    this.eventBus(false);
-                } else if (typeof this.eventBus.emit === 'function') {
-                    this.eventBus.emit('LEVEL_DEFEAT');
-                }
->>>>>>> 5e9e805 (stonk)
             }
         }
     }
@@ -591,16 +448,6 @@ export class Nivel_1 {
         window.removeEventListener('pointerup', this.handlePointerUp);
         window.removeEventListener('contextmenu', (e) => e.preventDefault());
 
-<<<<<<< HEAD
-=======
-        // ¡NUEVO! Limpiamos el evento del ratón para no generar Memory Leaks
-        this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-
-        this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-        this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-        this.canvas.removeEventListener('contextmenu', (e) => e.preventDefault());
-
->>>>>>> 5e9e805 (stonk)
         const managers = [this.inputManager, this.renderizador, this.uiManager, this.enemyManager];
         for (const manager of managers) {
             if (manager && typeof manager.destroy === 'function') {

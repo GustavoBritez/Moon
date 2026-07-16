@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CreadorMapas")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ee071bd30f2e379c8f35680e8ddafac79639635b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a190db497cead8ae6b76f33a3cb090c17d09939d")]
 [assembly: System.Reflection.AssemblyProductAttribute("CreadorMapas")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CreadorMapas")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

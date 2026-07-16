@@ -4,5 +4,8 @@
     <Compile Update="CreadorMapa.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="FormConfigPortal.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
 </Project>

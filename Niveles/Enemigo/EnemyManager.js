@@ -34,17 +34,12 @@ export class EnemyManager {
         const EnemyClass = ENEMY_CLASSES[data.type] || EnemigoBase;
         let enemigo = new EnemyClass(data, this.tileSize);
 
-<<<<<<< HEAD
         // 2. Si el enemigo DEBE llevar decoración extra
-=======
-        // 2. Decoradores
->>>>>>> 5e9e805 (stonk)
         if (data.decoradores) {
             for (const dec of data.decoradores) {
                 if (dec === 'FIRE') enemigo = new FireDecorator(enemigo);
             }
         }
-<<<<<<< HEAD
         
         // 3. Posicionamiento 
         enemigo.x = data.gridX * this.tileSize + (this.tileSize / 2);
@@ -71,51 +66,6 @@ export class EnemyManager {
         this.capaEntidades.addChild(enemigo.sprite);
         // ==========================================
 
-=======
-
-        // 3. Posicionamiento
-        enemigo.x = data.gridX * this.tileSize + (this.tileSize / 2);
-        enemigo.y = data.gridY * this.tileSize + (this.tileSize / 2);
-
-        // 4. Crear representación visual si no tiene sprite
-        if (!enemigo.sprite) {
-            const grafico = new PIXI.Graphics();
-            let color = 0xff6584; // Color base (Rosa)
-            let radio = this.tileSize * 0.35;
-
-            if (data.type === 'BAKU') {
-                color = 0x9b59b6; // Morado para Baku
-            } else if (data.type === 'EXPLOSIVE_SHOOTER') {
-                color = 0xe67e22; // Naranja para Boss
-                radio = this.tileSize * 0.45; // Más grande
-            } else if (data.type === 'SHOOTER_CHILD') {
-                color = 0xf1c40f; // Amarillo para hijos
-                radio = this.tileSize * 0.22; // Pequeño
-            } else if (data.decoradores && data.decoradores.includes('SPLITTER')) {
-                color = 0x2ecc71; // Verde para Splitter
-            }
-
-            grafico.lineStyle(2, 0xffffff, 0.8);
-            grafico.beginFill(color);
-            grafico.drawCircle(0, 0, radio);
-            grafico.endFill();
-
-            grafico.beginFill(0xffffff, 0.6);
-            grafico.drawCircle(-radio * 0.2, -radio * 0.2, radio * 0.25);
-            grafico.endFill();
-
-            enemigo.sprite = grafico;
-            this.capaEntidades.addChild(grafico);
-        }
-
-        if (enemigo.sprite) {
-            enemigo.sprite.x = enemigo.x;
-            enemigo.sprite.y = enemigo.y;
-            enemigo.sprite.visible = true;
-        }
-
-        this.enemies.push(enemigo);
->>>>>>> 5e9e805 (stonk)
         return enemigo;
     }
 

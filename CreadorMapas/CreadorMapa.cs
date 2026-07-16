@@ -340,6 +340,13 @@ namespace CreadorMapas
                 // Configurar portal si se selecciona Portal_Lab (19)
                 if (idTile == 19)
                 {
+                    var celdaActual = mapaActual.Grid.Rows[fila].Cells[columna];
+                    if (celdaActual.Value != null && celdaActual.Value.ToString() == "19")
+                    {
+                        // Ya es un portal. Solo ignoramos si estamos arrastrando para no re-abrir
+                        if (isMouseDown) return;
+                    }
+
                     var portalExistente = mapaActual.Portales.Find(p => p.GridX == columna && p.GridY == fila);
                     string etiqueta = portalExistente?.Etiqueta ?? $"Portal_{mapaActual.Nombre}_{columna}_{fila}";
                     string destMapa = portalExistente?.DestinoMapa ?? "";
@@ -409,6 +416,17 @@ namespace CreadorMapas
             var mapaActual = GetMapaActual();
             if (mapaActual == null) return;
 
+            // Restricción: No colocar en bloques sólidos
+            var valCelda = mapaActual.Grid.Rows[fila].Cells[columna].Value;
+            if (valCelda != null && int.TryParse(valCelda.ToString(), out int idTile))
+            {
+                if (TileConfig.TILE_DICT.ContainsKey(idTile) && TileConfig.TILE_DICT[idTile].solido)
+                {
+                    MessageBox.Show("No puedes colocar un enemigo sobre un bloque sólido.", "Bloque Sólido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             var existente = mapaActual.Enemigos.Find(en => en.gridX == columna && en.gridY == fila);
 
             if (existente != null)
@@ -450,8 +468,36 @@ namespace CreadorMapas
         {
             if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
             {
-                if (modoColocarEnemigo) ColocarEnemigo(e.RowIndex, e.ColumnIndex);
-                else PintarCelda(e.RowIndex, e.ColumnIndex);
+                if (e.Button == MouseButtons.Right)
+                {
+                    // Borrar: Enemigos y Baldosas
+                    var mapaActual = GetMapaActual();
+                    if (mapaActual != null)
+                    {
+                        var enemigo = mapaActual.Enemigos.Find(en => en.gridX == e.ColumnIndex && en.gridY == e.RowIndex);
+                        if (enemigo != null)
+                        {
+                            mapaActual.Enemigos.Remove(enemigo);
+                            mapaActual.Grid.InvalidateCell(e.ColumnIndex, e.RowIndex);
+                        }
+                        else if (!modoColocarEnemigo)
+                        {
+                            // Borramos la celda (poner ID 0 - Suelo)
+                            mapaActual.Portales.RemoveAll(p => p.GridX == e.ColumnIndex && p.GridY == e.RowIndex);
+                            var celda = mapaActual.Grid.Rows[e.RowIndex].Cells[e.ColumnIndex];
+                            celda.Value = 0;
+                            int colorSuelo = TileConfig.TILE_DICT[0].color;
+                            Color c = Color.FromArgb(255, (colorSuelo >> 16) & 0xFF, (colorSuelo >> 8) & 0xFF, colorSuelo & 0xFF);
+                            celda.Style.BackColor = c;
+                            celda.Style.SelectionBackColor = c;
+                        }
+                    }
+                }
+                else if (e.Button == MouseButtons.Left)
+                {
+                    if (modoColocarEnemigo) ColocarEnemigo(e.RowIndex, e.ColumnIndex);
+                    else PintarCelda(e.RowIndex, e.ColumnIndex);
+                }
             }
         }
 
@@ -571,6 +617,26 @@ namespace CreadorMapas
             if (int.TryParse(tamanoInput, out int tamano))
             {
                 CrearNuevaPestañaMapa(nombre, tamano);
+            }
+        }
+
+        private void BtnEliminarMapa_Click(object sender, EventArgs e)
+        {
+            var tab = tabMapas.SelectedTab;
+            if (tab == null) return;
+            if (tab.Text.Equals("principal", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("No puedes eliminar el mapa principal.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (MessageBox.Show($"¿Estás seguro de que deseas eliminar el mapa '{tab.Text}'?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                if (mapaProyectos.ContainsKey(tab))
+                {
+                    mapaProyectos.Remove(tab);
+                }
+                tabMapas.TabPages.Remove(tab);
             }
         }
 

@@ -24,6 +24,7 @@ namespace CreadorMapas
             panelDerecho = new FlowLayoutPanel();
             BtnCrearMapa = new Button();
             BtnNuevoMapa = new Button();
+            BtnEliminarMapa = new Button();
             comboBox1 = new ComboBox();
             BtnCrearEnemigo = new Button();
             lblClaseBase = new Label();
@@ -86,6 +87,28 @@ namespace CreadorMapas
             panelDerecho.Name = "panelDerecho";
             panelDerecho.Size = new Size(194, 644);
             panelDerecho.TabIndex = 1;
+            panelDerecho.Controls.Add(BtnCrearMapa);
+            panelDerecho.Controls.Add(BtnNuevoMapa);
+            panelDerecho.Controls.Add(BtnEliminarMapa);
+            panelDerecho.Controls.Add(comboBox1);
+            panelDerecho.Controls.Add(BtnCrearEnemigo);
+            panelDerecho.Controls.Add(lblClaseBase);
+            panelDerecho.Controls.Add(cmbClaseBase);
+            panelDerecho.Controls.Add(lblFiltro);
+            panelDerecho.Controls.Add(txtFiltroDecoradores);
+            panelDerecho.Controls.Add(lblDecorador);
+            panelDerecho.Controls.Add(chkDecoradores);
+            panelDerecho.Controls.Add(lblVida);
+            panelDerecho.Controls.Add(nudVida);
+            panelDerecho.Controls.Add(lblVelocidad);
+            panelDerecho.Controls.Add(nudVelocidad);
+            panelDerecho.Controls.Add(lblDefensa);
+            panelDerecho.Controls.Add(nudDefensaBase);
+            panelDerecho.Controls.Add(lblDanio);
+            panelDerecho.Controls.Add(nudDanioBase);
+            panelDerecho.Controls.Add(lblTipoDanio);
+            panelDerecho.Controls.Add(cmbTipoDanio);
+            panelDerecho.Controls.Add(btnExportar);
             // 
             // BtnCrearMapa (Inicializar/Reiniciar Principal)
             // 
@@ -108,6 +131,17 @@ namespace CreadorMapas
             BtnNuevoMapa.Text = "➕ Añadir Sub-Mapa";
             BtnNuevoMapa.UseVisualStyleBackColor = false;
             BtnNuevoMapa.Click += BtnNuevoMapa_Click;
+            // 
+            // BtnEliminarMapa
+            // 
+            BtnEliminarMapa.BackColor = System.Drawing.Color.IndianRed;
+            BtnEliminarMapa.FlatStyle = FlatStyle.Flat;
+            BtnEliminarMapa.ForeColor = Color.White;
+            BtnEliminarMapa.Size = new Size(180, 32);
+            BtnEliminarMapa.Margin = new Padding(3, 3, 3, 10);
+            BtnEliminarMapa.Text = "🗑️ Eliminar Mapa";
+            BtnEliminarMapa.UseVisualStyleBackColor = false;
+            BtnEliminarMapa.Click += BtnEliminarMapa_Click;
             // 
             // comboBox1 (Selector de Baldozas)
             // 
@@ -297,6 +331,7 @@ namespace CreadorMapas
         private FlowLayoutPanel panelDerecho;
         private Button BtnCrearMapa;
         private Button BtnNuevoMapa;
+        private Button BtnEliminarMapa;
         private ComboBox comboBox1;
         private Button BtnCrearEnemigo;
         private Label lblClaseBase;
