@@ -9,6 +9,33 @@ export class AppOrchestrator {
 
         this.currentLevelId = 1;
 
+        // Inicializar Estado Global del Jugador
+        if (!window.playerState) {
+            window.playerState = {
+                cafe: 5,
+                nubes: 150,
+                inventario: {
+                    botiquin: 2,
+                    escudo: 2,
+                    arma_doble: 0,
+                    arma_rebotadora: 0
+                },
+                slots: [
+                    "arma_basica",
+                    null,
+                    null,
+                    null,
+                    null
+                ],
+                balas: {
+                    arma_basica: 100,
+                    arma_doble: 100,
+                    arma_rebotadora: 100
+                },
+                activeSlotIndex: 0
+            };
+        }
+
         this.crearCortinaTransicion();
     }
 

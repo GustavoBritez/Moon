@@ -49,7 +49,8 @@ export class TilemapRenderer {
             16: 0xd9e0ea,
             17: 0x8fa0b8,
             18: 0xa8ff7a,
-            19: 0xf0a7ff
+            19: 0xf0a7ff,
+            20: 0xdfa375
         };
 
         return paletaCute[tipoNumero] || visual.color || 0xffffff;
@@ -96,6 +97,21 @@ export class TilemapRenderer {
                         <circle cx="32" cy="32" r="18" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="3"/>
                         <circle cx="32" cy="32" r="11" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
                         <path d="M21 26 C26 18, 39 18, 43 27 C37 24, 29 24, 21 26 Z" fill="rgba(255,255,255,0.18)"/>
+                    </g>`;
+                break;
+            case 20: // Cofre
+                decoracion = `
+                    <g opacity="0.95">
+                        <!-- Madera inferior -->
+                        <rect x="14" y="26" width="36" height="24" rx="4" fill="#a0522d" stroke="#5c2e16" stroke-width="2"/>
+                        <!-- Tapa arqueada -->
+                        <path d="M14 26 C14 12, 50 12, 50 26 Z" fill="#8b4513" stroke="#5c2e16" stroke-width="2"/>
+                        <!-- Herraje y cerradura -->
+                        <rect x="29" y="22" width="6" height="8" fill="#ffd700" stroke="#b8860b" stroke-width="1"/>
+                        <circle cx="32" cy="26" r="1.5" fill="#000000"/>
+                        <!-- Ribetes metálicos laterales -->
+                        <rect x="17" y="26" width="3" height="24" fill="#dcdde1" opacity="0.4"/>
+                        <rect x="44" y="26" width="3" height="24" fill="#dcdde1" opacity="0.4"/>
                     </g>`;
                 break;
             default:
@@ -305,5 +321,6 @@ export const TILE_DICT = {
     16: { name: 'Baldosa_Metal', color: 0xbdc3c7, solido: false },
     17: { name: 'Muro_Titanio', color: 0x2c3e50, solido: true },
     18: { name: 'Acido', color: 0x39ff14, solido: false, daño: 20 },
-    19: { name: 'Portal_Lab', color: 0x9b59b6, solido: false, esTeleport: true, destino: 3 }
+    19: { name: 'Portal_Lab', color: 0x9b59b6, solido: false, esTeleport: true, destino: 3 },
+    20: { name: 'Cofre', color: 0x8b5a2b, solido: false, esCofre: true }
 };

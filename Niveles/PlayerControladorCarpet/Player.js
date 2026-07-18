@@ -9,10 +9,16 @@ export class Player {
         this.sprite = null;
 
         this.isDead = false;
+        this.isShielded = false;
+        this.shieldTimer = 0;
     }
 
     recibirDanio(cantidad) {
         if (this.isDead) return;
+        if (this.isShielded) {
+            console.log("¡Daño bloqueado por el escudo!");
+            return;
+        }
         this.vidaActual -= cantidad;
         if (this.vidaActual <= 0) {
             this.vidaActual = 0;

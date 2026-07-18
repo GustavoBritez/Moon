@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -38,7 +38,8 @@ namespace CreadorMapas
             { 16, new TileData { name = "Baldosa_Metal", color = 0xbdc3c7, solido = false } },
             { 17, new TileData { name = "Muro_Titanio", color = 0x2c3e50, solido = true } },
             { 18, new TileData { name = "Acido", color = 0x39ff14, solido = false } },
-            { 19, new TileData { name = "Portal_Lab", color = 0x9b59b6, solido = false } }
+            { 19, new TileData { name = "Portal_Lab", color = 0x9b59b6, solido = false } },
+            { 20, new TileData { name = "Cofre", color = 0x8b5a2b, solido = false } }
         };
     }
 }

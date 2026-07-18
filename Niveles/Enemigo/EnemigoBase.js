@@ -246,7 +246,7 @@ export class ExplosiveShooter extends EnemigoBase {
 
         const spriteBala = new PIXI.Graphics();
         spriteBala.lineStyle(2, 0xffffff);
-        spriteBala.beginFill(0xe74c3c); // Rojo para balas enemigas
+        spriteBala.beginFill(0x000000); // Balas enemigas negras
         spriteBala.drawCircle(0, 0, 5);
         spriteBala.endFill();
 
@@ -290,8 +290,8 @@ export class ExplosiveShooter extends EnemigoBase {
 
             const radioExplosion = 120;
             if (dist < radioExplosion) {
-                const danioExplosion = this.calcularDanio(player);
-                player.recibirDanio(danioExplosion);
+                // Los enemigos no causan daño en Kitty
+                console.log("¡Kitty esquivó la explosión!");
             }
 
             // Efecto visual de explosión

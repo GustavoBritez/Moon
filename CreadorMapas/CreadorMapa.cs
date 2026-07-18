@@ -20,6 +20,7 @@ namespace CreadorMapas
             public DataGridView Grid { get; set; }
             public List<EnemigoSpawn> Enemigos { get; set; } = new List<EnemigoSpawn>();
             public List<PortalConfig> Portales { get; set; } = new List<PortalConfig>();
+            public List<ChestConfig> Cofres { get; set; } = new List<ChestConfig>();
         }
 
         private Dictionary<TabPage, MapaData> mapaProyectos = new Dictionary<TabPage, MapaData>();
@@ -337,6 +338,12 @@ namespace CreadorMapas
                     mapaActual.Portales.RemoveAll(p => p.GridX == columna && p.GridY == fila);
                 }
 
+                // Si pintamos cualquier cosa arriba de un cofre existente, eliminar cofre
+                if (idTile != 20)
+                {
+                    mapaActual.Cofres.RemoveAll(c => c.GridX == columna && c.GridY == fila);
+                }
+
                 // Configurar portal si se selecciona Portal_Lab (19)
                 if (idTile == 19)
                 {
@@ -376,6 +383,38 @@ namespace CreadorMapas
                         {
                             // Si cancela la creación del primer portal, no lo colocamos
                             if (portalExistente == null) return;
+                        }
+                    }
+                }
+
+                // Configurar cofre si se selecciona Cofre (20)
+                if (idTile == 20)
+                {
+                    var celdaActual = mapaActual.Grid.Rows[fila].Cells[columna];
+                    if (celdaActual.Value != null && celdaActual.Value.ToString() == "20")
+                    {
+                        // Ya es un cofre. Solo ignoramos si estamos arrastrando para no re-abrir
+                        if (isMouseDown) return;
+                    }
+
+                    var cofreExistente = mapaActual.Cofres.Find(c => c.GridX == columna && c.GridY == fila);
+                    var itemsExistentes = cofreExistente?.Items ?? new Dictionary<string, int>();
+
+                    using (var formConfig = new FormConfigCofre(itemsExistentes))
+                    {
+                        if (formConfig.ShowDialog() == DialogResult.OK)
+                        {
+                            if (cofreExistente == null)
+                            {
+                                cofreExistente = new ChestConfig { GridX = columna, GridY = fila };
+                                mapaActual.Cofres.Add(cofreExistente);
+                            }
+                            cofreExistente.Items = formConfig.ConfiguredItems;
+                        }
+                        else
+                        {
+                            // Si cancela la creación del primer cofre, no lo colocamos
+                            if (cofreExistente == null) return;
                         }
                     }
                 }
@@ -484,6 +523,7 @@ namespace CreadorMapas
                         {
                             // Borramos la celda (poner ID 0 - Suelo)
                             mapaActual.Portales.RemoveAll(p => p.GridX == e.ColumnIndex && p.GridY == e.RowIndex);
+                            mapaActual.Cofres.RemoveAll(c => c.GridX == e.ColumnIndex && c.GridY == e.RowIndex);
                             var celda = mapaActual.Grid.Rows[e.RowIndex].Cells[e.ColumnIndex];
                             celda.Value = 0;
                             int colorSuelo = TileConfig.TILE_DICT[0].color;
@@ -588,6 +628,7 @@ namespace CreadorMapas
                     var mapa = mapaProyectos[principalTab];
                     mapa.Enemigos.Clear();
                     mapa.Portales.Clear();
+                    mapa.Cofres.Clear();
                     GenerarGrillaInternal(mapa.Grid, tamano);
                 }
             }
@@ -732,6 +773,24 @@ namespace CreadorMapas
                     js += $"            {{ gridX: {p.GridX}, gridY: {p.GridY}, etiqueta: '{p.Etiqueta}', destinoMapa: '{p.DestinoMapa}', destinoPortal: '{p.DestinoPortal}' }}";
 
                     if (i < mapa.Portales.Count - 1) js += ",\n";
+                    else js += "\n";
+                }
+                js += "        ],\n";
+
+                // --- 4. COFRES ---
+                js += "        cofres: [\n";
+                for (int i = 0; i < mapa.Cofres.Count; i++)
+                {
+                    var c = mapa.Cofres[i];
+                    var itemsList = new List<string>();
+                    foreach (var kv in c.Items)
+                    {
+                        itemsList.Add($"'{kv.Key}': {kv.Value}");
+                    }
+                    string itemsStr = "{" + string.Join(", ", itemsList) + "}";
+                    js += $"            {{ gridX: {c.GridX}, gridY: {c.GridY}, items: {itemsStr} }}";
+
+                    if (i < mapa.Cofres.Count - 1) js += ",\n";
                     else js += "\n";
                 }
                 js += "        ]\n";

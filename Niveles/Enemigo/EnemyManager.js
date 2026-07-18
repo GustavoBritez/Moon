@@ -76,7 +76,8 @@ export class EnemyManager {
         }
 
         for (const data of this.configEnemigos) {
-            this.fabricaDeEnemigos(data);
+            const enemigo = this.fabricaDeEnemigos(data);
+            this.enemies.push(enemigo);
         }
 
         console.log(`EnemyManager: Inicializados ${this.enemies.length} enemigos visibles.`);
