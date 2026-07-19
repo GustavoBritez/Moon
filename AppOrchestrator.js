@@ -12,29 +12,34 @@ export class AppOrchestrator {
         // Inicializar Estado Global del Jugador
         if (!window.playerState) {
             window.playerState = {
-                cafe: 5,
-                nubes: 150,
+                clase: "knight", // 'knight' o 'mage'
+                gemas: 5,
+                monedas: 150,
+                nivel: 1,
+                xpActual: 0.0,
                 inventario: {
-                    botiquin: 2,
-                    escudo: 2,
-                    arma_doble: 0,
-                    arma_rebotadora: 0
+                    pocion_vida: 2,
+                    escudo_hierro: 2,
+                    daga_doble: 0,
+                    martillo_rebote: 0
                 },
                 slots: [
-                    "arma_basica",
+                    "espada_basica",
                     null,
                     null,
                     null,
                     null
                 ],
-                balas: {
-                    arma_basica: 100,
-                    arma_doble: 100,
-                    arma_rebotadora: 100
+                durabilidad: {
+                    espada_basica: 100,
+                    daga_doble: 100,
+                    martillo_rebote: 100
                 },
                 activeSlotIndex: 0
             };
         }
+        if (window.playerState.nivel === undefined) window.playerState.nivel = 1;
+        if (window.playerState.xpActual === undefined) window.playerState.xpActual = 0.0;
 
         this.crearCortinaTransicion();
     }
@@ -78,7 +83,7 @@ export class AppOrchestrator {
 
         this.currentLevelId = levelId;
 
-        const alTerminarNivel = () => this.procesarVictoria();
+        const alTerminarNivel = (status) => this.procesarVictoria(status === 'LEVEL_VICTORY');
         const alSeleccionarNivel = (idDestino) => this.transitionTo(idDestino);
 
         const productoMecanico = GameFactory.build(
@@ -101,7 +106,13 @@ export class AppOrchestrator {
     procesarVictoria(esVictoria = true) {
         if (this.gameState === "VICTORY" || this.gameState === "DEFEAT") return;
         this.gameState = esVictoria ? "VICTORY" : "DEFEAT";
-        this.mostrarPantallaFinal(esVictoria);
+        
+        if (esVictoria) {
+            this.mostrarPantallaFinal(true);
+        } else {
+            console.log("Derrota: Relanzando la partida...");
+            this.transitionTo(this.currentLevelId);
+        }
     }
 
 
@@ -121,9 +132,9 @@ export class AppOrchestrator {
         `;
 
         // Textos y colores dinámicos (Verde vs Rosa)
-        const titulo = esVictoria ? "✨ ¡VICTORIA! ✨" : "💔 ¡OUCH! 💔";
-        const subtitulo = esVictoria ? "¡Nivel Superado!" : "Jugador Eliminado";
-        const mensaje = esVictoria ? "¡Kitty completó el laberinto con éxito!" : "Nuestra pobre Kitty se quedó sin energías...";
+        const titulo = esVictoria ? "✨ ¡VICTORIA! ✨" : "💔 ¡DERROTA! 💔";
+        const subtitulo = esVictoria ? "¡Mazmorra Superada!" : "Héroe Caído";
+        const mensaje = esVictoria ? "¡Completaste el calabozo con éxito!" : "Tu héroe se ha quedado sin salud en la mazmorra...";
         const colorPrincipal = esVictoria ? "#2ecc71" : "#ff6584";
         const colorSombra = esVictoria ? "#27ae60" : "#d11a5b";
         const colorTexto = esVictoria ? "#a8e6cf" : "#ffb7c5";

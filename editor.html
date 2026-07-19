@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moon Editor - Diseñador de Niveles</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f0c16;
+            --panel-bg: rgba(30, 27, 41, 0.75);
+            --border-gold: #d69e2e;
+            --text-gold: #f6e05e;
+            --text-light: #f1ebd9;
+            --shadow-glow: rgba(214, 158, 46, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Contenedor del Sidebar */
+        .sidebar {
+            width: 380px;
+            height: 100%;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-right: 2px solid var(--border-gold);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 2px solid rgba(214, 158, 46, 0.25);
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            color: var(--text-gold);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px var(--shadow-glow);
+        }
+
+        .sidebar-header p {
+            font-size: 0.8rem;
+            color: #a0aec0;
+            margin-top: 4px;
+        }
+
+        /* Configuración del Mapa */
+        .map-config {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .map-config label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-gold);
+        }
+
+        .map-config input {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-gold);
+            color: white;
+            padding: 6px;
+            border-radius: 8px;
+            width: 70px;
+            text-align: center;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .map-config button {
+            background: var(--border-gold);
+            color: #110e19;
+            border: none;
+            padding: 6px 12px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: transform 0.1s;
+        }
+
+        .map-config button:active {
+            transform: scale(0.95);
+        }
+
+        /* Pestañas de la paleta */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            color: #a0aec0;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            color: var(--text-gold);
+            border-bottom: 3px solid var(--border-gold);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Contenido de Paleta */
+        .palette-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .palette-item {
+            aspect-ratio: 1;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid #3e3b4e;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            padding: 4px;
+            position: relative;
+        }
+
+        .palette-item:hover {
+            border-color: var(--border-gold);
+            background: rgba(214, 158, 46, 0.15);
+        }
+
+        .palette-item.active {
+            border-color: var(--border-gold);
+            background: rgba(214, 158, 46, 0.25);
+            box-shadow: 0 0 10px var(--shadow-glow);
+        }
+
+        .palette-item svg, .palette-item img {
+            width: 48px;
+            height: 48px;
+            pointer-events: none;
+        }
+
+        .palette-item span {
+            font-size: 0.65rem;
+            color: #cbd5e0;
+            text-align: center;
+            margin-top: 4px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* Botones de acción inferiores */
+        .actions-panel {
+            padding: 20px;
+            border-top: 2px solid rgba(214, 158, 46, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-copy {
+            background: var(--border-gold);
+            color: #110e19;
+        }
+
+        .btn-download {
+            background: #2b6cb0;
+            color: white;
+        }
+
+        .btn-clear {
+            background: #e53e3e;
+            color: white;
+        }
+
+        /* Contenedor del Canvas */
+        .canvas-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background-color: #14121f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Indicador de Herramienta Activa */
+        .tool-indicator {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 18, 31, 0.85);
+            border: 2px solid var(--border-gold);
+            border-radius: 16px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--text-gold);
+            z-index: 5;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        /* Modales de Configuración */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 12, 22, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s, visibility 0.25s;
+        }
+
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #1e1b29;
+            border: 3px solid var(--border-gold);
+            border-radius: 24px;
+            padding: 25px;
+            width: 380px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--text-gold);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+            text-align: center;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #cbd5e0;
+        }
+
+        .form-group input {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-gold);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 10px;
+            font-weight: bold;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .btn-modal-save {
+            background: var(--border-gold);
+            color: #110e19;
+        }
+
+        .btn-modal-cancel {
+            background: #4a5568;
+            color: white;
+        }
+
+        /* Overlay para ver el JSON */
+        .json-modal {
+            width: 550px !important;
+        }
+
+        .json-textarea {
+            width: 100%;
+            height: 250px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border-gold);
+            color: #2ed573;
+            font-family: monospace;
+            font-size: 0.75rem;
+            padding: 12px;
+            border-radius: 12px;
+            resize: none;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(214, 158, 46, 0.3);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(214, 158, 46, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Consola de errores visual flotante (muy útil para depurar sin abrir F12) -->
+    <div id="errorConsole" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(229, 62, 98, 0.95); color: white; padding: 15px; border-radius: 8px; border: 2px solid #fff; max-width: 400px; z-index: 10000; font-family: monospace; font-size: 0.8rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+        <h4 style="margin-bottom: 5px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 3px;">⚠️ Error de Script:</h4>
+        <p id="errorText" style="white-space: pre-wrap; margin: 0;"></p>
+    </div>
+
+    <script>
+        // Capturador global de errores para mostrar en pantalla
+        window.onerror = function(message, source, lineno, colno, error) {
+            const consoleEl = document.getElementById('errorConsole');
+            const textEl = document.getElementById('errorText');
+            if (consoleEl && textEl) {
+                consoleEl.style.display = 'block';
+                textEl.innerText = `${message}\nLínea: ${lineno}:${colno}\nArchivo: ${source ? source.split('/').pop() : 'desconocido'}`;
+            }
+            return false;
+        };
+    </script>
+
+    <!-- Indicador de herramienta activa -->
+    <div class="tool-indicator" id="toolIndicator">Activo: Baldosa Suelo (0)</div>
+
+    <!-- Barra lateral izquierda -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>Moon Editor</h1>
+            <p>Moon WYSIWYG Editor</p>
+        </div>
+
+        <div class="map-config">
+            <label for="gridSize">Tamaño Grid:</label>
+            <input type="number" id="gridSize" value="20" min="5" max="50">
+            <button onclick="cambiarDimensiones()">Rediseñar</button>
+        </div>
+
+        <!-- Selector/Pestañas de Mapas en el Paquete -->
+        <div style="padding: 10px 20px; border-bottom: 2px solid rgba(214, 158, 46, 0.25); display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">Mapas del Paquete:</label>
+                <button onclick="crearNuevoMapa()" style="background: #2ecc71; color: white; border: none; padding: 4px 10px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">➕ Nuevo Mapa</button>
+            </div>
+            <div id="mapTabsContainer" style="display: flex; gap: 5px; flex-wrap: wrap; max-height: 100px; overflow-y: auto; padding: 5px 0;">
+                <!-- Pestañas generadas por JS -->
+            </div>
+        </div>
+
+        <!-- Pestañas de la paleta -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="cambiarPestaña('tiles')">Baldosas</button>
+            <button class="tab-btn" onclick="cambiarPestaña('enemies')">Enemigos</button>
+        </div>
+
+        <!-- Paleta de Elementos -->
+        <div class="palette-content" id="paletteContent">
+            <!-- Grid de Baldosas -->
+            <div class="palette-grid" id="tilesPalette">
+                <!-- Se llena mediante JS -->
+            </div>
+            
+            <!-- Grid de Enemigos -->
+            <div class="palette-grid" id="enemiesPalette" style="display: none;">
+                <!-- Se llena mediante JS -->
+            </div>
+        </div>
+
+        <!-- Acciones principales -->
+        <div class="actions-panel">
+            <button class="btn-action btn-copy" onclick="abrirModalImportExport()">
+                📤 Importar / Exportar JSON
+            </button>
+            <button class="btn-action btn-download" onclick="descargarJSON()">
+                💾 Descargar Archivo JSON
+            </button>
+            <button class="btn-action btn-clear" onclick="confirmarLimpiarTodo()">
+                🗑️ Limpiar Todo el Mapa
+            </button>
+        </div>
+    </div>
+
+    <!-- Zona del Canvas -->
+    <div class="canvas-container" id="canvasContainer">
+        <!-- El canvas 2D se inserta aquí dinámicamente -->
+    </div>
+
+    <!-- Modal para Configurar Portales (ID 19) -->
+    <div class="modal" id="modalPortal">
+        <div class="modal-content">
+            <div class="modal-header">Configurar Portal</div>
+            <div class="form-group">
+                <label for="portalTag">Etiqueta de este portal (ej. "inicio"):</label>
+                <input type="text" id="portalTag" placeholder="inicio">
+            </div>
+            <div class="form-group">
+                <label for="portalDestMap">Mapa de Destino (ej. "cueva"):</label>
+                <input type="text" id="portalDestMap" placeholder="cueva">
+            </div>
+            <div class="form-group">
+                <label for="portalDestTag">Etiqueta de Destino (ej. "salida"):</label>
+                <input type="text" id="portalDestTag" placeholder="salida">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-modal-save" onclick="guardarConfigPortal()">Guardar</button>
+                <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalPortal')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Configurar Cofres (ID 20) -->
+    <div class="modal" id="modalCofre">
+        <div class="modal-content">
+            <div class="modal-header">Configurar Cofre de Botín</div>
+            <div style="font-size: 0.8rem; color: #a0aec0; margin-bottom: 5px; text-align: center;">Cantidad de items a arrojar al abrirse:</div>
+            <div class="form-group">
+                <label for="lootCoins">🪙 Monedas de Oro:</label>
+                <input type="number" id="lootCoins" value="10" min="0">
+            </div>
+            <div class="form-group">
+                <label for="lootGems">💎 Gemas:</label>
+                <input type="number" id="lootGems" value="2" min="0">
+            </div>
+            <div class="form-group">
+                <label for="lootPotions">🧪 Pociones de Vida:</label>
+                <input type="number" id="lootPotions" value="1" min="0">
+            </div>
+            <div class="form-group">
+                <label for="lootShields">🛡️ Escudos de Hierro:</label>
+                <input type="number" id="lootShields" value="0" min="0">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-modal-save" onclick="guardarConfigCofre()">Guardar</button>
+                <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalCofre')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Importar / Exportar JSON -->
+    <div class="modal" id="modalImportExport">
+        <div class="modal-content json-modal">
+            <div class="modal-header">Importar / Exportar Paquete de Nivel</div>
+            <p style="font-size: 0.8rem; color: #a0aec0; text-align: center; margin-bottom: 5px;">Puedes pegar un JSON para cargarlo, o copiar el generado abajo:</p>
+            <textarea class="json-textarea" id="jsonTextArea" spellcheck="false"></textarea>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-modal-save" onclick="importarJSON()">📥 Cargar JSON en Editor</button>
+                <button class="btn-modal btn-copy" onclick="copiarAlPortapapeles()">📋 Copiar al Portapapeles</button>
+                <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalImportExport')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN TILEMAP ORIGINAL
+        const TILE_DICT = {
+            0: { name: 'Suelo', color: 0x2c3e50, solido: false },
+            1: { name: 'Pared Base', color: 0x7f8c8d, solido: true },
+            2: { name: 'Meta', color: 0xf1c40f, solido: false },
+            3: { name: 'Spawn Jugador', color: 0x00ffff, solido: false },
+            4: { name: 'Hielo', color: 0xa4ebf3, solido: false },
+            5: { name: 'Nieve', color: 0xffffff, solido: false },
+            6: { name: 'Pared Hielo', color: 0x2980b9, solido: true },
+            7: { name: 'Agua Congelada', color: 0x1abc9c, solido: false },
+            8: { name: 'Piedra Volcánica', color: 0x34495e, solido: false },
+            9: { name: 'Lava', color: 0xe67e22, solido: false },
+            10: { name: 'Ceniza', color: 0x111111, solido: false },
+            11: { name: 'Muro Obsidiana', color: 0x000000, solido: true },
+            12: { name: 'Pasto', color: 0x2ecc71, solido: false },
+            13: { name: 'Pantano', color: 0x145a32, solido: false },
+            14: { name: 'Tronco Muro', color: 0x8e44ad, solido: true },
+            15: { name: 'Veneno', color: 0x00ff00, solido: false },
+            16: { name: 'Baldosa Metal', color: 0xbdc3c7, solido: false },
+            17: { name: 'Muro Titanio', color: 0x2c3e50, solido: true },
+            18: { name: 'Ácido', color: 0x39ff14, solido: false },
+            19: { name: 'Portal Portal', color: 0x9b59b6, solido: false },
+            20: { name: 'Cofre Botín', color: 0x8b5a2b, solido: false }
+        };
+
+        const ENEMY_DICT = {
+            'BASE': { name: 'Esqueleto', color: 0xdfe4ea, desc: 'Enemigo cuerpo a cuerpo básico' },
+            'BAKU': { name: 'Orco', color: 0x27ae60, desc: 'Orco patrullero normal' },
+            'EXPLOSIVE_SHOOTER': { name: 'Chamán Esqueleto', color: 0x8e44ad, desc: 'Lanza bolas de fuego y explota al morir' },
+            'SHOOTER_CHILD': { name: 'Espectro', color: 0xf1f2f6, desc: 'Pequeño fantasma veloz' },
+            'MONSTER_SPAWNER': { name: 'Generador Esqueletos', color: 0x805AD5, desc: 'Genera esqueletos cada 6s' },
+            'NECROMANCER': { name: 'Nigromante', color: 0x319795, desc: 'Huye e invoca espectros' },
+            'ORC_BOSS': { name: 'Jefe Orco Élite', color: 0x22543D, desc: 'Área roja con golpe y knockback' }
+        };
+
+        // VARIABLES DE ESTADO
+        let N = 20;
+        let selectedTool = { type: 'tile', id: 0 }; // 'tile' o 'enemy'
+        let matrix = Array(N).fill(null).map(() => Array(N).fill(0));
+        let enemigos = [];
+        let portales = [];
+        let cofres = [];
+
+        // Soporte de múltiples mapas del paquete de nivel
+        let mapsOfPack = {
+            principal: {
+                gridSize: N,
+                matrix: matrix,
+                enemigos: enemigos,
+                portales: portales,
+                cofres: cofres
+            }
+        };
+        let activeMapName = 'principal';
+
+        // Canvas Setup (Nativo HTML5 2D)
+        let canvas;
+        let ctx;
+        let imgCache = new Map();
+        let tileSize = 40;
+
+        let activeCellConfig = { x: 0, y: 0 };
+        let isMouseDown = false;
+
+        // INICIALIZACIÓN
+        window.onload = () => {
+            inicializarCanvas();
+            generarPaletas();
+            actualizarIndicadorHerramienta();
+            renderMapTabs();
+        };
+
+        // FUNCIONES DE CONTROL DE MÚLTIPLES MAPAS
+        function crearNuevoMapa() {
+            let name = prompt("Ingrese el nombre del nuevo mapa secundario (ej. cueva, arena_jefe):");
+            if (!name) return;
+
+            name = name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+            if (!name) {
+                alert("Nombre inválido. Debe contener solo caracteres alfanuméricos y guiones bajos.");
+                return;
+            }
+
+            if (mapsOfPack[name]) {
+                alert("Ya existe un mapa con ese nombre en el paquete.");
+                return;
+            }
+
+            // Crear el nuevo mapa con el tamaño actual por defecto
+            mapsOfPack[name] = {
+                gridSize: 20,
+                matrix: Array(20).fill(null).map(() => Array(20).fill(0)),
+                enemigos: [],
+                portales: [],
+                cofres: []
+            };
+
+            switchMap(name);
+        }
+
+        function switchMap(name) {
+            if (!mapsOfPack[name]) return;
+
+            // Salvar estado del mapa activo actual antes de cambiar
+            mapsOfPack[activeMapName] = {
+                gridSize: N,
+                matrix: matrix.map(row => row.slice()), // Clonar fila por fila
+                enemigos: JSON.parse(JSON.stringify(enemigos)), // Clonación profunda
+                portales: JSON.parse(JSON.stringify(portales)),
+                cofres: JSON.parse(JSON.stringify(cofres))
+            };
+
+            // Cambiar punteros al nuevo mapa activo
+            activeMapName = name;
+            const targetMap = mapsOfPack[activeMapName];
+
+            N = targetMap.gridSize;
+            matrix = targetMap.matrix;
+            enemigos = targetMap.enemigos;
+            portales = targetMap.portales;
+            cofres = targetMap.cofres;
+
+            // Ajustar controles y canvas
+            const gridSizeInput = document.getElementById('gridSize');
+            if (gridSizeInput) {
+                gridSizeInput.value = N;
+            }
+
+            if (canvas) {
+                canvas.width = N * tileSize;
+                canvas.height = N * tileSize;
+            }
+
+            dibujarGrilla();
+            renderMapTabs();
+        }
+
+        function renderMapTabs() {
+            const container = document.getElementById('mapTabsContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+            for (const name of Object.keys(mapsOfPack)) {
+                const btn = document.createElement('button');
+                const isActive = name === activeMapName;
+                btn.innerText = name;
+                
+                // Estilo para los botones de pestañas
+                btn.style.padding = '4px 10px';
+                btn.style.fontSize = '0.8rem';
+                btn.style.fontWeight = 'bold';
+                btn.style.borderRadius = '6px';
+                btn.style.border = isActive ? '2px solid var(--border-gold)' : '1px solid rgba(255,255,255,0.2)';
+                btn.style.background = isActive ? 'rgba(214, 158, 46, 0.25)' : 'rgba(0,0,0,0.3)';
+                btn.style.color = isActive ? 'var(--text-gold)' : '#cbd5e0';
+                btn.style.cursor = 'pointer';
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.gap = '6px';
+                btn.style.transition = 'all 0.15s';
+
+                btn.onclick = () => switchMap(name);
+
+                // Botón de eliminar para mapas secundarios
+                if (name !== 'principal') {
+                    const delSpan = document.createElement('span');
+                    delSpan.innerHTML = ' ❌';
+                    delSpan.style.color = '#ff6b6b';
+                    delSpan.style.fontSize = '0.7rem';
+                    delSpan.style.cursor = 'pointer';
+                    delSpan.style.marginLeft = '4px';
+                    delSpan.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm(`¿Estás seguro de que deseas eliminar por completo el mapa secundario "${name}"?`)) {
+                            if (activeMapName === name) {
+                                switchMap('principal');
+                            }
+                            delete mapsOfPack[name];
+                            renderMapTabs();
+                        }
+                    };
+                    btn.appendChild(delSpan);
+                }
+
+                container.appendChild(btn);
+            }
+        }
+
+        function inicializarCanvas() {
+            const container = document.getElementById('canvasContainer');
+            container.innerHTML = ''; // Limpiar previo
+            
+            canvas = document.createElement('canvas');
+            canvas.width = N * tileSize;
+            canvas.height = N * tileSize;
+            canvas.style.backgroundColor = '#14121f';
+            canvas.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+            canvas.style.borderRadius = '16px';
+            canvas.style.cursor = 'crosshair';
+            canvas.style.display = 'block';
+            
+            container.appendChild(canvas);
+            ctx = canvas.getContext('2d');
+
+            dibujarGrilla();
+
+            // Eventos del Mouse en el Canvas
+            canvas.addEventListener('mousedown', onCanvasMouseDown);
+            canvas.addEventListener('mousemove', onCanvasMouseMove);
+            window.addEventListener('mouseup', () => { isMouseDown = false; });
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        // REDIBUJAR TODA LA MAZMORRA
+        function dibujarGrilla() {
+            if (!ctx) return;
+            
+            // Limpiar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar Baldosas
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    const tileId = matrix[r][c];
+                    const visual = TILE_DICT[tileId] || TILE_DICT[0];
+
+                    const img = obtenerImagenTile(tileId, visual);
+                    
+                    ctx.save();
+                    // Suelos ajedrezados
+                    if (!visual.solido && tileId !== 20 && tileId !== 19 && (r + c) % 2 === 0) {
+                        ctx.globalAlpha = 0.93;
+                    }
+
+                    if (img.complete && img.naturalWidth !== 0) {
+                        ctx.drawImage(img, c * tileSize, r * tileSize, tileSize, tileSize);
+                    } else {
+                        // Relleno de color fallback mientras carga
+                        ctx.fillStyle = '#' + visual.color.toString(16).padStart(6, '0');
+                        ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // Dibujar Líneas de Grilla
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i <= N; i++) {
+                // Verticales
+                ctx.moveTo(i * tileSize, 0);
+                ctx.lineTo(i * tileSize, N * tileSize);
+                // Horizontales
+                ctx.moveTo(0, i * tileSize);
+                ctx.lineTo(N * tileSize, i * tileSize);
+            }
+            ctx.stroke();
+
+            // Dibujar Enemigos
+            for (const en of enemigos) {
+                const x = en.gridX * tileSize + tileSize / 2;
+                const y = en.gridY * tileSize + tileSize / 2;
+                dibujarEnemigoCanvas(ctx, en.type, x, y);
+            }
+        }
+
+        // TEXTURAS DE BALDOSAS SVG (IDÉNTICAS AL JUEGO)
+        function colorAHex(color) {
+            return `#${color.toString(16).padStart(6, '0')}`;
+        }
+
+        function ajustarColor(color, factor) {
+            const rojo = (color >> 16) & 255;
+            const verde = (color >> 8) & 255;
+            const azul = color & 255;
+
+            const ajustarCanal = (canal) => {
+                const valor = factor >= 0 ? canal + (255 - canal) * factor : canal * (1 + factor);
+                return Math.max(0, Math.min(255, Math.round(valor)));
+            };
+
+            return (ajustarCanal(rojo) << 16) | (ajustarCanal(verde) << 8) | ajustarCanal(azul);
+        }
+
+        function crearSvgTile(tipoNumero, visual) {
+            const colorBase = visual.color;
+            const colorLuz = colorAHex(ajustarColor(colorBase, 0.3));
+            const colorMedio = colorAHex(colorBase);
+            const colorSombra = colorAHex(ajustarColor(colorBase, -0.18));
+            const colorProfundo = colorAHex(ajustarColor(colorBase, -0.4));
+            const borde = visual.solido ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.2)';
+
+            let decoracion = '';
+            switch (tipoNumero) {
+                case 2:
+                    decoracion = `<circle cx="32" cy="32" r="10" fill="rgba(255,255,255,0.18)"/><circle cx="32" cy="32" r="6" fill="#ffffff" opacity="0.9"/>`;
+                    break;
+                case 19: // Portal
+                    decoracion = `<circle cx="32" cy="32" r="16" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="3"/><circle cx="32" cy="32" r="8" fill="rgba(255,255,255,0.25)"/>`;
+                    break;
+                case 20: // Cofre
+                    decoracion = `<rect x="14" y="26" width="36" height="24" rx="4" fill="#a0522d" stroke="#5c2e16" stroke-width="2"/><path d="M14 26 C14 12, 50 12, 50 26 Z" fill="#8b4513" stroke="#5c2e16" stroke-width="2"/><rect x="29" y="22" width="6" height="8" fill="#ffd700" stroke="#b8860b" stroke-width="1"/>`;
+                    break;
+                default:
+                    decoracion = `<circle cx="20" cy="19" r="4" fill="rgba(255,255,255,0.12)"/><circle cx="42" cy="44" r="3" fill="rgba(0,0,0,0.06)"/>`;
+                    break;
+            }
+
+            return `
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="g_${tipoNumero}" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="${colorLuz}"/>
+                            <stop offset="55%" stop-color="${colorMedio}"/>
+                            <stop offset="100%" stop-color="${colorSombra}"/>
+                        </linearGradient>
+                    </defs>
+                    <rect x="4" y="6" width="56" height="54" rx="12" fill="${colorProfundo}" opacity="0.3"/>
+                    <rect x="3" y="3" width="58" height="54" rx="12" fill="url(#g_${tipoNumero})" stroke="${borde}" stroke-width="1.2"/>
+                    <rect x="3" y="3" width="58" height="15" rx="12" fill="#ffffff" opacity="0.12"/>
+                    ${decoracion}
+                </svg>`;
+        }
+
+        function obtenerImagenTile(tipoNumero, visual) {
+            if (imgCache.has(tipoNumero)) {
+                return imgCache.get(tipoNumero);
+            }
+            const img = new Image();
+            const svg = crearSvgTile(tipoNumero, visual);
+            img.src = 'data:image/svg+xml;charset=utf8,' + encodeURIComponent(svg);
+            img.onload = () => {
+                dibujarGrilla(); // Volver a dibujar cuando el SVG cargue
+            };
+            imgCache.set(tipoNumero, img);
+            return img;
+        }
+
+        // RENDER DE ENEMIGOS EN CANVAS 2D (SÍMBOLOS)
+        function dibujarEnemigoCanvas(ctx, type, x, y) {
+            ctx.save();
+            if (type === 'MONSTER_SPAWNER') {
+                ctx.fillStyle = '#2d3748';
+                ctx.fillRect(x - 14, y - 14, 28, 28);
+                ctx.strokeStyle = '#d69e2e';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(x - 14, y - 14, 28, 28);
+                
+                ctx.fillStyle = '#805ad5';
+                ctx.beginPath();
+                ctx.ellipse(x, y, 7, 10, 0, 0, 2 * Math.PI);
+                ctx.fill();
+            } else if (type === 'NECROMANCER') {
+                ctx.fillStyle = '#1a202c';
+                ctx.beginPath();
+                ctx.arc(x, y, 11, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#edf2f7';
+                ctx.beginPath();
+                ctx.ellipse(x, y - 2, 5, 6, 0, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#319795';
+                ctx.beginPath();
+                ctx.arc(x - 2, y - 2, 1, 0, 2 * Math.PI);
+                ctx.arc(x + 2, y - 2, 1, 0, 2 * Math.PI);
+                ctx.fill();
+            } else if (type === 'ORC_BOSS') {
+                ctx.fillStyle = '#22543d';
+                ctx.beginPath();
+                ctx.arc(x, y, 17, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#4a5568';
+                ctx.fillRect(x - 8, y - 12, 16, 11);
+                
+                ctx.fillStyle = '#e53e3e';
+                ctx.beginPath();
+                ctx.arc(x - 3, y - 9, 1.5, 0, 2 * Math.PI);
+                ctx.arc(x + 3, y - 9, 1.5, 0, 2 * Math.PI);
+                ctx.fill();
+            } else if (type === 'BAKU') {
+                ctx.fillStyle = '#27ae60';
+                ctx.fillRect(x - 12, y - 12, 24, 24);
+                ctx.strokeStyle = '#1e5a32';
+                ctx.strokeRect(x - 12, y - 12, 24, 24);
+            } else if (type === 'EXPLOSIVE_SHOOTER') {
+                ctx.fillStyle = '#2f3542';
+                ctx.beginPath();
+                ctx.arc(x, y, 11, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#8e44ad';
+                ctx.beginPath();
+                ctx.arc(x, y - 4, 7, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#ff3f34';
+                ctx.beginPath();
+                ctx.arc(x - 2, y - 1, 1.5, 0, 2 * Math.PI);
+                ctx.arc(x + 2, y - 1, 1.5, 0, 2 * Math.PI);
+                ctx.fill();
+            } else if (type === 'SHOOTER_CHILD') {
+                ctx.fillStyle = 'rgba(241, 242, 246, 0.85)';
+                ctx.beginPath();
+                ctx.arc(x, y, 7, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#34e7f4';
+                ctx.beginPath();
+                ctx.arc(x - 2, y - 1, 1, 0, 2 * Math.PI);
+                ctx.arc(x + 2, y - 1, 1, 0, 2 * Math.PI);
+                ctx.fill();
+            } else {
+                // BASE (Esqueleto)
+                ctx.fillStyle = '#dfe4ea';
+                ctx.beginPath();
+                ctx.arc(x, y, 9, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#ff3f34';
+                ctx.beginPath();
+                ctx.arc(x - 2, y - 2, 1.5, 0, 2 * Math.PI);
+                ctx.arc(x + 2, y - 2, 1.5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // GENERACIÓN DE PALETAS LATERALES HTML (CON PREVIEWS SVG INLINE)
+        function generarPaletas() {
+            // Baldosas
+            const tilesPalette = document.getElementById('tilesPalette');
+            tilesPalette.innerHTML = '';
+            for (const [id, visual] of Object.entries(TILE_DICT)) {
+                const idNum = parseInt(id);
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `palette-item ${selectedTool.type === 'tile' && selectedTool.id === idNum ? 'active' : ''}`;
+                itemDiv.onclick = () => seleccionarHerramienta('tile', idNum);
+
+                // Crear preview SVG inline para la paleta
+                const svgContent = crearSvgTile(idNum, visual);
+                itemDiv.innerHTML = `${svgContent}<span>${visual.name}</span>`;
+                tilesPalette.appendChild(itemDiv);
+            }
+
+            // Enemigos
+            const enemiesPalette = document.getElementById('enemiesPalette');
+            enemiesPalette.innerHTML = '';
+            for (const [key, details] of Object.entries(ENEMY_DICT)) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `palette-item ${selectedTool.type === 'enemy' && selectedTool.id === key ? 'active' : ''}`;
+                itemDiv.onclick = () => seleccionarHerramienta('enemy', key);
+
+                // Generar vista previa coloreada
+                const colorHex = colorAHex(details.color);
+                const svgPreview = `
+                    <svg viewBox="0 0 40 40" width="48" height="48">
+                        <circle cx="20" cy="20" r="16" fill="${colorHex}" stroke="#ffd700" stroke-width="2"/>
+                        <text x="20" y="24" font-size="12" font-weight="bold" fill="#110e19" text-anchor="middle">👿</text>
+                    </svg>
+                `;
+                itemDiv.innerHTML = `${svgPreview}<span>${details.name}</span>`;
+                itemDiv.title = details.desc;
+                enemiesPalette.appendChild(itemDiv);
+            }
+        }
+
+        function seleccionarHerramienta(type, id) {
+            selectedTool = { type, id };
+            actualizarIndicadorHerramienta();
+            
+            // Actualizar clases activas en la paleta
+            const items = document.querySelectorAll('.palette-item');
+            items.forEach(el => el.classList.remove('active'));
+            generarPaletas();
+        }
+
+        function actualizarIndicadorHerramienta() {
+            const indicator = document.getElementById('toolIndicator');
+            if (selectedTool.type === 'tile') {
+                indicator.innerText = `Herramienta: Baldosa ${TILE_DICT[selectedTool.id].name} (ID: ${selectedTool.id})`;
+            } else {
+                indicator.innerText = `Herramienta: Enemigo ${ENEMY_DICT[selectedTool.id].name} (${selectedTool.id})`;
+            }
+        }
+
+        // NAVEGACIÓN DE PESTAÑAS (BALDOSAS / ENEMIGOS)
+        function cambiarPestaña(target) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (target === 'tiles') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('tilesPalette').style.display = 'grid';
+                document.getElementById('enemiesPalette').style.display = 'none';
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('tilesPalette').style.display = 'none';
+                document.getElementById('enemiesPalette').style.display = 'grid';
+            }
+        }
+
+        // EVENTOS DE EDICIÓN DEL CANVAS
+        function onCanvasMouseDown(e) {
+            isMouseDown = true;
+            const bounds = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - bounds.left;
+            const mouseY = e.clientY - bounds.top;
+
+            const gridX = Math.floor(mouseX / tileSize);
+            const gridY = Math.floor(mouseY / tileSize);
+
+            if (gridX >= 0 && gridX < N && gridY >= 0 && gridY < N) {
+                if (e.button === 2) {
+                    borrarCelda(gridX, gridY);
+                } else {
+                    aplicarHerramienta(gridX, gridY, true);
+                }
+            }
+        }
+
+        function onCanvasMouseMove(e) {
+            if (!isMouseDown) return;
+            const bounds = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - bounds.left;
+            const mouseY = e.clientY - bounds.top;
+
+            const gridX = Math.floor(mouseX / tileSize);
+            const gridY = Math.floor(mouseY / tileSize);
+
+            if (gridX >= 0 && gridX < N && gridY >= 0 && gridY < N) {
+                if (e.buttons === 2) {
+                    borrarCelda(gridX, gridY);
+                } else if (e.buttons === 1) {
+                    // Solo pintar baldosas en arrastre (para no colocar múltiples jefes/cofres accidentalmente)
+                    if (selectedTool.type === 'tile') {
+                        aplicarHerramienta(gridX, gridY, false);
+                    }
+                }
+            }
+        }
+
+        function aplicarHerramienta(gridX, gridY, showFeedback = false) {
+            if (selectedTool.type === 'tile') {
+                const tileInfo = TILE_DICT[selectedTool.id];
+                if (tileInfo && tileInfo.solido) {
+                    const tieneEnemigo = enemigos.some(en => en.gridX === gridX && en.gridY === gridY);
+                    if (tieneEnemigo) {
+                        if (showFeedback) {
+                            alert("No puedes colocar un bloque sólido sobre un enemigo.");
+                        }
+                        return;
+                    }
+                }
+
+                // Guardar baldosa
+                matrix[gridY][gridX] = selectedTool.id;
+
+                // Si es un portal (19), crear configuración
+                if (selectedTool.id === 19) {
+                    if (!portales.find(p => p.gridX === gridX && p.gridY === gridY)) {
+                        portales.push({ gridX, gridY, etiqueta: `portal_${gridX}_${gridY}`, destinoMapa: 'cueva', destinoPortal: 'salida' });
+                    }
+                    abrirModalPortal(gridX, gridY);
+                }
+                // Si es cofre (20), crear configuración
+                else if (selectedTool.id === 20) {
+                    if (!cofres.find(c => c.gridX === gridX && c.gridY === gridY)) {
+                        cofres.push({ gridX, gridY, items: { monedas: 15, gemas: 2, pocion_vida: 1, escudo_hierro: 0 } });
+                    }
+                    abrirModalCofre(gridX, gridY);
+                } else {
+                    // Si se sobrescribió un cofre/portal especial, eliminar su config
+                    removerConfigsAdicionales(gridX, gridY);
+                }
+            } else {
+                // Colocar Enemigo (evitar poner en paredes sólidas)
+                const tileInfo = TILE_DICT[matrix[gridY][gridX]];
+                if (tileInfo && tileInfo.solido) {
+                    if (showFeedback) {
+                        alert("No puedes colocar un enemigo sobre un muro sólido.");
+                    }
+                    return;
+                }
+
+                // Eliminar enemigo previo en esa celda si existe
+                enemigos = enemigos.filter(en => !(en.gridX === gridX && en.gridY === gridY));
+
+                // Registrar nuevo enemigo
+                enemigos.push({
+                    type: selectedTool.id,
+                    tipo: selectedTool.id,
+                    gridX,
+                    gridY,
+                    vida: selectedTool.id === 'ORC_BOSS' ? 450 : (selectedTool.id === 'NECROMANCER' ? 220 : 70),
+                    velocidad: selectedTool.id === 'ORC_BOSS' ? 75 : (selectedTool.id === 'NECROMANCER' ? 90 : 85),
+                    defensa: selectedTool.id === 'ORC_BOSS' ? 20 : 10,
+                    resistencias: {},
+                    decoradores: [],
+                    danioBase: selectedTool.id === 'ORC_BOSS' ? 5 : 2,
+                    tipoDanio: 'PORCENTAJE_BASE'
+                });
+            }
+            dibujarGrilla();
+        }
+
+        function borrarCelda(gridX, gridY) {
+            matrix[gridY][gridX] = 0; // Cambiar a Suelo
+            enemigos = enemigos.filter(en => !(en.gridX === gridX && en.gridY === gridY));
+            removerConfigsAdicionales(gridX, gridY);
+            dibujarGrilla();
+        }
+
+        function removerConfigsAdicionales(gridX, gridY) {
+            portales = portales.filter(p => !(p.gridX === gridX && p.gridY === gridY));
+            cofres = cofres.filter(c => !(c.gridX === gridX && c.gridY === gridY));
+        }
+
+        // REDIMENSIONAR GRILLA
+        function cambiarDimensiones() {
+            const nud = document.getElementById('gridSize');
+            const nuevoVal = parseInt(nud.value);
+            if (nuevoVal >= 5 && nuevoVal <= 50) {
+                N = nuevoVal;
+                
+                // Conservar contenido previo en la nueva matriz
+                const viejaMatriz = matrix;
+                matrix = Array(N).fill(null).map(() => Array(N).fill(0));
+                
+                for (let r = 0; r < Math.min(N, viejaMatriz.length); r++) {
+                    for (let c = 0; c < Math.min(N, viejaMatriz[0].length); c++) {
+                        matrix[r][c] = viejaMatriz[r][c];
+                    }
+                }
+
+                // Filtrar elementos fuera de rango
+                enemigos = enemigos.filter(en => en.gridX < N && en.gridY < N);
+                portales = portales.filter(p => p.gridX < N && p.gridY < N);
+                cofres = cofres.filter(c => c.gridX < N && c.gridY < N);
+
+                // Redimensionar Canvas HTML5
+                canvas.width = N * tileSize;
+                canvas.height = N * tileSize;
+                dibujarGrilla();
+            }
+        }
+
+        // MODALES
+        function abrirModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+
+        function cerrarModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        // Config Portal
+        function abrirModalPortal(x, y) {
+            activeCellConfig = { x, y };
+            const portal = portales.find(p => p.gridX === x && p.gridY === y);
+            if (portal) {
+                document.getElementById('portalTag').value = portal.etiqueta || '';
+                document.getElementById('portalDestMap').value = portal.destinoMapa || '';
+                document.getElementById('portalDestTag').value = portal.destinoPortal || '';
+                abrirModal('modalPortal');
+            }
+        }
+
+        function guardarConfigPortal() {
+            const portal = portales.find(p => p.gridX === activeCellConfig.x && p.gridY === activeCellConfig.y);
+            if (portal) {
+                portal.etiqueta = document.getElementById('portalTag').value.trim();
+                portal.destinoMapa = document.getElementById('portalDestMap').value.trim();
+                portal.destinoPortal = document.getElementById('portalDestTag').value.trim();
+            }
+            cerrarModal('modalPortal');
+            dibujarGrilla();
+        }
+
+        // Config Cofre
+        function abrirModalCofre(x, y) {
+            activeCellConfig = { x, y };
+            const cofre = cofres.find(c => c.gridX === x && c.gridY === y);
+            if (cofre) {
+                document.getElementById('lootCoins').value = cofre.items.monedas || 0;
+                document.getElementById('lootGems').value = cofre.items.gemas || 0;
+                document.getElementById('lootPotions').value = cofre.items.pocion_vida || 0;
+                document.getElementById('lootShields').value = cofre.items.escudo_hierro || 0;
+                abrirModal('modalCofre');
+            }
+        }
+
+        function guardarConfigCofre() {
+            const cofre = cofres.find(c => c.gridX === activeCellConfig.x && c.gridY === activeCellConfig.y);
+            if (cofre) {
+                cofre.items.monedas = parseInt(document.getElementById('lootCoins').value) || 0;
+                cofre.items.gemas = parseInt(document.getElementById('lootGems').value) || 0;
+                cofre.items.pocion_vida = parseInt(document.getElementById('lootPotions').value) || 0;
+                cofre.items.escudo_hierro = parseInt(document.getElementById('lootShields').value) || 0;
+            }
+            cerrarModal('modalCofre');
+            dibujarGrilla();
+        }
+
+        // LIMPIAR TODO
+        function confirmarLimpiarTodo() {
+            if (confirm("¿Estás seguro de que deseas vaciar por completo el mapa actual? Perderás todo el progreso no guardado.")) {
+                matrix = Array(N).fill(null).map(() => Array(N).fill(0));
+                enemigos = [];
+                portales = [];
+                cofres = [];
+                dibujarGrilla();
+            }
+        }
+
+        // IMPORTAR / EXPORTAR JSON
+        function construirJSONMapa() {
+            // Guardar el estado del mapa actual antes de exportar
+            mapsOfPack[activeMapName] = {
+                gridSize: N,
+                matrix: matrix.map(row => row.slice()),
+                enemigos: JSON.parse(JSON.stringify(enemigos)),
+                portales: JSON.parse(JSON.stringify(portales)),
+                cofres: JSON.parse(JSON.stringify(cofres))
+            };
+
+            const dataPack = {};
+            for (const [name, mapData] of Object.entries(mapsOfPack)) {
+                dataPack[name] = {
+                    matriz: mapData.matrix,
+                    enemigos: mapData.enemigos,
+                    portales: mapData.portales,
+                    cofres: mapData.cofres
+                };
+            }
+            const jsCode = `export const NIVEL_PACK = ${JSON.stringify(dataPack, null, 4)};`;
+            return jsCode;
+        }
+
+        function abrirModalImportExport() {
+            const textarea = document.getElementById('jsonTextArea');
+            textarea.value = construirJSONMapa();
+            abrirModal('modalImportExport');
+        }
+
+        function copiarAlPortapapeles() {
+            const textarea = document.getElementById('jsonTextArea');
+            textarea.select();
+            document.execCommand('copy');
+            alert("¡Código del nivel copiado al portapapeles! Puedes pegarlo directamente en tu archivo Mapa_1.js.");
+        }
+
+        function descargarJSON() {
+            const jsCode = construirJSONMapa();
+            const blob = new Blob([jsCode], { type: "text/javascript;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "Mapa_1.js";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function importarJSON() {
+            const text = document.getElementById('jsonTextArea').value.trim();
+            if (!text) return;
+
+            try {
+                let jsonText = text;
+                const matches = text.match(/export\s+const\s+\w+\s*=\s*([\s\S]+?);?$/);
+                if (matches) {
+                    jsonText = matches[1];
+                }
+
+                const dataPack = JSON.parse(jsonText);
+                
+                let importedPack = {};
+                if (dataPack.principal && dataPack.principal.matriz) {
+                    importedPack = dataPack;
+                } else if (dataPack.matriz) {
+                    importedPack = {
+                        principal: dataPack
+                    };
+                } else {
+                    throw new Error("Formato de JSON inválido. Debe contener un objeto con la llave 'principal' o directamente una 'matriz'.");
+                }
+
+                // Limpiar y poblar mapsOfPack
+                mapsOfPack = {};
+                for (const [name, mapData] of Object.entries(importedPack)) {
+                    mapsOfPack[name] = {
+                        gridSize: mapData.matriz.length,
+                        matrix: mapData.matriz,
+                        enemigos: mapData.enemigos || [],
+                        portales: mapData.portales || [],
+                        cofres: mapData.cofres || []
+                    };
+                }
+
+                // Cargar el mapa principal por defecto
+                activeMapName = 'principal';
+                const targetMap = mapsOfPack.principal;
+                N = targetMap.gridSize;
+                matrix = targetMap.matrix;
+                enemigos = targetMap.enemigos;
+                portales = targetMap.portales;
+                cofres = targetMap.cofres;
+
+                document.getElementById('gridSize').value = N;
+
+                canvas.width = N * tileSize;
+                canvas.height = N * tileSize;
+                dibujarGrilla();
+                renderMapTabs();
+
+                cerrarModal('modalImportExport');
+                alert("¡Paquete de niveles cargado e importado con éxito!");
+            } catch (ex) {
+                alert("Error al importar el JSON: " + ex.message + "\n\nAsegúrate de que tenga el formato correcto.");
+            }
+        }
+    </script>
+</body>
+</html>

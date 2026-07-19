@@ -1,12 +1,19 @@
 export class UIManager {
-    constructor(capaUI) {
+    constructor(capaUI, capaEntidades) {
         this.capaUI = capaUI;
+        this.capaEntidades = capaEntidades || capaUI;
 
         this.barraVidaFondo = null;
         this.barraVidaRelleno = null;
         this.textoVida = null;
 
+        this.barraXpFondo = null;
+        this.barraXpRelleno = null;
+        this.textoXp = null;
+
         this.vidaCacheada = -1;
+        this.xpCacheada = -1;
+        this.lvlCacheada = -1;
         this.parpadeoTimer = 0;
 
         this.inicializarElementos();
@@ -44,15 +51,77 @@ export class UIManager {
         this.textoVida.y = 22;
         this.textoVida.anchor.set(0.5, 0);
         this.capaUI.addChild(this.textoVida);
+
+        // 4. Barra de XP - Fondo gris
+        this.barraXpFondo = new PIXI.Graphics();
+        this.barraXpFondo.beginFill(0x333333, 0.8);
+        this.barraXpFondo.drawRoundedRect(0, 0, 200, 14, 4);
+        this.barraXpFondo.endFill();
+        this.barraXpFondo.x = 20;
+        this.barraXpFondo.y = 48; // Bajo la barra de salud (20 + 22 + 6 margen)
+        this.capaUI.addChild(this.barraXpFondo);
+
+        // 5. Barra de XP - Relleno azul
+        this.barraXpRelleno = new PIXI.Graphics();
+        this.barraXpRelleno.x = 20;
+        this.barraXpRelleno.y = 48;
+        this.capaUI.addChild(this.barraXpRelleno);
+
+        // 6. Texto XP superpuesto
+        this.textoXp = new PIXI.Text('LVL 1 - XP: 0.00/2.00', {
+            fontFamily: 'Arial',
+            fontSize: 10,
+            fill: 0x00d2ff,
+            fontWeight: 'bold',
+            dropShadow: true,
+            dropShadowColor: '#000000',
+            dropShadowBlur: 2,
+            dropShadowDistance: 1
+        });
+        this.textoXp.x = 20 + 100;
+        this.textoXp.y = 49;
+        this.textoXp.anchor.set(0.5, 0);
+        this.capaUI.addChild(this.textoXp);
     }
 
     actualizar(player) {
         if (!player) return;
 
+        const lvl = window.playerState.nivel || 1;
+        const xp = window.playerState.xpActual || 0.0;
+
         if (player.vidaActual !== this.vidaCacheada) {
             this.actualizarBarraVida(player);
             this.vidaCacheada = player.vidaActual;
         }
+
+        if (xp !== this.xpCacheada || lvl !== this.lvlCacheada) {
+            this.actualizarBarraXp(lvl, xp);
+            this.xpCacheada = xp;
+            this.lvlCacheada = lvl;
+        }
+    }
+
+    actualizarBarraXp(lvl, xp) {
+        this.barraXpRelleno.clear();
+
+        const req = Math.pow(2, lvl);
+        const porcentaje = Math.max(0, Math.min(1, xp / req));
+        const anchoRelleno = porcentaje * 200;
+
+        const colorBarra = 0x2980b9; // Azul brillante
+
+        this.barraXpRelleno.beginFill(colorBarra);
+        this.barraXpRelleno.drawRoundedRect(0, 0, anchoRelleno, 14, 4);
+        this.barraXpRelleno.endFill();
+
+        // Brillito superior
+        this.barraXpRelleno.beginFill(0xffffff, 0.15);
+        this.barraXpRelleno.drawRoundedRect(2, 1, anchoRelleno - 4, 5, 2);
+        this.barraXpRelleno.endFill();
+
+        // Texto
+        this.textoXp.text = `LVL ${lvl} - XP: ${xp.toFixed(2)}/${req.toFixed(2)}`;
     }
 
     actualizarBarraVida(player) {
@@ -97,24 +166,30 @@ export class UIManager {
             fontFamily: 'Arial',
             fontSize: 20,
             fill: 0xFFFF00,
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            dropShadow: true,
+            dropShadowColor: '#000000',
+            dropShadowBlur: 2,
+            dropShadowDistance: 1
         });
 
         mensaje.x = x;
         mensaje.y = y;
-        this.capaUI.addChild(mensaje);
+        this.capaEntidades.addChild(mensaje);
+
+        const ticker = window.orquestador?.currentEngine?.app?.ticker || PIXI.Ticker.shared;
 
         const animarMensaje = () => {
             mensaje.y -= 1;
             mensaje.alpha -= 0.02;
 
             if (mensaje.alpha <= 0) {
-                PIXI.Ticker.shared.remove(animarMensaje);
+                ticker.remove(animarMensaje);
                 mensaje.destroy();
             }
         };
 
-        PIXI.Ticker.shared.add(animarMensaje);
+        ticker.add(animarMensaje);
     }
 
     reajustarUI(ancho, alto) {
@@ -125,6 +200,9 @@ export class UIManager {
         if (this.barraVidaFondo) { this.barraVidaFondo.destroy(true); this.barraVidaFondo = null; }
         if (this.barraVidaRelleno) { this.barraVidaRelleno.destroy(true); this.barraVidaRelleno = null; }
         if (this.textoVida) { this.textoVida.destroy(true); this.textoVida = null; }
+        if (this.barraXpFondo) { this.barraXpFondo.destroy(true); this.barraXpFondo = null; }
+        if (this.barraXpRelleno) { this.barraXpRelleno.destroy(true); this.barraXpRelleno = null; }
+        if (this.textoXp) { this.textoXp.destroy(true); this.textoXp = null; }
 
         if (this.capaUI) {
             this.capaUI.removeChildren();

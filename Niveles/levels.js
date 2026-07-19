@@ -9,7 +9,7 @@ export const GAME_LEVELS = {
     },
     2: {
         type: "Nivel_1",
-        title: "¡Prueba de Estrés 100x100!",
+        title: "Calabozo del Inframundo",
         pack: NIVEL_PACK
     }
 };

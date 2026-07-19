@@ -29,6 +29,8 @@ export class Nivel_1 {
             if (['1', '2', '3', '4', '5'].includes(e.key)) {
                 const index = parseInt(e.key) - 1;
                 this.seleccionarSlot(index);
+            } else if (e.key === 'Escape' || e.key === 'Esc') {
+                this.togglePause();
             }
         };
         window.addEventListener('keydown', this.handleKeyDown);
@@ -65,7 +67,7 @@ export class Nivel_1 {
         this.collisionManager = new CollisionManager(this.mapaMatriz, this.tileSize);
         this.playerController = new PlayerController(this.player, this.inputManager, this.collisionManager);
         this.renderizador = new TilemapRenderer(this.capaFondo, this.mapaMatriz, this.tileSize);
-        this.uiManager = new UIManager(this.capaUI);
+        this.uiManager = new UIManager(this.capaUI, this.capaEntidades);
         this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, this.enemigos);
         this.enemyManager.engine = this;
 
@@ -152,41 +154,63 @@ export class Nivel_1 {
         this.enemyManager.inicializar();
 
         const radioBase = this.tileSize * 0.36;
-        const bolaKitty = new PIXI.Container();
+        const visualHeroe = new PIXI.Container();
 
         const sombra = new PIXI.Graphics();
-        sombra.beginFill(0x000000, 0.22);
-        sombra.drawEllipse(4, radioBase * 0.78, radioBase * 0.92, radioBase * 0.38);
+        sombra.beginFill(0x000000, 0.3);
+        sombra.drawEllipse(0, radioBase * 0.8, radioBase * 0.9, radioBase * 0.3);
         sombra.endFill();
+        visualHeroe.addChild(sombra);
 
-        const brilloExterior = new PIXI.Graphics();
-        brilloExterior.beginFill(0xff9ab4, 0.22);
-        brilloExterior.drawCircle(0, 0, radioBase + 3);
-        brilloExterior.endFill();
+        if (window.playerState.clase === 'mage') {
+            // DISEÑO MAGO: Esfera de energía mágica morada y brillante
+            const brilloExterior = new PIXI.Graphics();
+            brilloExterior.beginFill(0xb794f4, 0.25);
+            brilloExterior.drawCircle(0, 0, radioBase + 5);
+            brilloExterior.endFill();
 
-        const cuerpo = new PIXI.Graphics();
-        cuerpo.beginFill(0xff6584);
-        cuerpo.drawCircle(0, 0, radioBase);
-        cuerpo.endFill();
+            const cuerpo = new PIXI.Graphics();
+            cuerpo.beginFill(0x553c9a); // Púrpura oscuro
+            cuerpo.drawCircle(0, 0, radioBase);
+            cuerpo.endFill();
 
-        const nucleo = new PIXI.Graphics();
-        nucleo.beginFill(0xff89a4, 0.95);
-        nucleo.drawCircle(-radioBase * 0.18, -radioBase * 0.18, radioBase * 0.62);
-        nucleo.endFill();
+            const nucleo = new PIXI.Graphics();
+            nucleo.beginFill(0x805ad5, 0.9); // Morado brillante
+            nucleo.drawCircle(0, 0, radioBase * 0.7);
+            nucleo.endFill();
 
-        const brillo = new PIXI.Graphics();
-        brillo.beginFill(0xffffff, 0.92);
-        brillo.drawCircle(-radioBase * 0.28, -radioBase * 0.28, radioBase * 0.18);
-        brillo.endFill();
+            const brillo = new PIXI.Graphics();
+            brillo.beginFill(0xffffff, 0.9);
+            brillo.drawCircle(-radioBase * 0.2, -radioBase * 0.2, radioBase * 0.2);
+            brillo.endFill();
 
-        const destello = new PIXI.Graphics();
-        destello.beginFill(0xffffff, 0.18);
-        destello.drawCircle(-radioBase * 0.42, -radioBase * 0.42, radioBase * 0.42);
-        destello.endFill();
+            visualHeroe.addChild(brilloExterior, cuerpo, nucleo, brillo);
+        } else {
+            // DISEÑO CABALLERO: Escudo de acero plateado con yelmo y detalles dorados
+            const brilloExterior = new PIXI.Graphics();
+            brilloExterior.beginFill(0xf6e05e, 0.25); // Brillo dorado
+            brilloExterior.drawCircle(0, 0, radioBase + 4);
+            brilloExterior.endFill();
 
-        bolaKitty.addChild(sombra, brilloExterior, cuerpo, nucleo, destello, brillo);
+            const cuerpo = new PIXI.Graphics();
+            cuerpo.beginFill(0x4a5568); // Acero gris oscuro
+            cuerpo.drawCircle(0, 0, radioBase);
+            cuerpo.endFill();
 
-        this.player.setSprite(bolaKitty);
+            const yelmo = new PIXI.Graphics();
+            yelmo.beginFill(0x718096); // Metal templado
+            yelmo.drawRect(-radioBase * 0.7, -radioBase * 0.5, radioBase * 1.4, radioBase * 1.0, 4);
+            yelmo.endFill();
+
+            const visor = new PIXI.Graphics();
+            visor.beginFill(0xd69e2e); // Visor dorado
+            visor.drawRect(-radioBase * 0.5, -radioBase * 0.2, radioBase * 1.0, radioBase * 0.3, 1);
+            visor.endFill();
+
+            visualHeroe.addChild(brilloExterior, cuerpo, yelmo, visor);
+        }
+
+        this.player.setSprite(visualHeroe);
         this.capaEntidades.addChild(this.player.sprite);
 
         this.crearHUDHtml();
@@ -215,14 +239,14 @@ export class Nivel_1 {
         const activeSlot = window.playerState.slots[window.playerState.activeSlotIndex];
 
         // 1. Manejo de Consumibles
-        if (activeSlot === 'botiquin') {
-            if (window.playerState.inventario.botiquin > 0) {
+        if (activeSlot === 'pocion_vida') {
+            if (window.playerState.inventario.pocion_vida > 0) {
                 if (this.player.vidaActual < 100) {
-                    window.playerState.inventario.botiquin--;
+                    window.playerState.inventario.pocion_vida--;
                     this.player.vidaActual = Math.min(100, this.player.vidaActual + 50);
                     this.uiManager.mostrarMensajeFlotante("+50 ❤️", this.player.x, this.player.y - 30);
                     
-                    if (window.playerState.inventario.botiquin === 0) {
+                    if (window.playerState.inventario.pocion_vida === 0) {
                         window.playerState.slots[window.playerState.activeSlotIndex] = null;
                         window.playerState.activeSlotIndex = 0;
                     }
@@ -234,16 +258,16 @@ export class Nivel_1 {
             return;
         }
 
-        if (activeSlot === 'escudo') {
-            if (window.playerState.inventario.escudo > 0) {
+        if (activeSlot === 'escudo_hierro') {
+            if (window.playerState.inventario.escudo_hierro > 0) {
                 if (!this.player.isShielded) {
-                    window.playerState.inventario.escudo--;
+                    window.playerState.inventario.escudo_hierro--;
                     this.player.isShielded = true;
                     this.player.shieldTimer = 3.0;
                     
                     // Efecto visual de escudo
                     const escudoGfx = new PIXI.Graphics();
-                    escudoGfx.lineStyle(3, 0x00ffff, 0.85);
+                    escudoGfx.lineStyle(3, 0xffd700, 0.85); // Dorado
                     escudoGfx.drawCircle(0, 0, this.tileSize * 0.55);
                     escudoGfx.endFill();
                     this.player.sprite.addChild(escudoGfx);
@@ -251,7 +275,7 @@ export class Nivel_1 {
                     
                     this.uiManager.mostrarMensajeFlotante("¡ESCUDO! 🛡️", this.player.x, this.player.y - 30);
 
-                    if (window.playerState.inventario.escudo === 0) {
+                    if (window.playerState.inventario.escudo_hierro === 0) {
                         window.playerState.slots[window.playerState.activeSlotIndex] = null;
                         window.playerState.activeSlotIndex = 0;
                     }
@@ -264,25 +288,21 @@ export class Nivel_1 {
         }
 
         // 2. Manejo de Armas
-        const arma = activeSlot || "arma_basica";
+        const arma = activeSlot || "espada_basica";
 
-        if (arma !== 'arma_basica') {
-            const balasRestantes = window.playerState.balas[arma];
+        // Desgaste de durabilidad por ataque
+        if (window.playerState.durabilidad && window.playerState.durabilidad[arma] !== undefined) {
+            let desgaste = 0.02; // Espada
+            if (arma === 'daga_doble') desgaste = 0.04;
+            else if (arma === 'martillo_rebote') desgaste = 0.08;
 
-            if (balasRestantes <= 0) {
-                this.uiManager.mostrarMensajeFlotante("🚫 ¡Sin Balas!", this.player.x, this.player.y - 30);
-                return;
-            }
-
-            // Descontar bala
-            window.playerState.balas[arma]--;
-
-            // Si se vacía el cargador de un arma equipada (que no sea la básica), vuelve al slot 1
-            if (window.playerState.balas[arma] <= 0) {
-                window.playerState.slots[window.playerState.activeSlotIndex] = null;
-                window.playerState.activeSlotIndex = 0;
-            }
+            window.playerState.durabilidad[arma] = Math.max(0, window.playerState.durabilidad[arma] - desgaste);
         }
+
+        // Calcular factor de daño según mantenimiento (mínimo 50% de daño a 0% de durabilidad)
+        const dur = window.playerState.durabilidad[arma] !== undefined ? window.playerState.durabilidad[arma] : 100;
+        const factorDanio = Math.max(0.5, 1.0 - (100 - dur) * (0.01 / 20));
+
         this.actualizarHUDHtml();
 
         const mouseMundoX = this.mouseX - this.mundo.x;
@@ -295,18 +315,15 @@ export class Nivel_1 {
         const velocidadBala = 600;
 
         // Actualizar dinámicamente fireRate del ticker según arma
-        if (arma === 'arma_doble') this.fireRate = 0.10;
-        else if (arma === 'arma_rebotadora') this.fireRate = 0.15;
-        else this.fireRate = 0.15;
+        if (arma === 'daga_doble') this.fireRate = 0.10;
+        else if (arma === 'martillo_rebote') this.fireRate = 0.22;
+        else this.fireRate = 0.25; // Espada
 
-        // Todas las balas aliadas son negras (0x000000)
-        const colorBalaAliada = 0x000000;
-
-        if (arma === 'arma_doble') {
-            // Dispara dos proyectiles paralelos
+        if (arma === 'daga_doble') {
+            // Dispara dos dagas paralelas
             const offsetAngle = angulo + Math.PI / 2;
-            const offsetX = Math.cos(offsetAngle) * 12;
-            const offsetY = Math.sin(offsetAngle) * 12;
+            const offsetX = Math.cos(offsetAngle) * 10;
+            const offsetY = Math.sin(offsetAngle) * 10;
 
             const balas = [
                 { x: this.player.x + offsetX, y: this.player.y + offsetY },
@@ -314,57 +331,98 @@ export class Nivel_1 {
             ];
 
             for (const pos of balas) {
-                const spriteBala = this.crearSpriteBala(colorBalaAliada);
+                const spriteBala = new PIXI.Graphics();
+                spriteBala.lineStyle(1.5, 0xffffff);
+                spriteBala.beginFill(0x95a5a6); // Gris acero
+                spriteBala.drawPolygon([-8, -2, 8, 0, -8, 2]); // Daga
+                spriteBala.endFill();
+                spriteBala.rotation = angulo;
+
                 const b = {
                     x: pos.x,
                     y: pos.y,
-                    vx: Math.cos(angulo) * velocidadBala,
-                    vy: Math.sin(angulo) * velocidadBala,
+                    vx: Math.cos(angulo) * (velocidadBala * 1.1),
+                    vy: Math.sin(angulo) * (velocidadBala * 1.1),
                     sprite: spriteBala,
-                    danio: 10
+                    danio: Math.round(15 * factorDanio)
                 };
                 b.sprite.x = b.x;
                 b.sprite.y = b.y;
                 this.capaEntidades.addChild(b.sprite);
                 this.projectiles.push(b);
             }
-            console.log("¡Disparo Doble!");
+            console.log("¡Dagas Dobles!");
         } 
-        else if (arma === 'arma_rebotadora') {
-            // Dispara proyectil que rebota 3 veces
-            const spriteBala = this.crearSpriteBala(colorBalaAliada);
+        else if (arma === 'martillo_rebote') {
+            // Lanzar martillo pesado que rebota 3 veces
+            const spriteBala = new PIXI.Graphics();
+            spriteBala.lineStyle(1.5, 0xd69e2e); // Detalle dorado
+            spriteBala.beginFill(0x57606f); // Gris metal pesado
+            spriteBala.drawRect(-4, -10, 8, 20); // Mango
+            spriteBala.drawRect(-12, -10, 24, 8); // Cabeza
+            spriteBala.endFill();
+
             const b = {
                 x: this.player.x,
                 y: this.player.y,
-                vx: Math.cos(angulo) * velocidadBala,
-                vy: Math.sin(angulo) * velocidadBala,
+                vx: Math.cos(angulo) * (velocidadBala * 0.8),
+                vy: Math.sin(angulo) * (velocidadBala * 0.8),
                 sprite: spriteBala,
-                danio: 40,
+                danio: Math.round(45 * factorDanio),
                 rebotadora: true,
-                rebotesRestantes: 3
+                rebotesRestantes: 3,
+                martillo: true
             };
             b.sprite.x = b.x;
             b.sprite.y = b.y;
             this.capaEntidades.addChild(b.sprite);
             this.projectiles.push(b);
-            console.log("¡Disparo Rebotador!");
+            console.log("¡Martillo Arrojado!");
         } 
         else {
-            // Arma básica (Munición infinita)
-            const spriteBala = this.crearSpriteBala(colorBalaAliada);
-            const b = {
-                x: this.player.x,
-                y: this.player.y,
-                vx: Math.cos(angulo) * velocidadBala,
-                vy: Math.sin(angulo) * velocidadBala,
-                sprite: spriteBala,
-                danio: 20
+            // ESPADA BÁSICA (Ataque melee de arco de tajo)
+            const radioSlash = 80;
+            const arcoSlash = 1.6;
+
+            const slashGfx = new PIXI.Graphics();
+            slashGfx.lineStyle(4, 0xf6e05e, 0.95);
+            slashGfx.arc(0, 0, radioSlash - 10, angulo - arcoSlash/2, angulo + arcoSlash/2);
+            slashGfx.lineStyle(1, 0xffffff, 0.5);
+            slashGfx.arc(0, 0, radioSlash - 5, angulo - arcoSlash/2, angulo + arcoSlash/2);
+            
+            slashGfx.x = this.player.x;
+            slashGfx.y = this.player.y;
+            this.capaEntidades.addChild(slashGfx);
+
+            let duracion = 0.12;
+            const animarSlash = () => {
+                duracion -= 0.016;
+                slashGfx.alpha = Math.max(0, duracion / 0.12);
+                if (duracion <= 0) {
+                    this.app.ticker.remove(animarSlash);
+                    slashGfx.destroy();
+                }
             };
-            b.sprite.x = b.x;
-            b.sprite.y = b.y;
-            this.capaEntidades.addChild(b.sprite);
-            this.projectiles.push(b);
-            console.log("¡Disparo Básico!");
+            this.app.ticker.add(animarSlash);
+
+            for (let j = this.enemyManager.enemies.length - 1; j >= 0; j--) {
+                const enemigo = this.enemyManager.enemies[j];
+                const dx = enemigo.x - this.player.x;
+                const dy = enemigo.y - this.player.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist <= radioSlash + 15) {
+                    const angEnemigo = Math.atan2(dy, dx);
+                    let diffAng = angEnemigo - angulo;
+                    while (diffAng < -Math.PI) diffAng += Math.PI * 2;
+                    while (diffAng > Math.PI) diffAng -= Math.PI * 2;
+
+                    if (Math.abs(diffAng) <= arcoSlash / 2 + 0.3) {
+                        enemigo.recibirGolpe(Math.round(35 * factorDanio));
+                    }
+                }
+            }
+            console.log("¡Tajo de espada!");
         }
     }
 
@@ -391,6 +449,22 @@ export class Nivel_1 {
         if (this.gameOver || this.isPaused) return;
 
         const dt = delta / this.app.ticker.FPS;
+
+        // Reducir la duración de la invulnerabilidad si está activa
+        if (this.player.isInvulnerable) {
+            this.player.invulnerableTimer -= dt;
+            if (this.player.sprite) {
+                // Hacer que el sprite parpadee alternando la opacidad
+                this.player.sprite.alpha = Math.floor(Date.now() / 80) % 2 === 0 ? 0.2 : 0.8;
+            }
+            if (this.player.invulnerableTimer <= 0) {
+                this.player.isInvulnerable = false;
+                this.player.invulnerableTimer = 0;
+                if (this.player.sprite) {
+                    this.player.sprite.alpha = 1.0; // Restaurar opacidad completa
+                }
+            }
+        }
 
         // Reducir la duración del escudo si está activo
         if (this.player.isShielded) {
@@ -420,9 +494,23 @@ export class Nivel_1 {
         this.enemyManager.update(dt, this.player, this);
         this.actualizarProyectiles(dt);
 
+        // Detección de colisión de daño por contacto con enemigos
+        if (!this.player.isDead && !this.player.isInvulnerable) {
+            const enemigoColision = this.collisionManager.verificarColisionesJugadorEnemigo(this.player, this.enemyManager.enemies);
+            if (enemigoColision) {
+                const danioBaseCalculado = enemigoColision.calcularDanio(this.player);
+                if (danioBaseCalculado > 0) {
+                    const danio = Math.max(1, Math.round(danioBaseCalculado));
+                    this.player.recibirDanio(danio);
+                    this.uiManager.mostrarMensajeFlotante(`-${danio} HP 💥`, this.player.x, this.player.y - 30);
+                }
+            }
+        }
+
         this.verificarPortales();
         this.verificarCofres();
         this.verificarVictoria();
+        this.verificarDerrota();
         this.actualizarCamara();
 
         this.renderizador.actualizarVista(this.camara.x, this.camara.y);
@@ -490,16 +578,25 @@ export class Nivel_1 {
             bala.sprite.x = bala.x;
             bala.sprite.y = bala.y;
 
+            if (bala.martillo) {
+                bala.sprite.rotation += 15 * dt; // Rotar martillo giratorio
+            }
+
             let impactoConfirmado = false;
 
             if (bala.enemigoOrigen || bala.owner === 'ENEMY') {
-                // Bala de enemigo daña a Kitty (DESACTIVADO: Los enemigos no causan daño en Kitty)
+                // Bala de enemigo daña a Kitty
                 let dx = bala.x - this.player.x;
                 let dy = bala.y - this.player.y;
                 let distSq = (dx * dx) + (dy * dy);
 
                 if (distSq < colisionSq) {
-                    impactoConfirmado = true; // La bala se destruye al chocar, pero no daña
+                    impactoConfirmado = true;
+                    if (!this.player.isDead && !this.player.isInvulnerable) {
+                        const danioBala = bala.danio || (bala.enemigoOrigen ? Math.max(1, Math.round(bala.enemigoOrigen.calcularDanio(this.player) * 5)) : 10);
+                        this.player.recibirDanio(danioBala);
+                        this.uiManager.mostrarMensajeFlotante(`-${danioBala} HP 💥`, this.player.x, this.player.y - 30);
+                    }
                 }
             } else {
                 // Bala del jugador daña a enemigos
@@ -562,6 +659,19 @@ export class Nivel_1 {
         }
     }
 
+    verificarDerrota() {
+        if (this.player.isDead && !this.gameOver) {
+            this.gameOver = true;
+            console.log("💔 ¡El jugador ha muerto! Juego terminado.");
+            
+            if (typeof this.eventBus === 'function') {
+                this.eventBus('LEVEL_DEFEAT');
+            } else if (this.eventBus && typeof this.eventBus.emit === 'function') {
+                this.eventBus.emit('LEVEL_DEFEAT');
+            }
+        }
+    }
+
     redimensionarEscena() {
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);
@@ -585,13 +695,22 @@ export class Nivel_1 {
     verificarPortales() {
         if (!this.portales || this.portales.length === 0) return;
 
-        // Obtener la posición de la celda de Kitty
+        // Obtener la posición de la celda del héroe
         const col = Math.floor(this.player.x / this.tileSize);
         const fila = Math.floor(this.player.y / this.tileSize);
 
         // Buscar si hay un portal en la coordenada actual
         const portal = this.portales.find(p => p.gridX === col && p.gridY === fila);
         if (portal) {
+            // VERIFICACIÓN DUNGEON RAMPAGE: ¿Quedan enemigos vivos en la sala?
+            if (this.enemyManager && this.enemyManager.enemies.length > 0) {
+                if (!this.portalAvisoTimer || Date.now() - this.portalAvisoTimer > 1500) {
+                    this.uiManager.mostrarMensajeFlotante("¡Puertas Selladas! 🚫 Elimina los monstruos", this.player.x, this.player.y - 40);
+                    this.portalAvisoTimer = Date.now();
+                }
+                return; // Bloquea el teletransporte
+            }
+
             // Verificar que tenga un destino y que estemos en un nivel cargado como pack
             if (portal.destinoMapa && portal.destinoPortal && this.pack) {
                 const subMapaDestino = this.pack[portal.destinoMapa];
@@ -670,27 +789,35 @@ export class Nivel_1 {
             let mensajes = [];
             if (cofre.items) {
                 for (const [key, value] of Object.entries(cofre.items)) {
-                    if (key === 'cafe') {
-                        window.playerState.cafe += value;
-                        mensajes.push(`+${value} ☕`);
-                    } else if (key === 'nube') {
-                        window.playerState.nubes += value;
-                        mensajes.push(`+${value} ☁️`);
-                    } else if (key === 'botiquin') {
-                        window.playerState.inventario.botiquin += value;
+                    // Mapeo automático de llaves antiguas para compatibilidad
+                    let mappedKey = key;
+                    if (key === 'cafe') mappedKey = 'gemas';
+                    else if (key === 'nube') mappedKey = 'monedas';
+                    else if (key === 'botiquin') mappedKey = 'pocion_vida';
+                    else if (key === 'escudo') mappedKey = 'escudo_hierro';
+                    else if (key === 'arma_doble') mappedKey = 'daga_doble';
+                    else if (key === 'arma_rebotadora') mappedKey = 'martillo_rebote';
+
+                    if (mappedKey === 'gemas') {
+                        window.playerState.gemas += value;
+                        mensajes.push(`+${value} 💎`);
+                    } else if (mappedKey === 'monedas') {
+                        window.playerState.monedas += value;
+                        mensajes.push(`+${value} 🪙`);
+                    } else if (mappedKey === 'pocion_vida') {
+                        window.playerState.inventario.pocion_vida += value;
                         mensajes.push(`+${value} 🧪`);
-                    } else if (key === 'escudo') {
-                        window.playerState.inventario.escudo += value;
+                    } else if (mappedKey === 'escudo_hierro') {
+                        window.playerState.inventario.escudo_hierro += value;
                         mensajes.push(`+${value} 🛡️`);
-                    } else if (key === 'arma_doble') {
-                        window.playerState.balas.arma_doble += value;
-                        // Asegurar de que esté en el inventario/tienda disponible
-                        window.playerState.inventario.arma_doble = (window.playerState.inventario.arma_doble || 0) + value;
-                        mensajes.push(`+${value} 雙`);
-                    } else if (key === 'arma_rebotadora') {
-                        window.playerState.balas.arma_rebotadora += value;
-                        window.playerState.inventario.arma_rebotadora = (window.playerState.inventario.arma_rebotadora || 0) + value;
-                        mensajes.push(`+${value} 🪃`);
+                    } else if (mappedKey === 'daga_doble') {
+                        window.playerState.balas.daga_doble += value;
+                        window.playerState.inventario.daga_doble = (window.playerState.inventario.daga_doble || 0) + value;
+                        mensajes.push(`+${value} ⚔️`);
+                    } else if (mappedKey === 'martillo_rebote') {
+                        window.playerState.balas.martillo_rebote += value;
+                        window.playerState.inventario.martillo_rebote = (window.playerState.inventario.martillo_rebote || 0) + value;
+                        mensajes.push(`+${value} 🔨`);
                     }
                 }
             }
@@ -721,7 +848,7 @@ export class Nivel_1 {
             display: flex;
             gap: 10px;
             background: rgba(20, 18, 31, 0.85);
-            border: 2px solid #ff6584;
+            border: 2px solid #d69e2e;
             border-radius: 16px;
             padding: 10px 15px;
             z-index: 999;
@@ -737,39 +864,42 @@ export class Nivel_1 {
         if (!this.hudElement) return;
 
         const nombresDisplay = {
-            "arma_basica": "🔫 Básica",
-            "arma_doble": "雙 Doble",
-            "arma_rebotadora": "🪃 Rebote",
-            "botiquin": "🧪 Botiquín",
-            "escudo": "🛡️ Escudo"
+            "espada_basica": "🗡️ Espada",
+            "daga_doble": "⚔️ Dagas",
+            "martillo_rebote": "🔨 Martillo",
+            "pocion_vida": "🧪 Poción",
+            "escudo_hierro": "🛡️ Escudo"
         };
 
         let html = '';
         for (let i = 0; i < 5; i++) {
             const item = window.playerState.slots[i];
             const isActive = window.playerState.activeSlotIndex === i;
-            const borderStyle = isActive ? 'border: 3px solid #ff6584; background: rgba(255, 101, 132, 0.25);' : 'border: 2px solid #3e3b4e; background: rgba(0,0,0,0.3);';
+            const borderStyle = isActive ? 'border: 3px solid #d69e2e; background: rgba(214, 158, 46, 0.25);' : 'border: 2px solid #3e3b4e; background: rgba(0,0,0,0.4);';
             const cursor = (i === 0 || item) ? 'cursor: pointer;' : 'cursor: not-allowed;';
             const opacity = item ? 'opacity: 1;' : 'opacity: 0.4;';
 
             let countLabel = '';
-            if (item === 'botiquin') {
-                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffd700; font-weight: bold;">x${window.playerState.inventario.botiquin}</span>`;
-            } else if (item === 'escudo') {
-                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffd700; font-weight: bold;">x${window.playerState.inventario.escudo}</span>`;
-            } else if (item === 'arma_doble') {
-                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffffff; font-weight: bold;">${window.playerState.balas.arma_doble}</span>`;
-            } else if (item === 'arma_rebotadora') {
-                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffffff; font-weight: bold;">${window.playerState.balas.arma_rebotadora}</span>`;
-            } else if (item === 'arma_basica' || i === 0) {
-                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffffff; font-weight: bold;">∞</span>`;
+            if (item === 'pocion_vida') {
+                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffd700; font-weight: bold;">x${window.playerState.inventario.pocion_vida}</span>`;
+            } else if (item === 'escudo_hierro') {
+                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffd700; font-weight: bold;">x${window.playerState.inventario.escudo_hierro}</span>`;
+            } else if (item === 'daga_doble') {
+                const durVal = window.playerState.durabilidad.daga_doble !== undefined ? window.playerState.durabilidad.daga_doble : 100;
+                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffffff; font-weight: bold;">${durVal.toFixed(0)}%</span>`;
+            } else if (item === 'martillo_rebote') {
+                const durVal = window.playerState.durabilidad.martillo_rebote !== undefined ? window.playerState.durabilidad.martillo_rebote : 100;
+                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffffff; font-weight: bold;">${durVal.toFixed(0)}%</span>`;
+            } else if (item === 'espada_basica' || i === 0) {
+                const durVal = window.playerState.durabilidad.espada_basica !== undefined ? window.playerState.durabilidad.espada_basica : 100;
+                countLabel = `<span style="position: absolute; bottom: 2px; right: 4px; font-size: 0.75rem; color: #ffffff; font-weight: bold;">${durVal.toFixed(0)}%</span>`;
             }
 
             const nombre = item ? nombresDisplay[item] : "Vacío";
 
             html += `
                 <div onclick="window.orquestador.currentEngine.seleccionarSlot(${i})" style="position: relative; width: 70px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; ${borderStyle} ${cursor} ${opacity} transition: all 0.2s; color: white;">
-                    <span style="font-size: 0.7rem; color: #ff6584; font-weight: bold; margin-bottom: 2px;">Slot ${i + 1}</span>
+                    <span style="font-size: 0.7rem; color: #d69e2e; font-weight: bold; margin-bottom: 2px;">Slot ${i + 1}</span>
                     <span style="font-size: 0.9rem; font-weight: bold;">${nombre}</span>
                     ${countLabel}
                 </div>
@@ -789,6 +919,15 @@ export class Nivel_1 {
         window.playerState.activeSlotIndex = index;
         console.log(`Slot seleccionado: ${index + 1} (${item || 'Vacío'})`);
         this.actualizarHUDHtml();
+    }
+
+    togglePause() {
+        if (this.gameOver) return;
+        this.isPaused = !this.isPaused;
+        const menuPausa = document.getElementById('menuPausa');
+        if (menuPausa) {
+            menuPausa.style.display = this.isPaused ? 'flex' : 'none';
+        }
     }
 
     destroy() {

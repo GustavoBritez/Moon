@@ -1,24 +1,23 @@
-
-.daniel-oficial-avatar {
+.knight-oficial-avatar {
     width: 180px;
     height: 180px;
-    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.15));
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
     animation: floatEffect 3s ease-in-out infinite alternate;
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
-    background-image: url('../Assets/img/DearDaniel_Base.svg');
+    background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="helmGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23718096"/><stop offset="50%" stop-color="%234a5568"/><stop offset="100%" stop-color="%232d3748"/></linearGradient><linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23f6e05e"/><stop offset="100%" stop-color="%23d69e2e"/></linearGradient></defs><circle cx="50" cy="50" r="45" fill="%231a202c" stroke="url(%23goldGrad)" stroke-width="3"/><path d="M 50 12 C 55 12, 58 20, 58 28 C 58 28, 42 28, 42 28 C 42 20, 45 12, 50 12 Z" fill="%23e53e3e"/><rect x="32" y="32" width="36" height="38" rx="8" fill="url(%23helmGrad)" stroke="%23cbd5e0" stroke-width="2"/><rect x="38" y="44" width="24" height="8" rx="2" fill="url(%23goldGrad)"/><line x1="44" y1="48" x2="44" y2="44" stroke="%231a202c" stroke-width="2"/><line x1="50" y1="48" x2="50" y2="44" stroke="%231a202c" stroke-width="2"/><line x1="56" y1="48" x2="56" y2="44" stroke="%231a202c" stroke-width="2"/><rect x="42" y="58" width="16" height="4" rx="1" fill="%232d3748"/></svg>');
 }
 
-.kitty-oficial-avatar {
+.mage-oficial-avatar {
     width: 180px;
     height: 180px;
-    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.15));
+    filter: drop-shadow(0 8px 16px rgba(107, 70, 193, 0.4));
     animation: floatEffect 3s ease-in-out infinite alternate;
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
-    background-image: url('../Assets/img/Kitty_Base.png');
+    background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="hatGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23805ad5"/><stop offset="100%" stop-color="%23553c9a"/></linearGradient><linearGradient id="orbGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23e9d8fd"/><stop offset="50%" stop-color="%23b794f4"/><stop offset="100%" stop-color="%23805ad5"/></linearGradient></defs><circle cx="50" cy="50" r="45" fill="%231a202c" stroke="%23805ad5" stroke-width="3"/><path d="M 30 70 L 50 18 L 70 70 Z" fill="url(%23hatGrad)" stroke="%23b794f4" stroke-width="1.5"/><ellipse cx="50" cy="68" rx="26" ry="6" fill="%236b46c1"/><circle cx="50" cy="18" r="5" fill="url(%23orbGrad)"/><polygon points="40,45 42,42 45,45 42,48" fill="%23f6e05e"/><polygon points="58,52 60,49 63,52 60,55" fill="%23f6e05e"/></svg>');
 }
 
 .daniel-head {

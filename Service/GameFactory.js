@@ -8,68 +8,85 @@ export class GameFactory {
                 let menuHtml = `
                     <div class="lobby-pantalla">
                         <div class="lobby-top">
-                            <div class="avatar-marco" style="width: 150px; height: 150px; margin-bottom: 0; position: relative;">
-                                <div id="jugadorAvatar" class="daniel-oficial-avatar" style="width: 110px; height: 110px;"></div>
-                                <button id="btnCambiarAvatar" style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background: #ff6584; color: white; border: none; border-radius: 20px; padding: 4px 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 10;">
-                                    🔄 
+                            <div class="avatar-marco" style="width: 150px; height: 150px; margin-bottom: 0; position: relative; border-color: #d69e2e;">
+                                <div id="jugadorAvatar" class="knight-oficial-avatar" style="width: 110px; height: 110px;"></div>
+                                <button id="btnCambiarAvatar" style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background: #742a2a; color: #f6e05e; border: 2px solid #d69e2e; border-radius: 20px; padding: 4px 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.4); z-index: 10;">
+                                    🔄 Clase
                                 </button>
                             </div>
 
                             <div class="lobby-recursos" style="display: flex; gap: 15px; align-items: center;">
-                                <div class="recurso-item"><div class="recurso-circulo">☁️</div><span class="recurso-cantidad" id="txtLobbyNubes">150</span></div>
-                                <div class="recurso-item"><div class="recurso-circulo">☕</div><span class="recurso-cantidad" id="txtLobbyCafe">5</span></div>
-                                <button id="btnInventarioLobby" style="background: #ffd700; border: none; border-radius: 12px; font-size: 1.5rem; width: 45px; height: 45px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; z-index: 10;">📦</button>
+                                <!-- Barra de XP del Lobby -->
+                                <div id="lobbyXpBarContainer" style="display: flex; flex-direction: column; gap: 5px; width: 180px; background: rgba(20, 18, 31, 0.85); padding: 8px 12px; border-radius: 12px; border: 2px solid #00d2ff; box-shadow: 0 4px 10px rgba(0,0,0,0.4); color: white; margin-right: 15px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: bold;">
+                                        <span style="color: #00d2ff;">LVL <span id="txtLobbyLvl">1</span></span>
+                                        <span style="font-family: monospace;" id="txtLobbyXpVal">0.00 / 2.00 XP</span>
+                                    </div>
+                                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.15); border-radius: 4px; overflow: hidden; border: 1px solid rgba(0,210,255,0.3);">
+                                        <div id="barLobbyXpFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0052d4, #4364f7, #6fb1fc); transition: width 0.3s;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="recurso-item"><div class="recurso-circulo">🪙</div><span class="recurso-cantidad" id="txtLobbyMonedas">150</span></div>
+                                <div class="recurso-item"><div class="recurso-circulo">💎</div><span class="recurso-cantidad" id="txtLobbyGemas">5</span></div>
+                                <button id="btnInventarioLobby" style="background: #d69e2e; color: #1a202c; border: none; border-radius: 12px; font-size: 1.5rem; width: 45px; height: 45px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.4); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; z-index: 10;">🎒</button>
                             </div>
                             
-                            <div id="audio-container" style="position: absolute; bottom: 20px; right: 20px; z-index: 100; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.4); padding: 10px 15px; border-radius: 16px; backdrop-filter: blur(5px); border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                                <button id="btnMusic" style="background: none; border: none; font-weight: bold; color: #d11a5b; cursor: pointer; font-size: 1rem;">🎵 Music ON</button>
+                            <div id="audio-container" style="position: absolute; bottom: 20px; right: 20px; z-index: 100; display: flex; align-items: center; gap: 10px; background: rgba(30, 27, 41, 0.85); padding: 10px 15px; border-radius: 16px; backdrop-filter: blur(5px); border: 2px solid #d69e2e; box-shadow: 0 4px 10px rgba(0,0,0,0.4); font-weight: bold; color: #f6e05e;">
+                                <button id="btnMusic" style="background: none; border: none; font-weight: bold; color: #f6e05e; cursor: pointer; font-size: 1rem;">🎵 Music ON</button>
                                 <input type="range" id="volRange" min="0" max="100" value="50" style="width: 80px; cursor: pointer;">
                             </div>
                         </div>
 
-                        <div class="lobby-bottom">
-                            <button class="btn-historia" id="btnHistoriaLobby"> Historia </button>
-                            <button class="btn-puzzle" id="btnPuzzleLobby"> Puzzle </button>
+                        <div class="lobby-bottom" style="display: flex; gap: 15px; justify-content: center;">
+                            <button class="btn-historia" id="btnHistoriaLobby"> Mazmorras </button>
+                            <button class="btn-puzzle" id="btnPuzzleLobby"> Desafío </button>
+                            <button class="btn-editor" id="btnEditorLobby" onclick="window.open('./editor.html', '_blank')"> 🛠️ Editor </button>
                         </div>
                     </div>
 
                     <div class="modal-overlay" id="modalNiveles" style="opacity: 0; visibility: hidden;">
                         <div class="modal-menu">
                             <button class="btn-cerrar-modal" id="btnCerrarModal">✖</button>
-                            <h2 class="modal-titulo"> Que haremos hoy ? </h2>
+                            <h2 class="modal-titulo" style="color: #f6e05e;"> ¿A qué calabozo entraremos hoy? </h2>
                             
-                            <button class="btn-nivel" data-id="2">Nivel 1: Historia</button>
-                            <button class="btn-nivel" data-id="3">Nivel 2: Plataformas</button>
-                            <button class="btn-nivel" data-id="4">Nivel 3: ¿?</button>
+                            <button class="btn-nivel" data-id="2">Mazmorra del Inframundo</button>
+                            <button class="btn-nivel" data-id="3" style="opacity: 0.5;">Nivel 2: La Arena</button>
+                            <button class="btn-nivel" data-id="4" style="opacity: 0.5;">Nivel 3: El Templo</button>
                         </div>
                     </div>
 
-                    <div class="modal-overlay" id="modalInventarioTienda" style="opacity: 0; visibility: hidden; z-index: 1001; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 18, 31, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center;">
-                        <div class="modal-menu" style="width: 450px; max-height: 85vh; overflow-y: auto; background: #211933; border: 4px solid #ff6584; border-radius: 28px; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; display: flex; flex-direction: column; gap: 15px; color: white;">
-                            <button class="btn-cerrar-modal" id="btnCerrarInventario" style="position: absolute; top: 12px; right: 15px; background: none; border: none; color: #ff6584; font-size: 1.5rem; cursor: pointer; z-index: 1020;">✖</button>
+                    <div class="modal-overlay" id="modalInventarioTienda" style="opacity: 0; visibility: hidden; z-index: 1001; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center;">
+                        <div class="modal-menu" style="width: 450px; max-height: 85vh; overflow-y: auto; background: #1e1b29; border: 4px solid #d69e2e; border-radius: 28px; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; gap: 15px; color: white;">
+                            <button class="btn-cerrar-modal" id="btnCerrarInventario" style="position: absolute; top: 12px; right: 15px; background: none; border: none; color: #f6e05e; font-size: 1.5rem; cursor: pointer; z-index: 1020;">✖</button>
                             
                             <!-- Pestañas -->
                             <div style="display: flex; gap: 10px; margin-bottom: 10px; margin-right: 35px;">
-                                <button id="tabInventario" style="flex: 1; padding: 10px; font-weight: bold; background: #ff6584; color: white; border: none; border-radius: 12px; cursor: pointer;">🎒 Inventario</button>
-                                <button id="tabTienda" style="flex: 1; padding: 10px; font-weight: bold; background: rgba(255,255,255,0.1); color: #ffb7c5; border: 2px solid #ff6584; border-radius: 12px; cursor: pointer;">🏪 Tienda</button>
+                                <button id="tabInventario" style="flex: 1; padding: 10px; font-weight: bold; background: #742a2a; color: #f6e05e; border: none; border-radius: 12px; cursor: pointer;">🎒 Inventario</button>
+                                <button id="tabTienda" style="flex: 1; padding: 10px; font-weight: bold; background: rgba(255,255,255,0.05); color: #f6e05e; border: 2px solid #d69e2e; border-radius: 12px; cursor: pointer;">🏪 Tienda</button>
                             </div>
 
                             <!-- Contenido pestaña Inventario -->
-                            <div id="contentInventario" style="display: flex; flex-direction: column; gap: 15px;">
-                                <h3 style="color: #ffb7c5; margin: 0; text-align: center; font-size: 1.1rem;">Slots Activos (Equipa tus consumibles/armas)</h3>
+                            <div id="contentInventario" style="display: flex; flex-direction: column; gap: 12px;">
+                                <h3 style="color: #f6e05e; margin: 0; text-align: center; font-size: 1.1rem;">Slots Activos (Equipa consumibles/armas)</h3>
                                 <div style="display: flex; justify-content: space-between; gap: 5px;" id="lobbySlotsContainer">
                                     <!-- Se genera por JS -->
                                 </div>
 
-                                <h3 style="color: #ffb7c5; margin: 10px 0 0 0; text-align: center; font-size: 1.1rem;">Mochila (Haz clic para equipar)</h3>
-                                <div id="lobbyMochilaContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <h3 style="color: #f6e05e; margin: 5px 0 0 0; text-align: center; font-size: 1.1rem;">Mochila (Haz clic para equipar)</h3>
+                                <div id="lobbyMochilaContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                    <!-- Se genera por JS -->
+                                </div>
+
+                                <h3 style="color: #f6e05e; margin: 5px 0 0 0; text-align: center; font-size: 1.1rem;">🔨 Taller de Reparación (Coste: 1🪙 x 1%)</h3>
+                                <div id="lobbyTallerContainer" style="display: flex; flex-direction: column; gap: 6px;">
                                     <!-- Se genera por JS -->
                                 </div>
                             </div>
 
                             <!-- Contenido pestaña Tienda -->
                             <div id="contentTienda" style="display: none; flex-direction: column; gap: 15px;">
-                                <h3 style="color: #ffb7c5; margin: 0; text-align: center; font-size: 1.1rem;">Comprar con Café (☕ <span id="shopCafeSaldo">0</span>)</h3>
+                                <h3 style="color: #f6e05e; margin: 0; text-align: center; font-size: 1.1rem;">Comprar con Gemas (💎 <span id="shopGemasSaldo">0</span>)</h3>
                                 <div style="display: flex; flex-direction: column; gap: 10px;" id="shopItemsContainer">
                                     <!-- Se genera por JS -->
                                 </div>
@@ -110,10 +127,10 @@ export class GameFactory {
                             const cartel = document.getElementById('cartelAviso');
                             const botonesNivel = document.querySelectorAll('.btn-nivel');
 
-                            // LÓGICA DE AVATAR (Sin LocalStorage)
+                            // LÓGICA DE CLASES AVATAR (Caballero y Mago)
                             if (avatarDiv && btnCambiarAvatar) {
-                                const catalogoAvatares = ['daniel-oficial-avatar', 'kitty-oficial-avatar'];
-                                let avatarActual = 'daniel-oficial-avatar'; // Siempre empieza en Daniel
+                                const catalogoAvatares = ['knight-oficial-avatar', 'mage-oficial-avatar'];
+                                let avatarActual = window.playerState.clase === 'mage' ? 'mage-oficial-avatar' : 'knight-oficial-avatar';
                                 avatarDiv.className = avatarActual;
 
                                 btnCambiarAvatar.addEventListener('click', () => {
@@ -122,6 +139,9 @@ export class GameFactory {
                                     avatarActual = catalogoAvatares[indiceActual];
 
                                     avatarDiv.className = avatarActual;
+                                    window.playerState.clase = avatarActual === 'knight-oficial-avatar' ? 'knight' : 'mage';
+                                    console.log(`Clase del jugador cambiada a: ${window.playerState.clase}`);
+
                                     gsap.fromTo(avatarDiv, { scale: 0.8, rotation: -10 }, { duration: 0.4, scale: 1, rotation: 0, ease: "back.out(1.5)" });
                                 });
                             }
@@ -164,10 +184,22 @@ export class GameFactory {
                             });
 
                             // --- LÓGICA DE INVENTARIO Y TIENDA ---
-                            const txtNubes = document.getElementById('txtLobbyNubes');
-                            const txtCafe = document.getElementById('txtLobbyCafe');
-                            if (txtNubes) txtNubes.innerText = window.playerState.nubes;
-                            if (txtCafe) txtCafe.innerText = window.playerState.cafe;
+                            const txtMonedas = document.getElementById('txtLobbyMonedas');
+                            const txtGemas = document.getElementById('txtLobbyGemas');
+                            if (txtMonedas) txtMonedas.innerText = window.playerState.monedas;
+                            if (txtGemas) txtGemas.innerText = window.playerState.gemas;
+
+                            const txtLobbyLvl = document.getElementById('txtLobbyLvl');
+                            const txtLobbyXpVal = document.getElementById('txtLobbyXpVal');
+                            const barLobbyXpFill = document.getElementById('barLobbyXpFill');
+                            if (txtLobbyLvl && txtLobbyXpVal && barLobbyXpFill) {
+                                const lvl = window.playerState.nivel || 1;
+                                const xp = window.playerState.xpActual || 0.0;
+                                const req = Math.pow(2, lvl);
+                                txtLobbyLvl.innerText = lvl;
+                                txtLobbyXpVal.innerText = `${xp.toFixed(2)} / ${req.toFixed(2)} XP`;
+                                barLobbyXpFill.style.width = `${Math.min(100, (xp / req) * 100)}%`;
+                            }
 
                             const modalInv = document.getElementById('modalInventarioTienda');
                             const btnInv = document.getElementById('btnInventarioLobby');
@@ -179,19 +211,19 @@ export class GameFactory {
 
                             if (tabInv && tabTnd && contentInv && contentTnd) {
                                 tabInv.addEventListener('click', () => {
-                                    tabInv.style.background = '#ff6584';
-                                    tabInv.style.color = 'white';
-                                    tabTnd.style.background = 'rgba(255,255,255,0.1)';
-                                    tabTnd.style.color = '#ffb7c5';
+                                    tabInv.style.background = '#742a2a';
+                                    tabInv.style.color = '#f6e05e';
+                                    tabTnd.style.background = 'rgba(255,255,255,0.05)';
+                                    tabTnd.style.color = '#f6e05e';
                                     contentInv.style.display = 'flex';
                                     contentTnd.style.display = 'none';
                                     renderLobbyInventario();
                                 });
                                 tabTnd.addEventListener('click', () => {
-                                    tabTnd.style.background = '#ff6584';
-                                    tabTnd.style.color = 'white';
-                                    tabInv.style.background = 'rgba(255,255,255,0.1)';
-                                    tabInv.style.color = '#ffb7c5';
+                                    tabTnd.style.background = '#742a2a';
+                                    tabTnd.style.color = '#f6e05e';
+                                    tabInv.style.background = 'rgba(255,255,255,0.05)';
+                                    tabInv.style.color = '#f6e05e';
                                     contentInv.style.display = 'none';
                                     contentTnd.style.display = 'flex';
                                     renderLobbyTienda();
@@ -215,31 +247,40 @@ export class GameFactory {
 
                                 let slotsHtml = '';
                                 const nombresDisplay = {
-                                    "arma_basica": "🔫 Básica",
-                                    "arma_doble": "雙 Doble",
-                                    "arma_rebotadora": "🪃 Rebote",
-                                    "botiquin": "🧪 Botiquín",
-                                    "escudo": "🛡️ Escudo"
+                                    "espada_basica": "🗡️ Espada",
+                                    "daga_doble": "⚔️ Dagas",
+                                    "martillo_rebote": "🔨 Martillo",
+                                    "pocion_vida": "🧪 Poción",
+                                    "escudo_hierro": "🛡️ Escudo"
                                 };
 
                                 for (let i = 0; i < 5; i++) {
                                     const item = window.playerState.slots[i];
                                     const esPrimero = i === 0;
-                                    const border = esPrimero ? 'border: 2px dashed #ffd700;' : 'border: 2px solid #ff6584;';
-                                    const bg = item ? 'background: rgba(255, 101, 132, 0.15);' : 'background: rgba(0,0,0,0.2);';
+                                    const border = esPrimero ? 'border: 2px dashed #ffd700;' : 'border: 2px solid #d69e2e;';
+                                    const bg = item ? 'background: rgba(116, 42, 42, 0.25);' : 'background: rgba(0,0,0,0.4);';
                                     const cursor = esPrimero ? 'cursor: not-allowed;' : 'cursor: pointer;';
                                     const label = item ? nombresDisplay[item] : 'Vacío';
 
                                     let countLabel = '';
-                                    if (esPrimero) countLabel = ' (∞)';
-                                    else if (item === 'botiquin') countLabel = ` (x${window.playerState.inventario.botiquin})`;
-                                    else if (item === 'escudo') countLabel = ` (x${window.playerState.inventario.escudo})`;
-                                    else if (item === 'arma_doble') countLabel = ` (${window.playerState.balas.arma_doble})`;
-                                    else if (item === 'arma_rebotadora') countLabel = ` (${window.playerState.balas.arma_rebotadora})`;
+                                    if (esPrimero) {
+                                        const dur = window.playerState.durabilidad.espada_basica || 100;
+                                        countLabel = ` (${dur.toFixed(0)}%)`;
+                                    }
+                                    else if (item === 'pocion_vida') countLabel = ` (x${window.playerState.inventario.pocion_vida})`;
+                                    else if (item === 'escudo_hierro') countLabel = ` (x${window.playerState.inventario.escudo_hierro})`;
+                                    else if (item === 'daga_doble') {
+                                        const dur = window.playerState.durabilidad.daga_doble || 100;
+                                        countLabel = ` (${dur.toFixed(0)}%)`;
+                                    }
+                                    else if (item === 'martillo_rebote') {
+                                        const dur = window.playerState.durabilidad.martillo_rebote || 100;
+                                        countLabel = ` (${dur.toFixed(0)}%)`;
+                                    }
 
                                     slotsHtml += `
                                         <div style="flex: 1; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; ${border} ${bg} ${cursor} color: white; font-size: 0.7rem; text-align: center; overflow: hidden; padding: 2px;" onclick="desequiparSlot(${i})">
-                                            <span style="font-weight: bold; color: #ff6584; font-size: 0.65rem;">Slot ${i+1}</span>
+                                            <span style="font-weight: bold; color: #f6e05e; font-size: 0.65rem;">Slot ${i+1}</span>
                                             <span style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%;">${label}${countLabel}</span>
                                         </div>
                                     `;
@@ -248,19 +289,19 @@ export class GameFactory {
 
                                 let mochilaHtml = '';
                                 const itemsDisponibles = [
-                                    { key: "arma_doble", label: "雙 Arma Doble", count: window.playerState.inventario.arma_doble > 0 ? 1 : 0, desc: `${window.playerState.balas.arma_doble} balas` },
-                                    { key: "arma_rebotadora", label: "🪃 Arma Rebotadora", count: window.playerState.inventario.arma_rebotadora > 0 ? 1 : 0, desc: `${window.playerState.balas.arma_rebotadora} balas` },
-                                    { key: "botiquin", label: "🧪 Botiquín", count: window.playerState.inventario.botiquin, desc: "Cura 50 HP (Máx. 5)" },
-                                    { key: "escudo", label: "🛡️ Escudo", count: window.playerState.inventario.escudo, desc: "Inmune 3s (Máx. 5)" }
+                                    { key: "daga_doble", label: "⚔️ Dagas Dobles", count: window.playerState.inventario.daga_doble > 0 ? 1 : 0, desc: `Mant: ${(window.playerState.durabilidad.daga_doble || 100).toFixed(0)}%` },
+                                    { key: "martillo_rebote", label: "🔨 Martillo Trueno", count: window.playerState.inventario.martillo_rebote > 0 ? 1 : 0, desc: `Mant: ${(window.playerState.durabilidad.martillo_rebote || 100).toFixed(0)}%` },
+                                    { key: "pocion_vida", label: "🧪 Poción Vida", count: window.playerState.inventario.pocion_vida, desc: "Cura 50 HP (Máx. 5)" },
+                                    { key: "escudo_hierro", label: "🛡️ Escudo Hierro", count: window.playerState.inventario.escudo_hierro, desc: "Inmune 3s (Máx. 5)" }
                                 ];
 
                                 for (const it of itemsDisponibles) {
                                     if (it.count > 0) {
                                         mochilaHtml += `
-                                            <div style="padding: 8px; background: rgba(255,255,255,0.05); border: 2px solid #5c4e75; border-radius: 12px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: background 0.2s;" onclick="equiparEnSlotLibre('${it.key}')" onmouseover="this.style.background='rgba(255,101,132,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                                                <span style="font-weight: bold; color: #ffb7c5; font-size: 0.85rem;">${it.label}</span>
+                                            <div style="padding: 8px; background: rgba(0,0,0,0.3); border: 2px solid #d69e2e; border-radius: 12px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: background 0.2s;" onclick="equiparEnSlotLibre('${it.key}')" onmouseover="this.style.background='rgba(116,42,42,0.25)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
+                                                <span style="font-weight: bold; color: #f6e05e; font-size: 0.85rem;">${it.label}</span>
                                                 <span style="font-size: 0.7rem; color: #ddd;">Stock: ${it.count}</span>
-                                                <span style="font-size: 0.65rem; color: #ff6584; font-weight: bold; margin-top: 2px;">${it.desc}</span>
+                                                <span style="font-size: 0.65rem; color: #f6e05e; font-weight: bold; margin-top: 2px;">${it.desc}</span>
                                             </div>
                                         `;
                                     }
@@ -270,10 +311,40 @@ export class GameFactory {
                                     mochilaHtml = `<div style="grid-column: span 2; text-align: center; color: #aaa; padding: 15px; font-size: 0.85rem;">Tu mochila está vacía. Compra artículos en la tienda.</div>`;
                                 }
                                 mochilaContainer.innerHTML = mochilaHtml;
+
+                                // RENDERIZAR TALLER DE REPARACIÓN
+                                const tallerContainer = document.getElementById('lobbyTallerContainer');
+                                if (tallerContainer) {
+                                    let tallerHtml = '';
+                                    const armasParaReparar = [
+                                        { key: "espada_basica", label: "🗡️ Espada Básica" },
+                                        { key: "daga_doble", label: "⚔️ Dagas Dobles", desbloqueada: window.playerState.inventario.daga_doble > 0 },
+                                        { key: "martillo_rebote", label: "🔨 Martillo de Trueno", desbloqueada: window.playerState.inventario.martillo_rebote > 0 }
+                                    ];
+
+                                    for (const arma of armasParaReparar) {
+                                        if (arma.key === "espada_basica" || arma.desbloqueada) {
+                                            const dur = window.playerState.durabilidad[arma.key] || 100;
+                                            const costo = Math.ceil(100 - dur);
+                                            const disabled = costo === 0 ? 'disabled style="opacity: 0.5; background: #3e3b4e; color: #7f8c8d; cursor: not-allowed;"' : '';
+                                            
+                                            tallerHtml += `
+                                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid #d69e2e; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; color: white;">
+                                                    <span style="font-weight: bold; color: #f6e05e;">${arma.label}</span>
+                                                    <span style="color: ${dur < 50 ? '#ff4757' : '#2ed573'}; font-weight: bold; font-family: monospace;">${dur.toFixed(1)}%</span>
+                                                    <button onclick="repararArma('${arma.key}', ${costo})" ${disabled} style="background: #d69e2e; color: #110e19; border: none; padding: 4px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem; transition: transform 0.1s;">
+                                                        🔧 Reparar (🪙 ${costo})
+                                                     </button>
+                                                </div>
+                                            `;
+                                        }
+                                    }
+                                    tallerContainer.innerHTML = tallerHtml;
+                                }
                             }
 
                             window.equiparEnSlotLibre = (key) => {
-                                if (key.startsWith('arma') && window.playerState.slots.includes(key)) {
+                                if ((key.startsWith('daga') || key.startsWith('martillo')) && window.playerState.slots.includes(key)) {
                                     alert("Esta arma ya está equipada en un slot.");
                                     return;
                                 }
@@ -302,28 +373,28 @@ export class GameFactory {
 
                             function renderLobbyTienda() {
                                 const shopContainer = document.getElementById('shopItemsContainer');
-                                const shopCafeSaldo = document.getElementById('shopCafeSaldo');
-                                if (!shopContainer || !shopCafeSaldo) return;
+                                const shopGemasSaldo = document.getElementById('shopGemasSaldo');
+                                if (!shopContainer || !shopGemasSaldo) return;
 
-                                shopCafeSaldo.innerText = window.playerState.cafe;
+                                shopGemasSaldo.innerText = window.playerState.gemas;
 
                                 const catalogoTienda = [
-                                    { key: "arma_doble", label: "雙 Arma Doble", costo: 5, entrega: "+100 Balas", desc: "Disparo doble rápido (0.10s, Daño: 10)" },
-                                    { key: "arma_rebotadora", label: "🪃 Arma Rebotadora", costo: 5, entrega: "+50 Balas", desc: "Rebota en paredes (0.15s, Daño: 40)" },
-                                    { key: "botiquin", label: "🧪 Botiquín", costo: 10, entrega: "+1 Botiquín", desc: "Cura 50 de vida al usarse" },
-                                    { key: "escudo", label: "🛡️ Escudo", costo: 10, entrega: "+1 Escudo", desc: "Inmune por 3 segundos" }
+                                    { key: "daga_doble", label: "⚔️ Dagas Dobles", costo: 5, entrega: "+100 Dagas", desc: "Ráfaga rápida (0.10s, Daño: 10)" },
+                                    { key: "martillo_rebote", label: "🔨 Martillo Trueno", costo: 5, entrega: "+50 Golpes", desc: "Rebota en muros (0.15s, Daño: 40)" },
+                                    { key: "pocion_vida", label: "🧪 Poción de Vida", costo: 10, entrega: "+1 Poción", desc: "Cura 50 de vida al usarse" },
+                                    { key: "escudo_hierro", label: "🛡️ Escudo de Hierro", costo: 10, entrega: "+1 Escudo", desc: "Inmune por 3 segundos" }
                                 ];
 
                                 let shopHtml = '';
                                 for (const prod of catalogoTienda) {
                                     shopHtml += `
-                                        <div style="padding: 10px; background: rgba(0,0,0,0.2); border: 2px solid #5c4e75; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.85rem;">
+                                        <div style="padding: 10px; background: rgba(0,0,0,0.4); border: 2px solid #d69e2e; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.85rem;">
                                             <div style="display: flex; flex-direction: column;">
-                                                <span style="font-weight: bold; color: #ffb7c5; font-size: 0.9rem;">${prod.label} <span style="font-size: 0.75rem; color: #ffd700;">(${prod.entrega})</span></span>
+                                                <span style="font-weight: bold; color: #f6e05e; font-size: 0.9rem;">${prod.label} <span style="font-size: 0.75rem; color: #ffd700;">(${prod.entrega})</span></span>
                                                 <span style="font-size: 0.7rem; color: #aaa; margin-top: 1px;">${prod.desc}</span>
                                             </div>
-                                            <button onclick="comprarArticulo('${prod.key}', ${prod.costo})" style="background: #ffd700; color: #14121f; border: none; padding: 6px 12px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 4px; font-size: 0.8rem;">
-                                                ☕ ${prod.costo}
+                                            <button onclick="comprarArticulo('${prod.key}', ${prod.costo})" style="background: #d69e2e; color: #14121f; border: none; padding: 6px 12px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 4px; font-size: 0.8rem;">
+                                                💎 ${prod.costo}
                                             </button>
                                         </div>
                                     `;
@@ -331,34 +402,58 @@ export class GameFactory {
                                 shopContainer.innerHTML = shopHtml;
                             }
 
+                            window.repararArma = (key, costo) => {
+                                if (window.playerState.monedas < costo) {
+                                    alert("No tienes suficientes monedas de oro 🪙.");
+                                    return;
+                                }
+                                window.playerState.monedas -= costo;
+                                window.playerState.durabilidad[key] = 100;
+                                
+                                // Actualizar saldo visual en el lobby
+                                const txtMonedas = document.getElementById('txtLobbyMonedas');
+                                if (txtMonedas) txtMonedas.innerText = window.playerState.monedas;
+                                
+                                renderLobbyInventario();
+                                alert("¡Arma reparada con éxito!");
+                            };
+
                             window.comprarArticulo = (key, costo) => {
-                                if (window.playerState.cafe < costo) {
-                                    alert("No tienes suficiente café ☕.");
+                                if (window.playerState.gemas < costo) {
+                                    alert("No tienes suficientes gemas 💎.");
                                     return;
                                 }
 
-                                if (key === 'botiquin') {
-                                    if (window.playerState.inventario.botiquin >= 5) {
-                                        alert("Límite de 5 botiquines alcanzado.");
+                                if (key === 'pocion_vida') {
+                                    if (window.playerState.inventario.pocion_vida >= 5) {
+                                        alert("Límite de 5 pociones alcanzado.");
                                         return;
                                     }
-                                    window.playerState.inventario.botiquin++;
-                                } else if (key === 'escudo') {
-                                    if (window.playerState.inventario.escudo >= 5) {
+                                    window.playerState.inventario.pocion_vida++;
+                                } else if (key === 'escudo_hierro') {
+                                    if (window.playerState.inventario.escudo_hierro >= 5) {
                                         alert("Límite de 5 escudos alcanzado.");
                                         return;
                                     }
-                                    window.playerState.inventario.escudo++;
-                                } else if (key === 'arma_doble') {
-                                    window.playerState.inventario.arma_doble = 1;
-                                    window.playerState.balas.arma_doble += 100;
-                                } else if (key === 'arma_rebotadora') {
-                                    window.playerState.inventario.arma_rebotadora = 1;
-                                    window.playerState.balas.arma_rebotadora += 50;
+                                    window.playerState.inventario.escudo_hierro++;
+                                } else if (key === 'daga_doble') {
+                                    if (window.playerState.inventario.daga_doble > 0) {
+                                        alert("¡Ya posees las Dagas Dobles! Repáralas en el taller si están gastadas.");
+                                        return;
+                                    }
+                                    window.playerState.inventario.daga_doble = 1;
+                                    window.playerState.durabilidad.daga_doble = 100;
+                                } else if (key === 'martillo_rebote') {
+                                    if (window.playerState.inventario.martillo_rebote > 0) {
+                                        alert("¡Ya posees el Martillo de Trueno! Repáralo en el taller si está gastado.");
+                                        return;
+                                    }
+                                    window.playerState.inventario.martillo_rebote = 1;
+                                    window.playerState.durabilidad.martillo_rebote = 100;
                                 }
 
-                                window.playerState.cafe -= costo;
-                                txtCafe.innerText = window.playerState.cafe;
+                                window.playerState.gemas -= costo;
+                                shopGemasSaldo.innerText = window.playerState.gemas;
                                 renderLobbyTienda();
                                 alert("¡Comprado con éxito!");
                             };

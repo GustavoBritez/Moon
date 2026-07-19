@@ -11,10 +11,13 @@ export class Player {
         this.isDead = false;
         this.isShielded = false;
         this.shieldTimer = 0;
+        this.isInvulnerable = false;
+        this.invulnerableTimer = 0;
     }
 
     recibirDanio(cantidad) {
         if (this.isDead) return;
+        if (this.isInvulnerable) return;
         if (this.isShielded) {
             console.log("¡Daño bloqueado por el escudo!");
             return;
@@ -23,6 +26,9 @@ export class Player {
         if (this.vidaActual <= 0) {
             this.vidaActual = 0;
             this.isDead = true;
+        } else {
+            this.isInvulnerable = true;
+            this.invulnerableTimer = 1.0; // 1 segundo de invulnerabilidad
         }
     }
 

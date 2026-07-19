@@ -49,26 +49,28 @@ export class CollisionManager {
     // --- COLISIONES DE COMBATE ---
 
     verificarColisionesJugadorEnemigo(player, enemies) {
-        if (player.isDead) return false;
+        if (player.isDead) return null;
 
         const radioJugador = this.tileSize * 0.25;
 
         for (let i = 0; i < enemies.length; i++) {
             const enemigo = enemies[i];
+            if (enemigo.isDead) continue;
 
             const dx = player.x - enemigo.x;
             const dy = player.y - enemigo.y;
 
             const distSq = (dx * dx) + (dy * dy);
 
-            const distanciaMinima = radioJugador + enemigo.radioColision;
+            const radioEnemigo = enemigo.radioColision !== undefined ? enemigo.radioColision : (this.tileSize * 0.35);
+            const distanciaMinima = radioJugador + radioEnemigo;
 
             const distanciaMinimaSq = distanciaMinima * distanciaMinima;
 
             if (distSq < distanciaMinimaSq) {
-                return true;
+                return enemigo;
             }
         }
-        return false;
+        return null;
     }
 }
