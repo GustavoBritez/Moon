@@ -52,7 +52,7 @@ export class EnemyManager {
         const cuerpoEnemigo = new PIXI.Graphics();
         
         // Verificamos el tipo para darle distinta forma y color
-        if (type === 'MONSTER_SPAWNER') {
+        if (type === 'MONSTER_SPAWNER' || type === 'Generador Esqueletos') {
             // Generador de Monstruos (Portal de piedra)
             cuerpoEnemigo.beginFill(0x2d3748);
             cuerpoEnemigo.drawRect(-18, -18, 36, 36, 6);
@@ -64,7 +64,7 @@ export class EnemyManager {
             cuerpoEnemigo.beginFill(0xb794f4, 0.6);
             cuerpoEnemigo.drawCircle(0, 0, 6);
             cuerpoEnemigo.endFill();
-        } else if (type === 'NECROMANCER') {
+        } else if (type === 'NECROMANCER' || type === 'NIGROMANTE') {
             // Nigromante (Túnica oscura, capucha y báculo)
             cuerpoEnemigo.beginFill(0x1a202c);
             cuerpoEnemigo.drawCircle(0, 0, 14);
@@ -115,7 +115,7 @@ export class EnemyManager {
             cuerpoEnemigo.moveTo(19, -14);
             cuerpoEnemigo.lineTo(19, 10);
             cuerpoEnemigo.lineStyle(0);
-        } else if (type === 'BAKU') {
+        } else if (type === 'BAKU' || type === 'Orco') {
             // Orco normal
             cuerpoEnemigo.beginFill(0x27ae60);
             cuerpoEnemigo.drawRect(-16, -16, 32, 32);
@@ -168,6 +168,12 @@ export class EnemyManager {
         return enemigo;
     }
 
+    spawnEnemy(data) {
+        const enemigo = this.fabricaDeEnemigos(data);
+        this.enemies.push(enemigo);
+        return enemigo;
+    }
+
     inicializar() {
         if (!this.configEnemigos || !Array.isArray(this.configEnemigos)) {
             console.warn("EnemyManager: No se encontraron configuraciones de enemigos para inicializar.");
@@ -175,8 +181,17 @@ export class EnemyManager {
         }
 
         for (const data of this.configEnemigos) {
-            const enemigo = this.fabricaDeEnemigos(data);
-            this.enemies.push(enemigo);
+            const cantidad = data.cantidad || 1;
+            for (let k = 0; k < cantidad; k++) {
+                const clonedData = { ...data };
+                const enemigo = this.fabricaDeEnemigos(clonedData);
+                if (cantidad > 1) {
+                    enemigo.x += (Math.random() - 0.5) * 16;
+                    enemigo.y += (Math.random() - 0.5) * 16;
+                    enemigo.actualizarPosicionVisual();
+                }
+                this.enemies.push(enemigo);
+            }
         }
 
         console.log(`EnemyManager: Inicializados ${this.enemies.length} enemigos visibles.`);

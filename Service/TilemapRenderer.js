@@ -92,6 +92,7 @@ export class TilemapRenderer {
                     </g>`;
                 break;
             case 19:
+            case 21:
                 decoracion = `
                     <g opacity="0.95">
                         <circle cx="32" cy="32" r="18" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="3"/>
@@ -112,6 +113,29 @@ export class TilemapRenderer {
                         <!-- Ribetes metálicos laterales -->
                         <rect x="17" y="26" width="3" height="24" fill="#dcdde1" opacity="0.4"/>
                         <rect x="44" y="26" width="3" height="24" fill="#dcdde1" opacity="0.4"/>
+                    </g>`;
+                break;
+            case 23: // Placa de Presión
+                decoracion = `
+                    <g opacity="0.95">
+                        <rect x="18" y="18" width="28" height="28" rx="4" fill="#e1b12c" stroke="#f5cd79" stroke-width="2"/>
+                        <circle cx="32" cy="32" r="5" fill="#f5cd79"/>
+                    </g>`;
+                break;
+            case 24: // Muro Conectado
+                decoracion = `
+                    <g opacity="0.95">
+                        <rect x="8" y="8" width="48" height="48" rx="6" fill="#2c3e50" stroke="#44bd32" stroke-width="3"/>
+                        <line x1="8" y1="32" x2="56" y2="32" stroke="#44bd32" stroke-width="2"/>
+                        <line x1="32" y1="8" x2="32" y2="56" stroke="#44bd32" stroke-width="2"/>
+                    </g>`;
+                break;
+            case 25: // Receptor Láser
+                decoracion = `
+                    <g opacity="0.95">
+                        <rect x="8" y="8" width="48" height="48" rx="6" fill="#12cbc4" stroke="#dff9fb" stroke-width="3"/>
+                        <circle cx="32" cy="32" r="10" fill="#dff9fb"/>
+                        <circle cx="32" cy="32" r="4" fill="#ff7f50"/>
                     </g>`;
                 break;
             default:
@@ -237,7 +261,7 @@ export class TilemapRenderer {
                         } else if (tipoNumero === 9) {
                             sprite.blendMode = PIXI.BLEND_MODES.ADD;
                             opacidadFinal = 0.7 + (Math.sin(tiempo * 5) * 0.3);
-                        } else if (tipoNumero === 19) {
+                        } else if (tipoNumero === 19 || tipoNumero === 21) {
                             sprite.blendMode = PIXI.BLEND_MODES.ADD;
                             opacidadFinal = Math.random() > 0.05 ? 1.0 : 0.2;
                         } else if (tipoNumero === 2) {
@@ -301,26 +325,30 @@ export const TILE_DICT = {
 
     // Bioma: Hielo (4-7)
     4: { name: 'Hielo', color: 0xa4ebf3, solido: false, friccion: 0.2 }, // Resbala
-    5: { name: 'Nieve', color: 0xffffff, solido: false, multiplicadorVel: 0.6 }, // Lento
+    5: { name: 'Nieve', color: 0xffffff, solido: false, multiplicadorVel: 0.95 }, // Ralentización del 5%
     6: { name: 'Pared_Hielo', color: 0x2980b9, solido: true },
     7: { name: 'Agua_Congelada', color: 0x1abc9c, solido: false, daño: 1 }, // Frío
 
     // Bioma: Volcánico (8-11)
     8: { name: 'Piedra_Volcanica', color: 0x34495e, solido: false },
     9: { name: 'Lava', color: 0xe67e22, solido: false, daño: 15 }, // Quema
-    10: { name: 'Ceniza', color: 0x111111, solido: false, multiplicadorVel: 0.8 },
+    10: { name: 'Ceniza', color: 0x111111, solido: false, multiplicadorVel: 0.99 }, // Ralentización del 1%
     11: { name: 'Muro_Obsidiana', color: 0x000000, solido: true },
 
     // Bioma: Pantano/Bosque (12-15)
     12: { name: 'Pasto', color: 0x2ecc71, solido: false },
-    13: { name: 'Pantano', color: 0x145a32, solido: false, multiplicadorVel: 0.4 }, // Muy lento
+    13: { name: 'Pantano', color: 0x145a32, solido: false, multiplicadorVel: 0.98 }, // Ralentización del 2%
     14: { name: 'Tronco', color: 0x8e44ad, solido: true },
     15: { name: 'Veneno', color: 0x00ff00, solido: false, daño: 5 },
 
     // Bioma: Tech / Laboratorio (16-19)
-    16: { name: 'Baldosa_Metal', color: 0xbdc3c7, solido: false },
+    16: { name: 'Baldosa_Metal', color: 0xbdc3c7, solido: false, multiplicadorVel: 1.05 }, // Acelera 5%
     17: { name: 'Muro_Titanio', color: 0x2c3e50, solido: true },
     18: { name: 'Acido', color: 0x39ff14, solido: false, daño: 20 },
     19: { name: 'Portal_Lab', color: 0x9b59b6, solido: false, esTeleport: true, destino: 3 },
-    20: { name: 'Cofre', color: 0x8b5a2b, solido: false, esCofre: true }
+    20: { name: 'Cofre', color: 0x8b5a2b, solido: false, esCofre: true },
+    21: { name: 'Portal_Salida', color: 0xdfb4ff, solido: false, esTeleport: true },
+    23: { name: 'Placa_Presion', color: 0xe1b12c, solido: false },
+    24: { name: 'Muro_Conectado', color: 0x2c3e50, solido: true },
+    25: { name: 'Receptor_Laser', color: 0x12cbc4, solido: true }
 };

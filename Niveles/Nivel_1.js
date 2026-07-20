@@ -1,4 +1,4 @@
-import { TilemapRenderer } from '../Service/TilemapRenderer.js';
+import { TilemapRenderer, TILE_DICT } from '../Service/TilemapRenderer.js';
 import { UIManager } from './UiManager/UiManager.js';
 import { InputManager } from './PlayerControladorCarpet/InputManager.js';
 import { CollisionManager } from './PlayerControladorCarpet/CollisionManager.js';
@@ -26,7 +26,27 @@ export class Nivel_1 {
         const spawn = this.obtenerSpawnInicial(this.mapaMatriz);
 
         this.handleKeyDown = (e) => {
-            if (['1', '2', '3', '4', '5'].includes(e.key)) {
+            if (e.key.toLowerCase() === 'r') {
+                if (this.player && this.player.isFrozen) {
+                    if (this.freezeSliderVal >= 40 && this.freezeSliderVal <= 60) {
+                        this.descongelarJugador();
+                    } else {
+                        this.destellarFalloDescongelar();
+                    }
+                }
+            } else if (e.key === ' ') {
+                if (this.player && !this.player.isDead) {
+                    const pGridX = Math.floor(this.player.x / this.tileSize);
+                    const pGridY = Math.floor(this.player.y / this.tileSize);
+                    const esp = this.espejos?.find(esp => Math.abs(esp.gridX - pGridX) <= 1 && Math.abs(esp.gridY - pGridY) <= 1);
+                    if (esp) {
+                        e.preventDefault();
+                        esp.angulo = esp.angulo === 45 ? 135 : 45;
+                        this.uiManager.mostrarMensajeFlotante("🔄 Espejo Rotado", esp.gridX * this.tileSize + this.tileSize / 2, esp.gridY * this.tileSize);
+                        this.inicializarPuzzles();
+                    }
+                }
+            } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
                 const index = parseInt(e.key) - 1;
                 this.seleccionarSlot(index);
             } else if (e.key === 'Escape' || e.key === 'Esc') {
@@ -50,8 +70,9 @@ export class Nivel_1 {
         this.capaFondo = new PIXI.Container();
         this.capaEntidades = new PIXI.Container();
         this.capaUI = new PIXI.Container();
+        this.capaPuzzles = new PIXI.Container();
 
-        this.mundo.addChild(this.capaFondo, this.capaEntidades);
+        this.mundo.addChild(this.capaFondo, this.capaPuzzles, this.capaEntidades);
         this.app.stage.addChild(this.mundo, this.capaUI);
 
         // 3. Inicializar el Modelo de Datos del Jugador
@@ -62,14 +83,28 @@ export class Nivel_1 {
             this.settings.playerHP || 100
         );
 
+        // Cargar arrays de puzzles
+        this.cajas = JSON.parse(JSON.stringify(mapaInicial.cajas || []));
+        this.mecanismos = JSON.parse(JSON.stringify(mapaInicial.mecanismos || []));
+        this.holdouts = JSON.parse(JSON.stringify(mapaInicial.holdouts || []));
+        this.lasers = JSON.parse(JSON.stringify(mapaInicial.lasers || []));
+        this.espejos = JSON.parse(JSON.stringify(mapaInicial.espejos || []));
+        this.receptores = JSON.parse(JSON.stringify(mapaInicial.receptores || []));
+        this.secuencias = JSON.parse(JSON.stringify(mapaInicial.secuencias || []));
+
         // 4. Mánagers
         this.inputManager = new InputManager();
         this.collisionManager = new CollisionManager(this.mapaMatriz, this.tileSize);
+        this.collisionManager.nivel = this;
         this.playerController = new PlayerController(this.player, this.inputManager, this.collisionManager);
+        this.playerController.nivel = this;
         this.renderizador = new TilemapRenderer(this.capaFondo, this.mapaMatriz, this.tileSize);
         this.uiManager = new UIManager(this.capaUI, this.capaEntidades);
         this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, this.enemigos);
         this.enemyManager.engine = this;
+
+        // Inicializar vistas de puzzles
+        this.inicializarPuzzles();
 
         this.camara = { x: this.player.x, y: this.player.y };
         this.gameOver = false;
@@ -491,6 +526,7 @@ export class Nivel_1 {
         }
 
         this.playerController.update(dt);
+        this.actualizarPuzzles(dt);
         this.enemyManager.update(dt, this.player, this);
         this.actualizarProyectiles(dt);
 
@@ -504,6 +540,188 @@ export class Nivel_1 {
                     this.player.recibirDanio(danio);
                     this.uiManager.mostrarMensajeFlotante(`-${danio} HP 💥`, this.player.x, this.player.y - 30);
                 }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // GESTIÓN DE EFECTOS DE BALDOSAS ESPECIALES
+        // -------------------------------------------------------------
+        const col = Math.floor(this.player.x / this.tileSize);
+        const fila = Math.floor(this.player.y / this.tileSize);
+        let tileId = 0;
+        if (fila >= 0 && fila < this.mapaMatriz.length && col >= 0 && col < this.mapaMatriz[0].length) {
+            tileId = this.mapaMatriz[fila][col];
+        }
+
+        // --- Inmunidad temporal a congelación ---
+        if (this.player.freezeImmunityTimer > 0) {
+            this.player.freezeImmunityTimer -= dt;
+        }
+
+        // --- Congelación (Hielo 4, Agua Congelada 7) ---
+        if (!this.player.isFrozen && (tileId === 4 || tileId === 7)) {
+            if (!(this.player.freezeImmunityTimer > 0) && !this.player.isDead) {
+                this.player.isFrozen = true;
+                this.mostrarMiniJuegoCongelado();
+            }
+        }
+
+        // --- Actualización visual de congelamiento (Tinte azul) ---
+        if (this.player.isFrozen) {
+            if (this.player.sprite && !this.player.wasFrozenVisual) {
+                this.player.wasFrozenVisual = true;
+                this.player.sprite.children.forEach(child => {
+                    if (child !== this.player.poisonEffectGfx && child !== this.player.fireEffectGfx && child !== this.player.acidEffectGfx) {
+                        child._originalTint = child.tint;
+                        child.tint = 0x5dade2; // Tinte azul
+                    }
+                });
+            }
+
+            // Mover el deslizador del minijuego
+            this.freezeSliderVal = (this.freezeSliderVal || 0) + (this.freezeSliderDir || 1) * 220 * dt;
+            if (this.freezeSliderVal >= 100) {
+                this.freezeSliderVal = 100;
+                this.freezeSliderDir = -1;
+            } else if (this.freezeSliderVal <= 0) {
+                this.freezeSliderVal = 0;
+                this.freezeSliderDir = 1;
+            }
+
+            const sliderEl = document.getElementById('freezeSliderHead');
+            if (sliderEl) {
+                sliderEl.style.left = `${this.freezeSliderVal}%`;
+            }
+        } else {
+            if (this.player.wasFrozenVisual) {
+                this.player.wasFrozenVisual = false;
+                this.player.sprite.children.forEach(child => {
+                    if (child._originalTint !== undefined) {
+                        child.tint = child._originalTint;
+                    } else {
+                        child.tint = 0xffffff;
+                    }
+                });
+            }
+        }
+
+        // --- Veneno (15) DoT y Efecto Visual ---
+        if (tileId === 15 && !this.player.isDead) {
+            this.player.poisonDuration = 3.0; // Restablecer/aplicar duración de 3 segundos
+        }
+
+        if (this.player.poisonDuration > 0) {
+            this.player.poisonDuration -= dt;
+            this.player.poisonTickTimer = (this.player.poisonTickTimer || 0) + dt;
+            if (this.player.poisonTickTimer >= 1.0) {
+                this.player.poisonTickTimer -= 1.0;
+                const dmg = Math.max(1, Math.round(this.player.vidaMaxima * 0.01)); // 3% total -> 1% por tick
+                this.player.vidaActual = Math.max(0, this.player.vidaActual - dmg);
+                this.uiManager.mostrarMensajeFlotante(`-${dmg} HP 🧪`, this.player.x, this.player.y - 30);
+                if (this.player.vidaActual <= 0) {
+                    this.player.isDead = true;
+                }
+            }
+
+            // Animar el aura verde de veneno
+            if (this.player.sprite) {
+                if (!this.player.poisonEffectGfx) {
+                    const gfx = new PIXI.Graphics();
+                    this.player.poisonEffectGfx = gfx;
+                    this.player.sprite.addChildAt(gfx, 0); // Detrás
+                }
+                const time = performance.now() / 1000;
+                const pulse = 1 + Math.sin(time * 10) * 0.15;
+                this.player.poisonEffectGfx.clear();
+                this.player.poisonEffectGfx.lineStyle(2, 0x00ff00, 0.8);
+                this.player.poisonEffectGfx.drawCircle(0, 0, 22 * pulse);
+                this.player.poisonEffectGfx.beginFill(0x00ff00, 0.25);
+                this.player.poisonEffectGfx.drawCircle(0, 0, 18 * pulse);
+                this.player.poisonEffectGfx.endFill();
+            }
+        } else {
+            this.player.poisonDuration = 0;
+            this.player.poisonTickTimer = 0;
+            if (this.player.poisonEffectGfx) {
+                this.player.poisonEffectGfx.destroy();
+                this.player.poisonEffectGfx = null;
+            }
+        }
+
+        // --- Piedra Volcánica (8) DoT y Fuego ---
+        if (tileId === 8 && !this.player.isDead) {
+            this.player.volcanicTickTimer = (this.player.volcanicTickTimer || 0) + dt;
+            if (this.player.volcanicTickTimer >= 0.5) {
+                this.player.volcanicTickTimer -= 0.5;
+                const dmg = Math.max(1, Math.round(this.player.vidaMaxima * 0.05)); // 5% cada medio segundo
+                this.player.vidaActual = Math.max(0, this.player.vidaActual - dmg);
+                this.uiManager.mostrarMensajeFlotante(`-${dmg} HP 🔥`, this.player.x, this.player.y - 30);
+                if (this.player.vidaActual <= 0) {
+                    this.player.isDead = true;
+                }
+            }
+
+            // Animar llamas
+            if (this.player.sprite) {
+                if (!this.player.fireEffectGfx) {
+                    const gfx = new PIXI.Graphics();
+                    this.player.fireEffectGfx = gfx;
+                    this.player.sprite.addChildAt(gfx, 0);
+                }
+                const time = performance.now() / 1000;
+                this.player.fireEffectGfx.clear();
+                this.player.fireEffectGfx.beginFill(0xff4500, 0.4);
+                this.player.fireEffectGfx.drawCircle(0, 0, 24 + Math.sin(time * 25) * 3);
+                this.player.fireEffectGfx.endFill();
+                this.player.fireEffectGfx.beginFill(0xff8c00, 0.6);
+                this.player.fireEffectGfx.drawCircle(0, 0, 18 + Math.cos(time * 20) * 2);
+                this.player.fireEffectGfx.endFill();
+                this.player.fireEffectGfx.beginFill(0xffd700, 0.8);
+                this.player.fireEffectGfx.drawCircle(0, 0, 12 + Math.sin(time * 15) * 1.5);
+                this.player.fireEffectGfx.endFill();
+            }
+        } else {
+            this.player.volcanicTickTimer = 0;
+            if (this.player.fireEffectGfx) {
+                this.player.fireEffectGfx.destroy();
+                this.player.fireEffectGfx = null;
+            }
+        }
+
+        // --- Ácido (18) DoT y Color Verde Difuminado ---
+        if (tileId === 18 && !this.player.isDead) {
+            this.player.acidTickTimer = (this.player.acidTickTimer || 0) + dt;
+            if (this.player.acidTickTimer >= 0.5) {
+                this.player.acidTickTimer -= 0.5;
+                const dmg = Math.max(1, Math.round(this.player.vidaMaxima * 0.02)); // 2% cada medio segundo
+                this.player.vidaActual = Math.max(0, this.player.vidaActual - dmg);
+                this.uiManager.mostrarMensajeFlotante(`-${dmg} HP 🧪`, this.player.x, this.player.y - 30);
+                if (this.player.vidaActual <= 0) {
+                    this.player.isDead = true;
+                }
+            }
+
+            // Animar aura difuminada verde
+            if (this.player.sprite) {
+                if (!this.player.acidEffectGfx) {
+                    const gfx = new PIXI.Graphics();
+                    this.player.acidEffectGfx = gfx;
+                    this.player.sprite.addChildAt(gfx, 0);
+                }
+                const time = performance.now() / 1000;
+                this.player.acidEffectGfx.clear();
+                const baseRadius = 20 + Math.sin(time * 8) * 2;
+                for (let r = 4; r > 0; r--) {
+                    this.player.acidEffectGfx.beginFill(0x39ff14, 0.12 - (r * 0.02));
+                    this.player.acidEffectGfx.drawCircle(0, 0, baseRadius + r * 5);
+                    this.player.acidEffectGfx.endFill();
+                }
+            }
+        } else {
+            this.player.acidTickTimer = 0;
+            if (this.player.acidEffectGfx) {
+                this.player.acidEffectGfx.destroy();
+                this.player.acidEffectGfx = null;
             }
         }
 
@@ -738,6 +956,18 @@ export class Nivel_1 {
         this.portales = subMapa.portales || [];
         this.cofres = subMapa.cofres || [];
 
+        // Cargar arrays de puzzles del sub-mapa
+        this.cajas = JSON.parse(JSON.stringify(subMapa.cajas || []));
+        this.mecanismos = JSON.parse(JSON.stringify(subMapa.mecanismos || []));
+        this.holdouts = JSON.parse(JSON.stringify(subMapa.holdouts || []));
+        this.lasers = JSON.parse(JSON.stringify(subMapa.lasers || []));
+        this.espejos = JSON.parse(JSON.stringify(subMapa.espejos || []));
+        this.receptores = JSON.parse(JSON.stringify(subMapa.receptores || []));
+        this.secuencias = JSON.parse(JSON.stringify(subMapa.secuencias || []));
+
+        // Inicializar vistas de puzzles
+        this.inicializarPuzzles();
+
         // 1. Limpiar enemigos actuales
         this.enemyManager.destroy();
 
@@ -771,6 +1001,76 @@ export class Nivel_1 {
         this.enemyManager.inicializar();
 
         this.actualizarHUDHtml();
+    }
+
+    mostrarMiniJuegoCongelado() {
+        let container = document.getElementById('freezeMiniGame');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'freezeMiniGame';
+            container.style = `
+                position: absolute;
+                bottom: 120px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(10, 25, 47, 0.85);
+                backdrop-filter: blur(5px);
+                border: 2px solid #5dade2;
+                border-radius: 12px;
+                padding: 15px 25px;
+                color: white;
+                font-family: 'Outfit', sans-serif;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(93, 173, 226, 0.4);
+                z-index: 999;
+                pointer-events: none;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            `;
+            container.innerHTML = `
+                <div style="font-weight: bold; color: #a4ebf3; font-size: 1.1rem; text-shadow: 0 0 5px rgba(164,235,243,0.5);">
+                    ❄️ ¡CONGELADO! ❄️
+                </div>
+                <div style="font-size: 0.85rem; color: #cbd5e0; margin-bottom: 5px;">
+                    Presiona <span style="background: #5dade2; color: #0a192f; padding: 2px 6px; border-radius: 4px; font-weight: bold;">R</span> cuando el deslizante esté en la zona segura
+                </div>
+                <!-- The Bar -->
+                <div id="freezeBar" style="position: relative; width: 250px; height: 20px; background: #1a365d; border-radius: 10px; overflow: visible; border: 1px solid #5dade2;">
+                    <!-- Safe zone (40% to 60%) -->
+                    <div style="position: absolute; left: 40%; width: 20%; height: 100%; background: #2ecc71; opacity: 0.7; box-shadow: 0 0 10px #2ecc71; border-radius: 2px;"></div>
+                    <!-- Slider head -->
+                    <div id="freezeSliderHead" style="position: absolute; top: -4px; left: 0%; width: 12px; height: 28px; background: #ff4757; border-radius: 3px; box-shadow: 0 0 8px #ff4757; transform: translateX(-50%); transition: left 0.02s linear;"></div>
+                </div>
+            `;
+            this.canvas.parentNode.appendChild(container);
+        }
+        container.style.display = 'flex';
+        this.freezeSliderVal = 0;
+        this.freezeSliderDir = 1;
+    }
+
+    descongelarJugador() {
+        this.player.isFrozen = false;
+        this.player.freezeImmunityTimer = 1.5; // Inmunidad de 1.5 segundos
+        const container = document.getElementById('freezeMiniGame');
+        if (container) {
+            container.style.display = 'none';
+        }
+        this.uiManager.mostrarMensajeFlotante("¡LIBRE! 🔥", this.player.x, this.player.y - 30);
+    }
+
+    destellarFalloDescongelar() {
+        const bar = document.getElementById('freezeBar');
+        if (bar) {
+            bar.style.borderColor = '#ff4757';
+            bar.style.boxShadow = '0 0 15px #ff4757';
+            setTimeout(() => {
+                bar.style.borderColor = '#5dade2';
+                bar.style.boxShadow = 'none';
+            }, 150);
+        }
     }
 
     verificarCofres() {
@@ -930,6 +1230,470 @@ export class Nivel_1 {
         }
     }
 
+    inicializarPuzzles() {
+        if (!this.capaPuzzles) return;
+        this.capaPuzzles.removeChildren();
+
+        // 1. Cajas: Crear un sprite o gráficos para cada una
+        this.cajasSprites = [];
+        for (const box of this.cajas || []) {
+            const container = new PIXI.Container();
+            container.x = box.gridX * this.tileSize;
+            container.y = box.gridY * this.tileSize;
+
+            const rect = new PIXI.Graphics();
+            rect.beginFill(0x8c7ae6);
+            rect.lineStyle(2, 0xf5cd79);
+            rect.drawRoundedRect(2, 2, this.tileSize - 4, this.tileSize - 4, 4);
+            rect.endFill();
+
+            const text = new PIXI.Text('📦', { fontSize: this.tileSize * 0.45, align: 'center' });
+            text.anchor.set(0.5);
+            text.x = this.tileSize / 2;
+            text.y = this.tileSize / 2;
+
+            container.addChild(rect, text);
+            this.capaPuzzles.addChild(container);
+
+            this.cajasSprites.push({ data: box, view: container });
+        }
+
+        // 2. Espejos: Crear gráficos
+        this.espejosSprites = [];
+        for (const esp of this.espejos || []) {
+            const container = new PIXI.Container();
+            container.x = esp.gridX * this.tileSize;
+            container.y = esp.gridY * this.tileSize;
+
+            const line = new PIXI.Graphics();
+            line.lineStyle(4, 0xdcdde1);
+            if (esp.angulo === 45) {
+                line.moveTo(2, this.tileSize - 2);
+                line.lineTo(this.tileSize - 2, 2);
+            } else {
+                line.moveTo(2, 2);
+                line.lineTo(this.tileSize - 2, this.tileSize - 2);
+            }
+            const text = new PIXI.Text('🪞', { fontSize: this.tileSize * 0.35 });
+            text.anchor.set(0.5);
+            text.x = this.tileSize / 2;
+            text.y = this.tileSize / 2;
+
+            container.addChild(line, text);
+            this.capaPuzzles.addChild(container);
+
+            this.espejosSprites.push({ data: esp, view: container, lineGraphics: line });
+        }
+
+        // 3. Holdouts: Crear un contenedor y gráficos circulares translúcidos
+        this.holdoutGraphicsList = [];
+        for (const ho of this.holdouts || []) {
+            const circle = new PIXI.Graphics();
+            const cx = ho.gridX * this.tileSize + this.tileSize / 2;
+            const cy = ho.gridY * this.tileSize + this.tileSize / 2;
+            const radius = ho.radio * this.tileSize;
+
+            circle.lineStyle(3, 0xc23616, 0.45);
+            circle.beginFill(0xc23616, 0.08);
+            circle.drawCircle(cx, cy, radius);
+            circle.endFill();
+
+            const text = new PIXI.Text('🛡️', { fontSize: this.tileSize * 0.5 });
+            text.anchor.set(0.5);
+            text.x = cx;
+            text.y = cy;
+
+            this.capaPuzzles.addChild(circle, text);
+
+            this.holdoutGraphicsList.push({
+                data: ho,
+                circle: circle,
+                text: text,
+                activo: false,
+                completado: false,
+                tiempoRestante: ho.tiempo,
+                avisoPuertasCerradas: false
+            });
+        }
+
+        // 4. Simon Secuencia: Destellar baldosas y almacenar variables de comprobación
+        this.secuenciaPuzzlesList = [];
+        for (const seq of this.secuencias || []) {
+            const pasosGraphics = [];
+            seq.pasos.forEach((paso, idx) => {
+                const rect = new PIXI.Graphics();
+                rect.x = paso.x * this.tileSize;
+                rect.y = paso.y * this.tileSize;
+                rect.beginFill(0x00a8ff, 0.15);
+                rect.lineStyle(1.5, 0x00a8ff, 0.4);
+                rect.drawRect(1, 1, this.tileSize - 2, this.tileSize - 2);
+                rect.endFill();
+
+                const text = new PIXI.Text(`${idx + 1}`, { fontSize: this.tileSize * 0.35, fill: 0x00a8ff });
+                text.anchor.set(0.5);
+                text.x = this.tileSize / 2;
+                text.y = this.tileSize / 2;
+                rect.addChild(text);
+
+                this.capaPuzzles.addChild(rect);
+                pasosGraphics.push({ paso, graphics: rect, text });
+            });
+
+            this.secuenciaPuzzlesList.push({
+                data: seq,
+                pasosGraphics: pasosGraphics,
+                inputIndex: 0,
+                completado: false,
+                flashing: false,
+                flashTimer: 0,
+                flashIndex: 0,
+                flashCooldown: 1000
+            });
+        }
+
+        // 5. Láseres: Preparar gráficos para renderizar los rayos láser
+        this.laserGraphics = new PIXI.Graphics();
+        this.capaPuzzles.addChild(this.laserGraphics);
+    }
+
+    iniciarSimonDice(seqInfo) {
+        if (seqInfo.completado || seqInfo.flashing) return;
+        seqInfo.flashing = true;
+        seqInfo.flashIndex = 0;
+        seqInfo.flashTimer = Date.now();
+    }
+
+    actualizarPuzzles(dt) {
+        if (!this.player || this.player.isDead) return;
+
+        const pGridX = Math.floor(this.player.x / this.tileSize);
+        const pGridY = Math.floor(this.player.y / this.tileSize);
+
+        // --- 1. Sincronizar visuales de Cajas ---
+        if (this.cajasSprites) {
+            for (const item of this.cajasSprites) {
+                const targetX = item.data.gridX * this.tileSize;
+                const targetY = item.data.gridY * this.tileSize;
+                item.view.x += (targetX - item.view.x) * 0.2;
+                item.view.y += (targetY - item.view.y) * 0.2;
+            }
+        }
+
+        // --- 2. Mecanismos de Placas de Presión ---
+        for (const mec of this.mecanismos || []) {
+            const px = mec.plateX;
+            const py = mec.plateY;
+            
+            const playerOnPlate = (pGridX === px && pGridY === py);
+            const boxOnPlate = this.cajas.some(c => c.gridX === px && c.gridY === py);
+
+            if (playerOnPlate || boxOnPlate) {
+                if (this.mapaMatriz[mec.gateY]?.[mec.gateX] === 24) {
+                    this.mapaMatriz[mec.gateY][mec.gateX] = 0;
+                    this.renderizador.reconstruirTile(mec.gateX, mec.gateY, 0);
+                    this.uiManager.mostrarMensajeFlotante("⚡ Reja Abierta", mec.gateX * this.tileSize + this.tileSize/2, mec.gateY * this.tileSize);
+                }
+            } else {
+                const otraActiva = this.mecanismos.some(m => m.gateX === mec.gateX && m.gateY === mec.gateY && (pGridX === m.plateX && pGridY === m.plateY || this.cajas.some(c => c.gridX === m.plateX && c.gridY === m.plateY)));
+                if (!otraActiva && this.mapaMatriz[mec.gateY]?.[mec.gateX] === 0) {
+                    const playerOnGate = (pGridX === mec.gateX && pGridY === mec.gateY);
+                    const boxOnGate = this.cajas.some(c => c.gridX === mec.gateX && c.gridY === mec.gateY);
+                    if (!playerOnGate && !boxOnGate) {
+                        this.mapaMatriz[mec.gateY][mec.gateX] = 24;
+                        this.renderizador.reconstruirTile(mec.gateX, mec.gateY, 24);
+                    }
+                }
+            }
+        }
+
+        // --- 3. Evento de Defensa de Zona (Holdout) ---
+        for (const ho of this.holdoutGraphicsList || []) {
+            if (ho.completado) continue;
+
+            const cx = ho.data.gridX * this.tileSize + this.tileSize / 2;
+            const cy = ho.data.gridY * this.tileSize + this.tileSize / 2;
+            const radius = ho.data.radio * this.tileSize;
+
+            const dx = this.player.x - cx;
+            const dy = this.player.y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            const jugadorAdentro = (dist <= radius);
+
+            if (jugadorAdentro && !ho.activo) {
+                ho.activo = true;
+                this.uiManager.mostrarMensajeFlotante("⚠️ ¡INVASIÓN DETECTADA! Defiende la zona", cx, cy - 20);
+                
+                for (let r = 0; r < this.mapaMatriz.length; r++) {
+                    for (let c = 0; c < this.mapaMatriz[0].length; c++) {
+                        if (this.mapaMatriz[r][c] === 0) {
+                            const originalMap = this.pack[this.subMapaActual || 'principal'];
+                            if (originalMap && originalMap.matriz[r][c] === 24) {
+                                this.mapaMatriz[r][c] = 24;
+                                this.renderizador.reconstruirTile(c, r, 24);
+                            }
+                        }
+                    }
+                }
+                ho.avisoPuertasCerradas = true;
+            }
+
+            if (ho.activo) {
+                ho.tiempoRestante -= dt;
+                ho.text.text = `🛡️ ${Math.max(0, Math.ceil(ho.tiempoRestante))}s`;
+                
+                const pulseScale = 1.0 + Math.sin(Date.now() / 150) * 0.05;
+                ho.circle.scale.set(pulseScale);
+                ho.circle.pivot.set(cx, cy);
+                ho.circle.position.set(cx, cy);
+
+                if (!ho.lastSpawnTime) ho.lastSpawnTime = Date.now();
+                if (Date.now() - ho.lastSpawnTime > 2500) {
+                    ho.lastSpawnTime = Date.now();
+                    const angle = Math.random() * Math.PI * 2;
+                    const spawnDist = radius * 0.8;
+                    const enemyX = cx + Math.cos(angle) * spawnDist;
+                    const enemyY = cy + Math.sin(angle) * spawnDist;
+                    const eGridX = Math.floor(enemyX / this.tileSize);
+                    const eGridY = Math.floor(enemyY / this.tileSize);
+                    
+                    if (this.mapaMatriz[eGridY]?.[eGridX] === 0) {
+                        const esq = this.enemyManager.spawnEnemy('BASE', eGridX, eGridY);
+                        if (esq) {
+                            esq.vidaMax = Math.round(esq.vidaMax * 1.3);
+                            esq.vida = esq.vidaMax;
+                            esq.danioBase = Math.round(esq.danioBase * 1.25);
+                        }
+                    }
+                }
+
+                if (ho.tiempoRestante <= 0) {
+                    ho.activo = false;
+                    ho.completado = true;
+                    ho.text.text = '✅';
+                    ho.circle.tint = 0x44bd32;
+                    this.uiManager.mostrarMensajeFlotante("🎉 ¡ZONA DEFENDIDA! Puertas abiertas", cx, cy - 20);
+
+                    for (let r = 0; r < this.mapaMatriz.length; r++) {
+                        for (let c = 0; c < this.mapaMatriz[0].length; c++) {
+                            if (this.mapaMatriz[r][c] === 24) {
+                                this.mapaMatriz[r][c] = 0;
+                                this.renderizador.reconstruirTile(c, r, 0);
+                            }
+                        }
+                    }
+
+                    const hGridX = ho.data.gridX;
+                    const hGridY = ho.data.gridY;
+                    this.mapaMatriz[hGridY][hGridX] = 20;
+                    this.renderizador.reconstruirTile(hGridX, hGridY, 20);
+                    this.cofres.push({
+                        gridX: hGridX,
+                        gridY: hGridY,
+                        items: { monedas: 50, gemas: 10, pocion_vida: 2, escudo_hierro: 1 }
+                    });
+                }
+            }
+        }
+
+        // --- 4. Secuencia Rítmica (Simon Dice) ---
+        for (const seqInfo of this.secuenciaPuzzlesList || []) {
+            if (seqInfo.completado) continue;
+
+            const cercaDeSecuencia = seqInfo.data.pasos.some(p => {
+                const dx = this.player.x - (p.x * this.tileSize + this.tileSize/2);
+                const dy = this.player.y - (p.y * this.tileSize + this.tileSize/2);
+                return Math.sqrt(dx*dx + dy*dy) < 200;
+            });
+
+            if (cercaDeSecuencia && !seqInfo.flashing && seqInfo.inputIndex === 0) {
+                this.iniciarSimonDice(seqInfo);
+            }
+
+            if (seqInfo.flashing) {
+                if (Date.now() - seqInfo.flashTimer > seqInfo.flashCooldown) {
+                    seqInfo.flashTimer = Date.now();
+                    const idx = seqInfo.flashIndex;
+                    if (idx < seqInfo.pasosGraphics.length) {
+                        const step = seqInfo.pasosGraphics[idx];
+                        step.graphics.alpha = 1.0;
+                        step.graphics.tint = 0x00ff00;
+                        setTimeout(() => {
+                            step.graphics.alpha = 0.5;
+                            step.graphics.tint = 0xffffff;
+                        }, 500);
+
+                        seqInfo.flashIndex++;
+                    } else {
+                        seqInfo.flashing = false;
+                    }
+                }
+            }
+
+            const currentStep = seqInfo.data.pasos[seqInfo.inputIndex];
+            if (currentStep && pGridX === currentStep.x && pGridY === currentStep.y) {
+                const gStep = seqInfo.pasosGraphics[seqInfo.inputIndex];
+                gStep.graphics.tint = 0x00ff00;
+                gStep.graphics.alpha = 1.0;
+                
+                this.uiManager.mostrarMensajeFlotante(`🔔 ¡Paso ${seqInfo.inputIndex + 1} correcto!`, this.player.x, this.player.y - 30);
+                seqInfo.inputIndex++;
+
+                if (seqInfo.inputIndex >= seqInfo.data.pasos.length) {
+                    seqInfo.completado = true;
+                    this.uiManager.mostrarMensajeFlotante("🎉 ¡SIMON DICE COMPLETADO!", this.player.x, this.player.y - 30);
+
+                    const rx = seqInfo.data.rewardX;
+                    const ry = seqInfo.data.rewardY;
+                    if (rx !== 0 || ry !== 0) {
+                        this.mapaMatriz[ry][rx] = 20;
+                        this.renderizador.reconstruirTile(rx, ry, 20);
+                        this.cofres.push({
+                            gridX: rx,
+                            gridY: ry,
+                            items: { monedas: 40, gemas: 5, pocion_vida: 1, escudo_hierro: 1 }
+                        });
+                        this.uiManager.mostrarMensajeFlotante("🎁 Cofre de Recompensa Aparece", rx * this.tileSize + this.tileSize/2, ry * this.tileSize);
+                    }
+                }
+            } else {
+                const pisaOtroPaso = seqInfo.data.pasos.some((p, i) => i !== seqInfo.inputIndex && pGridX === p.x && pGridY === p.y);
+                if (pisaOtroPaso) {
+                    this.uiManager.mostrarMensajeFlotante("⚡ ¡Secuencia Incorrecta! Reiniciando...", this.player.x, this.player.y - 30);
+                    
+                    this.player.isPoisoned = true;
+                    this.player.poisonTimer = 3.0;
+
+                    seqInfo.inputIndex = 0;
+                    seqInfo.pasosGraphics.forEach(pg => {
+                        pg.graphics.tint = 0xffffff;
+                        pg.graphics.alpha = 0.55;
+                    });
+                    this.iniciarSimonDice(seqInfo);
+                }
+            }
+        }
+
+        // --- 5. Raycasting de Láseres ---
+        if (this.laserGraphics) {
+            this.laserGraphics.clear();
+            const receptoresActivados = new Set();
+
+            for (const laser of this.lasers || []) {
+                let curGridX = laser.gridX;
+                let curGridY = laser.gridY;
+                let curDir = laser.dir;
+
+                let startX = curGridX * this.tileSize + this.tileSize / 2;
+                let startY = curGridY * this.tileSize + this.tileSize / 2;
+
+                this.laserGraphics.lineStyle(4, 0xff3f34, 0.85);
+                this.laserGraphics.moveTo(startX, startY);
+
+                let maxSteps = 40;
+                let colisionado = false;
+
+                while (maxSteps > 0 && !colisionado) {
+                    maxSteps--;
+                    let dx = 0, dy = 0;
+                    if (curDir === 'UP') dy = -1;
+                    else if (curDir === 'DOWN') dy = 1;
+                    else if (curDir === 'LEFT') dx = -1;
+                    else if (curDir === 'RIGHT') dx = 1;
+
+                    let nextGridX = curGridX + dx;
+                    let nextGridY = curGridY + dy;
+
+                    if (nextGridY < 0 || nextGridY >= this.mapaMatriz.length || nextGridX < 0 || nextGridX >= this.mapaMatriz[0].length) {
+                        const targetX = curGridX * this.tileSize + this.tileSize/2 + dx * (this.tileSize/2);
+                        const targetY = curGridY * this.tileSize + this.tileSize/2 + dy * (this.tileSize/2);
+                        this.laserGraphics.lineTo(targetX, targetY);
+                        colisionado = true;
+                        break;
+                    }
+
+                    const nextTile = this.mapaMatriz[nextGridY][nextGridX];
+                    const nextTileSolid = TILE_DICT[nextTile]?.solido === true;
+
+                    const nextX = nextGridX * this.tileSize + this.tileSize / 2;
+                    const nextY = nextGridY * this.tileSize + this.tileSize / 2;
+                    this.laserGraphics.lineTo(nextX, nextY);
+
+                    if (pGridX === nextGridX && pGridY === nextGridY && !this.player.isDead && !this.player.isInvulnerable) {
+                        if (!this.lastLaserDamageTime || Date.now() - this.lastLaserDamageTime > 500) {
+                            this.lastLaserDamageTime = Date.now();
+                            const damage = Math.round(this.player.vidaMax * 0.05);
+                            this.player.recibirDanio(damage);
+                            this.uiManager.mostrarMensajeFlotante(`-${damage} HP ⚡ LÁSER`, this.player.x, this.player.y - 30);
+                        }
+                    }
+
+                    const espejo = (this.espejos || []).find(e => e.gridX === nextGridX && e.gridY === nextGridY);
+                    if (espejo) {
+                        if (espejo.angulo === 45) {
+                            if (curDir === 'UP') curDir = 'RIGHT';
+                            else if (curDir === 'DOWN') curDir = 'LEFT';
+                            else if (curDir === 'LEFT') curDir = 'DOWN';
+                            else if (curDir === 'RIGHT') curDir = 'UP';
+                        } else {
+                            if (curDir === 'UP') curDir = 'LEFT';
+                            else if (curDir === 'DOWN') curDir = 'RIGHT';
+                            else if (curDir === 'LEFT') curDir = 'UP';
+                            else if (curDir === 'RIGHT') curDir = 'DOWN';
+                        }
+                        curGridX = nextGridX;
+                        curGridY = nextGridY;
+                        continue;
+                    }
+
+                    const caja = (this.cajas || []).find(c => c.gridX === nextGridX && c.gridY === nextGridY);
+                    if (caja) {
+                        colisionado = true;
+                        break;
+                    }
+
+                    if (nextTile === 25) {
+                        receptoresActivados.add(`${nextGridX},${nextGridY}`);
+                        colisionado = true;
+                        break;
+                    }
+
+                    if (nextTileSolid) {
+                        colisionado = true;
+                        break;
+                    }
+
+                    curGridX = nextGridX;
+                    curGridY = nextGridY;
+                }
+            }
+
+            for (const rec of this.receptores || []) {
+                const rx = rec.gridX;
+                const ry = rec.gridY;
+                const isActivated = receptoresActivados.has(`${rx},${ry}`);
+
+                if (isActivated) {
+                    if (this.mapaMatriz[rec.gateY]?.[rec.gateX] === 24) {
+                        this.mapaMatriz[rec.gateY][rec.gateX] = 0;
+                        this.renderizador.reconstruirTile(rec.gateX, rec.gateY, 0);
+                        this.uiManager.mostrarMensajeFlotante("⚡ Reja Abierta", rec.gateX * this.tileSize + this.tileSize/2, rec.gateY * this.tileSize);
+                    }
+                } else {
+                    const otroReceptorActivo = this.receptores.some(r => r.gateX === rec.gateX && r.gateY === rec.gateY && receptoresActivados.has(`${r.gridX},${r.gridY}`));
+                    if (!otroReceptorActivo && this.mapaMatriz[rec.gateY]?.[rec.gateX] === 0) {
+                        const playerOnGate = (pGridX === rec.gateX && pGridY === rec.gateY);
+                        const boxOnGate = this.cajas.some(c => c.gridX === rec.gateX && c.gridY === rec.gateY);
+                        if (!playerOnGate && !boxOnGate) {
+                            this.mapaMatriz[rec.gateY][rec.gateX] = 24;
+                            this.renderizador.reconstruirTile(rec.gateX, rec.gateY, 24);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     destroy() {
         clearTimeout(this.resizeTimeout);
         window.removeEventListener('resize', this.handleResize);
@@ -945,6 +1709,47 @@ export class Nivel_1 {
         if (this.hudElement) {
             this.hudElement.remove();
             this.hudElement = null;
+        }
+
+        const freezeEl = document.getElementById('freezeMiniGame');
+        if (freezeEl) {
+            freezeEl.remove();
+        }
+
+        if (this.laserGraphics) {
+            this.laserGraphics.destroy(true);
+            this.laserGraphics = null;
+        }
+        if (this.cajasSprites) {
+            for (const item of this.cajasSprites) {
+                if (item.view) item.view.destroy(true);
+            }
+            this.cajasSprites = null;
+        }
+        if (this.espejosSprites) {
+            for (const item of this.espejosSprites) {
+                if (item.view) item.view.destroy(true);
+            }
+            this.espejosSprites = null;
+        }
+        if (this.holdoutGraphicsList) {
+            for (const item of this.holdoutGraphicsList) {
+                if (item.circle) item.circle.destroy(true);
+                if (item.text) item.text.destroy(true);
+            }
+            this.holdoutGraphicsList = null;
+        }
+        if (this.secuenciaPuzzlesList) {
+            for (const item of this.secuenciaPuzzlesList) {
+                for (const pg of item.pasosGraphics) {
+                    if (pg.graphics) pg.graphics.destroy(true);
+                }
+            }
+            this.secuenciaPuzzlesList = null;
+        }
+        if (this.capaPuzzles) {
+            this.capaPuzzles.destroy(true);
+            this.capaPuzzles = null;
         }
 
         const managers = [this.inputManager, this.renderizador, this.uiManager, this.enemyManager];

@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moon Editor - Diseñador de Niveles</title>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-dark: #0f0c16;
@@ -41,7 +44,7 @@
             border-right: 2px solid var(--border-gold);
             display: flex;
             flex-direction: column;
-            box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+            box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
             z-index: 10;
         }
 
@@ -69,7 +72,7 @@
         /* Configuración del Mapa */
         .map-config {
             padding: 15px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             gap: 10px;
             align-items: center;
@@ -82,7 +85,7 @@
         }
 
         .map-config input {
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--border-gold);
             color: white;
             padding: 6px;
@@ -112,8 +115,8 @@
         /* Pestañas de la paleta */
         .tabs {
             display: flex;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.2);
         }
 
         .tab-btn {
@@ -153,7 +156,7 @@
 
         .palette-item {
             aspect-ratio: 1;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0, 0, 0, 0.3);
             border: 2px solid #3e3b4e;
             border-radius: 12px;
             display: flex;
@@ -177,7 +180,8 @@
             box-shadow: 0 0 10px var(--shadow-glow);
         }
 
-        .palette-item svg, .palette-item img {
+        .palette-item svg,
+        .palette-item img {
             width: 48px;
             height: 48px;
             pointer-events: none;
@@ -202,7 +206,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0, 0, 0, 0.3);
         }
 
         .btn-action {
@@ -245,9 +249,64 @@
             height: 100%;
             position: relative;
             background-color: #14121f;
+            overflow: auto;
+            display: grid;
+            place-items: center;
+        }
+
+        #editorCanvas {
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+            cursor: crosshair;
+            display: block;
+            margin: 40px;
+            transition: width 0.1s ease, height 0.1s ease;
+        }
+
+        /* Controles de Zoom Flotantes */
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 27, 41, 0.85);
+            border: 2px solid var(--border-gold);
+            border-radius: 16px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 12px;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            font-weight: bold;
+            color: var(--text-gold);
+        }
+
+        .zoom-btn {
+            background: none;
+            border: none;
+            color: var(--text-gold);
+            font-size: 1.2rem;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(214, 158, 46, 0.2);
+        }
+
+        .zoom-label {
+            font-size: 0.9rem;
+            min-width: 50px;
+            text-align: center;
+            font-family: 'Space Grotesk', sans-serif;
         }
 
         /* Indicador de Herramienta Activa */
@@ -262,9 +321,9 @@
             font-size: 0.9rem;
             font-weight: bold;
             color: var(--text-gold);
-            z-index: 5;
+            z-index: 20;
             backdrop-filter: blur(5px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
             pointer-events: none;
         }
 
@@ -297,7 +356,7 @@
             border-radius: 24px;
             padding: 25px;
             width: 380px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
             color: white;
             display: flex;
             flex-direction: column;
@@ -308,7 +367,7 @@
             font-size: 1.2rem;
             font-weight: bold;
             color: var(--text-gold);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding-bottom: 8px;
             text-align: center;
         }
@@ -326,7 +385,7 @@
         }
 
         .form-group input {
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--border-gold);
             color: white;
             padding: 8px 12px;
@@ -368,7 +427,7 @@
         .json-textarea {
             width: 100%;
             height: 250px;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             border: 1px solid var(--border-gold);
             color: #2ed573;
             font-family: monospace;
@@ -382,29 +441,38 @@
         ::-webkit-scrollbar {
             width: 8px;
         }
+
         ::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.1);
+            background: rgba(0, 0, 0, 0.1);
         }
+
         ::-webkit-scrollbar-thumb {
             background: rgba(214, 158, 46, 0.3);
             border-radius: 4px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(214, 158, 46, 0.5);
         }
     </style>
 </head>
+
 <body>
 
     <!-- Consola de errores visual flotante (muy útil para depurar sin abrir F12) -->
-    <div id="errorConsole" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(229, 62, 98, 0.95); color: white; padding: 15px; border-radius: 8px; border: 2px solid #fff; max-width: 400px; z-index: 10000; font-family: monospace; font-size: 0.8rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-        <h4 style="margin-bottom: 5px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 3px;">⚠️ Error de Script:</h4>
+    <div id="errorConsole"
+        style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(229, 62, 98, 0.95); color: white; padding: 15px; border-radius: 8px; border: 2px solid #fff; max-width: 400px; z-index: 10000; font-family: monospace; font-size: 0.8rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+        <button onclick="document.getElementById('errorConsole').style.display='none'"
+            style="position: absolute; top: 5px; right: 10px; background: none; border: none; color: white; font-weight: bold; font-size: 1.15rem; cursor: pointer; line-height: 1;">×</button>
+        <h4
+            style="margin-bottom: 5px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 3px; margin-top: 0; padding-right: 20px;">
+            ⚠️ Error de Script:</h4>
         <p id="errorText" style="white-space: pre-wrap; margin: 0;"></p>
     </div>
 
     <script>
         // Capturador global de errores para mostrar en pantalla
-        window.onerror = function(message, source, lineno, colno, error) {
+        window.onerror = function (message, source, lineno, colno, error) {
             const consoleEl = document.getElementById('errorConsole');
             const textEl = document.getElementById('errorText');
             if (consoleEl && textEl) {
@@ -432,12 +500,16 @@
         </div>
 
         <!-- Selector/Pestañas de Mapas en el Paquete -->
-        <div style="padding: 10px 20px; border-bottom: 2px solid rgba(214, 158, 46, 0.25); display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.15);">
+        <div
+            style="padding: 10px 20px; border-bottom: 2px solid rgba(214, 158, 46, 0.25); display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.15);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">Mapas del Paquete:</label>
-                <button onclick="crearNuevoMapa()" style="background: #2ecc71; color: white; border: none; padding: 4px 10px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">➕ Nuevo Mapa</button>
+                <button onclick="crearNuevoMapa()"
+                    style="background: #2ecc71; color: white; border: none; padding: 4px 10px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">➕
+                    Nuevo Mapa</button>
             </div>
-            <div id="mapTabsContainer" style="display: flex; gap: 5px; flex-wrap: wrap; max-height: 100px; overflow-y: auto; padding: 5px 0;">
+            <div id="mapTabsContainer"
+                style="display: flex; gap: 5px; flex-wrap: wrap; max-height: 100px; overflow-y: auto; padding: 5px 0;">
                 <!-- Pestañas generadas por JS -->
             </div>
         </div>
@@ -446,6 +518,7 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="cambiarPestaña('tiles')">Baldosas</button>
             <button class="tab-btn" onclick="cambiarPestaña('enemies')">Enemigos</button>
+            <button class="tab-btn" onclick="cambiarPestaña('puzzles')">Puzzles</button>
         </div>
 
         <!-- Paleta de Elementos -->
@@ -454,9 +527,14 @@
             <div class="palette-grid" id="tilesPalette">
                 <!-- Se llena mediante JS -->
             </div>
-            
+
             <!-- Grid de Enemigos -->
             <div class="palette-grid" id="enemiesPalette" style="display: none;">
+                <!-- Se llena mediante JS -->
+            </div>
+
+            <!-- Grid de Puzzles -->
+            <div class="palette-grid" id="puzzlesPalette" style="display: none;">
                 <!-- Se llena mediante JS -->
             </div>
         </div>
@@ -475,9 +553,37 @@
         </div>
     </div>
 
-    <!-- Zona del Canvas -->
-    <div class="canvas-container" id="canvasContainer">
-        <!-- El canvas 2D se inserta aquí dinámicamente -->
+    <div style="flex: 1; height: 100%; position: relative; display: flex; flex-direction: column;">
+        <!-- Portal Banner -->
+        <div id="portalBanner"
+            style="display: none; width: 100%; background: #9b59b6; color: white; padding: 10px; text-align: center; font-weight: bold; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-family: 'Outfit', sans-serif;">
+            <span id="portalBannerText">MODO ENLACE PORTAL: Haz clic en un suelo no sólido para colocar la SALIDA
+                (violeta claro).</span>
+            <button class="btn-modal btn-modal-cancel" onclick="cancelarColocacionSalida()"
+                style="margin-left: 15px; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: auto;">Cancelar</button>
+        </div>
+
+        <!-- Connection Banner -->
+        <div id="connectionBanner"
+            style="display: none; width: 100%; background: #d29800; color: white; padding: 10px; text-align: center; font-weight: bold; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-family: 'Outfit', sans-serif;">
+            <span id="connectionBannerText">MODO ENLACE</span>
+            <button class="btn-modal btn-modal-cancel" onclick="cancelarConexion()"
+                style="margin-left: 15px; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: auto;">Cancelar</button>
+        </div>
+
+        <!-- Controles de Zoom Flotantes -->
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="cambiarZoom(-0.1)" title="Alejar (Ctrl + Rueda Abajo)">➖</button>
+            <span class="zoom-label" id="zoomLabel">100%</span>
+            <button class="zoom-btn" onclick="cambiarZoom(0.1)" title="Acercar (Ctrl + Rueda Arriba)">➕</button>
+            <button class="zoom-btn" onclick="establecerZoom(1.0)" title="Zoom 100%"
+                style="font-size: 0.8rem; padding: 4px 6px;">1:1</button>
+        </div>
+
+        <!-- Zona del Canvas -->
+        <div class="canvas-container" id="canvasContainer">
+            <!-- El canvas 2D se inserta aquí dinámicamente -->
+        </div>
     </div>
 
     <!-- Modal para Configurar Portales (ID 19) -->
@@ -507,7 +613,8 @@
     <div class="modal" id="modalCofre">
         <div class="modal-content">
             <div class="modal-header">Configurar Cofre de Botín</div>
-            <div style="font-size: 0.8rem; color: #a0aec0; margin-bottom: 5px; text-align: center;">Cantidad de items a arrojar al abrirse:</div>
+            <div style="font-size: 0.8rem; color: #a0aec0; margin-bottom: 5px; text-align: center;">Cantidad de items a
+                arrojar al abrirse:</div>
             <div class="form-group">
                 <label for="lootCoins">🪙 Monedas de Oro:</label>
                 <input type="number" id="lootCoins" value="10" min="0">
@@ -535,12 +642,171 @@
     <div class="modal" id="modalImportExport">
         <div class="modal-content json-modal">
             <div class="modal-header">Importar / Exportar Paquete de Nivel</div>
-            <p style="font-size: 0.8rem; color: #a0aec0; text-align: center; margin-bottom: 5px;">Puedes pegar un JSON para cargarlo, o copiar el generado abajo:</p>
+            <p style="font-size: 0.8rem; color: #a0aec0; text-align: center; margin-bottom: 5px;">Puedes pegar un JSON
+                para cargarlo, o copiar el generado abajo:</p>
             <textarea class="json-textarea" id="jsonTextArea" spellcheck="false"></textarea>
             <div class="modal-buttons">
                 <button class="btn-modal btn-modal-save" onclick="importarJSON()">📥 Cargar JSON en Editor</button>
                 <button class="btn-modal btn-copy" onclick="copiarAlPortapapeles()">📋 Copiar al Portapapeles</button>
                 <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalImportExport')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Alerta Personalizada -->
+    <div class="modal" id="modalAlert">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" id="alertTitle" style="color: var(--text-gold); margin-bottom: 15px;">Aviso</div>
+            <p id="alertMessage" style="margin-bottom: 25px; line-height: 1.5; color: #dfe4ea;"></p>
+            <div class="modal-buttons" style="justify-content: center;">
+                <button class="btn-modal btn-modal-save" onclick="cerrarModal('modalAlert')"
+                    style="width: 100%;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación Personalizada -->
+    <div class="modal" id="modalConfirm">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" id="confirmTitle" style="color: var(--text-gold); margin-bottom: 15px;">
+                Confirmación</div>
+            <p id="confirmMessage" style="margin-bottom: 25px; line-height: 1.5; color: #dfe4ea;"></p>
+            <div class="modal-buttons" style="justify-content: center; gap: 15px;">
+                <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalConfirm')"
+                    style="flex: 1;">Cancelar</button>
+                <button class="btn-modal btn-modal-save" id="btnConfirmAction" style="flex: 1;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Seleccionar Mapa Destino del Portal -->
+    <div class="modal" id="modalSelectDestMap">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="color: var(--text-gold); margin-bottom: 15px;">Seleccionar Mapa Destino
+            </div>
+            <p style="margin-bottom: 15px; color: #dfe4ea; font-size: 0.9rem;">Elige a qué mapa secundario se conectará
+                este portal:</p>
+            <div id="destMapOptionsContainer"
+                style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;"></div>
+            <div class="modal-buttons" style="justify-content: center;">
+                <button class="btn-modal btn-modal-cancel" onclick="cancelarEnlacePortal()"
+                    style="width: 100%;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Solicitar Nombre de Nuevo Mapa -->
+    <div class="modal" id="modalCrearMapa">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="color: var(--text-gold); margin-bottom: 15px;">Crear Nuevo Mapa Secundario
+            </div>
+            <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+                <label for="newMapNameInput"
+                    style="display: block; font-size: 0.85rem; margin-bottom: 5px; color: #cbd5e0;">Nombre del sub-mapa
+                    (ej. "cueva", "arena_jefe"):</label>
+                <input type="text" id="newMapNameInput" placeholder="cueva"
+                    style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 8px; border-radius: 8px; font-family: inherit;">
+            </div>
+            <div class="modal-buttons" style="justify-content: center; gap: 15px;">
+                <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalCrearMapa')"
+                    style="flex: 1;">Cancelar</button>
+                <button class="btn-modal btn-modal-save" onclick="confirmarCrearMapa()" style="flex: 1;">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Configurar Defensa de Zona -->
+    <div class="modal" id="modalHoldout">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header" style="color: var(--text-gold); margin-bottom: 15px;">Configurar Defensa de Zona
+            </div>
+            <div class="form-group" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+                <label for="holdoutRadio" style="font-size: 0.85rem; color: #cbd5e0; font-weight: 600;">Radio de la zona
+                    (en bloques):</label>
+                <input type="number" id="holdoutRadio" min="1" max="6" value="3"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 8px; border-radius: 8px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 5px;">
+                <label for="holdoutTiempo" style="font-size: 0.85rem; color: #cbd5e0; font-weight: 600;">Tiempo de
+                    supervivencia (segundos):</label>
+                <input type="number" id="holdoutTiempo" min="5" max="300" value="30"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 8px; border-radius: 8px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 5px;">
+                <label for="holdoutPenalidad" style="font-size: 0.85rem; color: #cbd5e0; font-weight: 600;">Penalidad
+                    por salir de la zona:</label>
+                <select id="holdoutPenalidad"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 8px; border-radius: 8px;">
+                    <option value="RESTART_MINIGAME">Reiniciar Minijuego</option>
+                    <option value="LOSE_LEVEL">Perder el Nivel</option>
+                </select>
+            </div>
+            <div class="modal-buttons" style="justify-content: center; gap: 15px;">
+                <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalHoldout')"
+                    style="flex: 1;">Cancelar</button>
+                <button class="btn-modal btn-modal-save" onclick="guardarHoldout()" style="flex: 1;">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Configurar Estadísticas de Enemigos -->
+    <div class="modal" id="modalEnemigo">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header" id="enemigoHeader" style="color: var(--text-gold); margin-bottom: 15px;">
+                Configurar Enemigo</div>
+
+            <div class="form-group" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+                <label for="enemyVida" style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">❤️ Vida
+                    Máxima:</label>
+                <input type="number" id="enemyVida" min="1" value="70"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 6px; border-radius: 8px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+                <label for="enemyVelocidad" style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">⚡
+                    Velocidad:</label>
+                <input type="number" id="enemyVelocidad" min="1" value="85"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 6px; border-radius: 8px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+                <label for="enemyDefensa" style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">🛡️
+                    Defensa:</label>
+                <input type="number" id="enemyDefensa" min="0" value="10"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 6px; border-radius: 8px;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+                <label for="enemyDanio" style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">💥 Daño
+                    Base (%):</label>
+                <input type="number" id="enemyDanio" min="1" value="2"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 6px; border-radius: 8px;">
+            </div>
+
+            <!-- Cantidad de aparición para Esqueleto / Orco -->
+            <div class="form-group" id="groupEnemyCantidad"
+                style="margin-bottom: 15px; display: none; flex-direction: column; gap: 5px;">
+                <label for="enemyCantidad" id="lblEnemyCantidad"
+                    style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">👥 Cantidad a aparecer
+                    (1-10):</label>
+                <input type="number" id="enemyCantidad" min="1" max="10" value="1"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 6px; border-radius: 8px;">
+            </div>
+
+            <!-- Cantidad para Generador de Esqueletos -->
+            <div class="form-group" id="groupEnemySpawnCount"
+                style="margin-bottom: 15px; display: none; flex-direction: column; gap: 5px;">
+                <label for="enemySpawnCount" style="font-size: 0.85rem; font-weight: 600; color: var(--text-gold);">💀
+                    Esqueletos por ciclo (1-10):</label>
+                <input type="number" id="enemySpawnCount" min="1" max="10" value="1"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-gold); color: white; padding: 6px; border-radius: 8px;">
+            </div>
+
+            <div class="modal-buttons" style="display: flex; gap: 15px; margin-top: 20px;">
+                <button class="btn-modal btn-modal-cancel" onclick="cerrarModal('modalEnemigo')"
+                    style="flex: 1;">Cancelar</button>
+                <button class="btn-modal btn-modal-save" onclick="guardarConfigEnemigo()"
+                    style="flex: 1;">Guardar</button>
             </div>
         </div>
     </div>
@@ -568,7 +834,11 @@
             17: { name: 'Muro Titanio', color: 0x2c3e50, solido: true },
             18: { name: 'Ácido', color: 0x39ff14, solido: false },
             19: { name: 'Portal Portal', color: 0x9b59b6, solido: false },
-            20: { name: 'Cofre Botín', color: 0x8b5a2b, solido: false }
+            20: { name: 'Cofre Botín', color: 0x8b5a2b, solido: false },
+            21: { name: 'Portal Salida', color: 0xdfb4ff, solido: false },
+            23: { name: 'Placa Presión', color: 0xe1b12c, solido: false },
+            24: { name: 'Muro Conectado', color: 0x2c3e50, solido: true },
+            25: { name: 'Receptor Láser', color: 0x12cbc4, solido: true }
         };
 
         const ENEMY_DICT = {
@@ -576,18 +846,35 @@
             'BAKU': { name: 'Orco', color: 0x27ae60, desc: 'Orco patrullero normal' },
             'EXPLOSIVE_SHOOTER': { name: 'Chamán Esqueleto', color: 0x8e44ad, desc: 'Lanza bolas de fuego y explota al morir' },
             'SHOOTER_CHILD': { name: 'Espectro', color: 0xf1f2f6, desc: 'Pequeño fantasma veloz' },
-            'MONSTER_SPAWNER': { name: 'Generador Esqueletos', color: 0x805AD5, desc: 'Genera esqueletos cada 6s' },
-            'NECROMANCER': { name: 'Nigromante', color: 0x319795, desc: 'Huye e invoca espectros' },
+            'Generador Esqueletos': { name: 'Generador Esqueletos', color: 0x805AD5, desc: 'Genera esqueletos cada 6s' },
+            'NIGROMANTE': { name: 'Nigromante', color: 0x319795, desc: 'Huye e invoca espectros' },
             'ORC_BOSS': { name: 'Jefe Orco Élite', color: 0x22543D, desc: 'Área roja con golpe y knockback' }
+        };
+
+        const PUZZLE_DICT = {
+            'caja': { name: 'Caja Sokoban', color: '#8c7ae6', icon: '📦', desc: 'Caja empujable en casillas libres' },
+            'emisor_laser': { name: 'Emisor Láser', color: '#e84118', icon: '🚨', desc: 'Emite rayo láser de daño y activación' },
+            'espejo_45': { name: 'Espejo (45°)', color: '#dcdde1', icon: '🪞', desc: 'Espejo que refleja el láser 90 grados' },
+            'holdout': { name: 'Supervivencia Zona', color: '#c23616', icon: '🛡️', desc: 'Defiende el área circular de oleadas' },
+            'secuencia': { name: 'Secuencia Simon', color: '#00a8ff', icon: '🔢', desc: 'Secuencia rítmica de pasos' },
+            'vincular_mecanismo': { name: 'Enlace Placa-Reja', color: '#e1b12c', icon: '🔗', desc: 'Vincular placa de presión a reja conectada' },
+            'vincular_receptor': { name: 'Enlace Receptor-Reja', color: '#12cbc4', icon: '⚡', desc: 'Vincular receptor láser a reja conectada' }
         };
 
         // VARIABLES DE ESTADO
         let N = 20;
-        let selectedTool = { type: 'tile', id: 0 }; // 'tile' o 'enemy'
+        let selectedTool = { type: 'tile', id: 0 }; // 'tile', 'enemy', or 'puzzle'
         let matrix = Array(N).fill(null).map(() => Array(N).fill(0));
         let enemigos = [];
         let portales = [];
         let cofres = [];
+        let cajas = [];
+        let mecanismos = [];
+        let holdouts = [];
+        let lasers = [];
+        let espejos = [];
+        let receptores = [];
+        let secuencias = [];
 
         // Soporte de múltiples mapas del paquete de nivel
         let mapsOfPack = {
@@ -596,7 +883,14 @@
                 matrix: matrix,
                 enemigos: enemigos,
                 portales: portales,
-                cofres: cofres
+                cofres: cofres,
+                cajas: cajas,
+                mecanismos: mecanismos,
+                holdouts: holdouts,
+                lasers: lasers,
+                espejos: espejos,
+                receptores: receptores,
+                secuencias: secuencias
             }
         };
         let activeMapName = 'principal';
@@ -610,29 +904,57 @@
         let activeCellConfig = { x: 0, y: 0 };
         let isMouseDown = false;
 
+        // Soporte de Zoom y Paneo (Cámara)
+        let zoomScale = 1.0;
+        const ZOOM_MIN = 0.25;
+        const ZOOM_MAX = 3.0;
+
+        let isPanning = false;
+        let startPanX = 0, startPanY = 0;
+        let scrollLeftStart = 0, scrollTopStart = 0;
+
+        let needsRedraw = false;
+
+        function renderLoop() {
+            if (needsRedraw) {
+                dibujarGrilla();
+                needsRedraw = false;
+            }
+            requestAnimationFrame(renderLoop);
+        }
+
         // INICIALIZACIÓN
         window.onload = () => {
             inicializarCanvas();
             generarPaletas();
             actualizarIndicadorHerramienta();
             renderMapTabs();
+            requestAnimationFrame(renderLoop);
         };
 
         // FUNCIONES DE CONTROL DE MÚLTIPLES MAPAS
         function crearNuevoMapa() {
-            let name = prompt("Ingrese el nombre del nuevo mapa secundario (ej. cueva, arena_jefe):");
+            document.getElementById('newMapNameInput').value = '';
+            abrirModal('modalCrearMapa');
+        }
+
+        function confirmarCrearMapa() {
+            let name = document.getElementById('newMapNameInput').value;
             if (!name) return;
 
             name = name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
             if (!name) {
-                alert("Nombre inválido. Debe contener solo caracteres alfanuméricos y guiones bajos.");
+                mostrarAlerta("Nombre inválido. Debe contener solo caracteres alfanuméricos y guiones bajos.");
                 return;
             }
 
             if (mapsOfPack[name]) {
-                alert("Ya existe un mapa con ese nombre en el paquete.");
+                mostrarAlerta("Ya existe un mapa con ese nombre en el paquete.");
                 return;
             }
+
+            // Cerrar modal
+            cerrarModal('modalCrearMapa');
 
             // Crear el nuevo mapa con el tamaño actual por defecto
             mapsOfPack[name] = {
@@ -640,7 +962,14 @@
                 matrix: Array(20).fill(null).map(() => Array(20).fill(0)),
                 enemigos: [],
                 portales: [],
-                cofres: []
+                cofres: [],
+                cajas: [],
+                mecanismos: [],
+                holdouts: [],
+                lasers: [],
+                espejos: [],
+                receptores: [],
+                secuencias: []
             };
 
             switchMap(name);
@@ -655,7 +984,14 @@
                 matrix: matrix.map(row => row.slice()), // Clonar fila por fila
                 enemigos: JSON.parse(JSON.stringify(enemigos)), // Clonación profunda
                 portales: JSON.parse(JSON.stringify(portales)),
-                cofres: JSON.parse(JSON.stringify(cofres))
+                cofres: JSON.parse(JSON.stringify(cofres)),
+                cajas: JSON.parse(JSON.stringify(cajas || [])),
+                mecanismos: JSON.parse(JSON.stringify(mecanismos || [])),
+                holdouts: JSON.parse(JSON.stringify(holdouts || [])),
+                lasers: JSON.parse(JSON.stringify(lasers || [])),
+                espejos: JSON.parse(JSON.stringify(espejos || [])),
+                receptores: JSON.parse(JSON.stringify(receptores || [])),
+                secuencias: JSON.parse(JSON.stringify(secuencias || []))
             };
 
             // Cambiar punteros al nuevo mapa activo
@@ -667,6 +1003,13 @@
             enemigos = targetMap.enemigos;
             portales = targetMap.portales;
             cofres = targetMap.cofres;
+            cajas = targetMap.cajas || [];
+            mecanismos = targetMap.mecanismos || [];
+            holdouts = targetMap.holdouts || [];
+            lasers = targetMap.lasers || [];
+            espejos = targetMap.espejos || [];
+            receptores = targetMap.receptores || [];
+            secuencias = targetMap.secuencias || [];
 
             // Ajustar controles y canvas
             const gridSizeInput = document.getElementById('gridSize');
@@ -677,9 +1020,10 @@
             if (canvas) {
                 canvas.width = N * tileSize;
                 canvas.height = N * tileSize;
+                actualizarZoom();
             }
 
-            dibujarGrilla();
+            needsRedraw = true;
             renderMapTabs();
         }
 
@@ -692,7 +1036,7 @@
                 const btn = document.createElement('button');
                 const isActive = name === activeMapName;
                 btn.innerText = name;
-                
+
                 // Estilo para los botones de pestañas
                 btn.style.padding = '4px 10px';
                 btn.style.fontSize = '0.8rem';
@@ -719,13 +1063,16 @@
                     delSpan.style.marginLeft = '4px';
                     delSpan.onclick = (e) => {
                         e.stopPropagation();
-                        if (confirm(`¿Estás seguro de que deseas eliminar por completo el mapa secundario "${name}"?`)) {
-                            if (activeMapName === name) {
-                                switchMap('principal');
+                        mostrarConfirmacion(
+                            `¿Estás seguro de que deseas eliminar por completo el mapa secundario "${name}"?`,
+                            () => {
+                                if (activeMapName === name) {
+                                    switchMap('principal');
+                                }
+                                delete mapsOfPack[name];
+                                renderMapTabs();
                             }
-                            delete mapsOfPack[name];
-                            renderMapTabs();
-                        }
+                        );
                     };
                     btn.appendChild(delSpan);
                 }
@@ -737,32 +1084,68 @@
         function inicializarCanvas() {
             const container = document.getElementById('canvasContainer');
             container.innerHTML = ''; // Limpiar previo
-            
+
             canvas = document.createElement('canvas');
+            canvas.id = 'editorCanvas';
             canvas.width = N * tileSize;
             canvas.height = N * tileSize;
-            canvas.style.backgroundColor = '#14121f';
-            canvas.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
-            canvas.style.borderRadius = '16px';
-            canvas.style.cursor = 'crosshair';
-            canvas.style.display = 'block';
-            
+
             container.appendChild(canvas);
             ctx = canvas.getContext('2d');
 
+            actualizarZoom();
             dibujarGrilla();
 
             // Eventos del Mouse en el Canvas
             canvas.addEventListener('mousedown', onCanvasMouseDown);
             canvas.addEventListener('mousemove', onCanvasMouseMove);
-            window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+            // Zoom mediante rueda del mouse + Ctrl
+            container.addEventListener('wheel', (e) => {
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+                    cambiarZoom(delta);
+                }
+            }, { passive: false });
+
+            window.addEventListener('mouseup', (e) => {
+                isMouseDown = false;
+                if (isPanning) {
+                    isPanning = false;
+                    if (canvas) canvas.style.cursor = 'crosshair';
+                }
+            });
             canvas.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        function cambiarZoom(factor) {
+            zoomScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomScale + factor));
+            actualizarZoom();
+        }
+
+        function establecerZoom(valor) {
+            zoomScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, valor));
+            actualizarZoom();
+        }
+
+        function actualizarZoom() {
+            if (!canvas) return;
+            const scaledWidth = N * tileSize * zoomScale;
+            const scaledHeight = N * tileSize * zoomScale;
+            canvas.style.width = scaledWidth + 'px';
+            canvas.style.height = scaledHeight + 'px';
+
+            const label = document.getElementById('zoomLabel');
+            if (label) {
+                label.innerText = Math.round(zoomScale * 100) + '%';
+            }
         }
 
         // REDIBUJAR TODA LA MAZMORRA
         function dibujarGrilla() {
             if (!ctx) return;
-            
+
             // Limpiar canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -773,7 +1156,7 @@
                     const visual = TILE_DICT[tileId] || TILE_DICT[0];
 
                     const img = obtenerImagenTile(tileId, visual);
-                    
+
                     ctx.save();
                     // Suelos ajedrezados
                     if (!visual.solido && tileId !== 20 && tileId !== 19 && (r + c) % 2 === 0) {
@@ -811,7 +1194,296 @@
                 const y = en.gridY * tileSize + tileSize / 2;
                 dibujarEnemigoCanvas(ctx, en.type, x, y);
             }
+
+            // Dibujar Cajas Sokoban
+            for (const box of cajas || []) {
+                const x = box.gridX * tileSize;
+                const y = box.gridY * tileSize;
+                ctx.save();
+                ctx.fillStyle = '#8c7ae6';
+                ctx.strokeStyle = '#f5cd79';
+                ctx.lineWidth = 2;
+                ctx.fillRect(x + 4, y + 4, tileSize - 8, tileSize - 8);
+                ctx.strokeRect(x + 4, y + 4, tileSize - 8, tileSize - 8);
+                // Icono 📦
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `${tileSize * 0.4}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('📦', x + tileSize / 2, y + tileSize / 2);
+                ctx.restore();
+            }
+
+            // Dibujar Emisores Láser
+            for (const laser of lasers || []) {
+                const x = laser.gridX * tileSize;
+                const y = laser.gridY * tileSize;
+                ctx.save();
+                ctx.fillStyle = '#e84118';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x + tileSize / 2, y + tileSize / 2, tileSize * 0.35, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+                // Dirección
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `bold ${tileSize * 0.3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                let dirChar = '↑';
+                if (laser.dir === 'DOWN') dirChar = '↓';
+                if (laser.dir === 'LEFT') dirChar = '←';
+                if (laser.dir === 'RIGHT') dirChar = '→';
+                ctx.fillText('🚨' + dirChar, x + tileSize / 2, y + tileSize / 2);
+                ctx.restore();
+            }
+
+            // Dibujar Espejos Reflectores
+            for (const esp of espejos || []) {
+                const x = esp.gridX * tileSize;
+                const y = esp.gridY * tileSize;
+                ctx.save();
+                ctx.strokeStyle = '#dcdde1';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                if (esp.angulo === 45) {
+                    ctx.moveTo(x + 4, y + tileSize - 4);
+                    ctx.lineTo(x + tileSize - 4, y + 4);
+                } else {
+                    ctx.moveTo(x + 4, y + 4);
+                    ctx.lineTo(x + tileSize - 4, y + tileSize - 4);
+                }
+                ctx.stroke();
+                // Icono
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `${tileSize * 0.3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🪞', x + tileSize / 2, y + tileSize / 2);
+                ctx.restore();
+            }
+
+            // Dibujar Zonas de Defensa / Holdouts
+            for (const ho of holdouts || []) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 105, 180, 0.2)'; // Rosa claro
+                for (let r = ho.gridY - ho.radio; r <= ho.gridY + ho.radio; r++) {
+                    for (let c = ho.gridX - ho.radio; c <= ho.gridX + ho.radio; c++) {
+                        if (r >= 0 && r < N && c >= 0 && c < N) {
+                            ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                        }
+                    }
+                }
+                ctx.restore();
+
+                const cx = ho.gridX * tileSize + tileSize / 2;
+                const cy = ho.gridY * tileSize + tileSize / 2;
+                const radius = ho.radio * tileSize;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(194, 54, 22, 0.4)';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+                ctx.stroke();
+                // Icono central
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `${tileSize * 0.4}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🛡️', cx, cy);
+                ctx.font = `bold ${tileSize * 0.25}px Arial`;
+                ctx.fillStyle = '#ff7675';
+                ctx.fillText(`${ho.tiempo}s`, cx, cy + tileSize * 0.4);
+                ctx.restore();
+            }
+
+            // Dibujar Secuencias Rítmicas (Simon)
+            for (const seq of secuencias || []) {
+                seq.pasos.forEach((paso, idx) => {
+                    const x = paso.x * tileSize;
+                    const y = paso.y * tileSize;
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(0, 168, 255, 0.7)';
+                    ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `bold ${tileSize * 0.4}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`${idx + 1}`, x + tileSize / 2, y + tileSize / 2);
+                    ctx.restore();
+                });
+                if (seq.pasos.length > 0) {
+                    const lastPaso = seq.pasos[seq.pasos.length - 1];
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(0, 168, 255, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([3, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(lastPaso.x * tileSize + tileSize / 2, lastPaso.y * tileSize + tileSize / 2);
+                    ctx.lineTo(seq.rewardX * tileSize + tileSize / 2, seq.rewardY * tileSize + tileSize / 2);
+                    ctx.stroke();
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = `${tileSize * 0.4}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🎁', seq.rewardX * tileSize + tileSize / 2, seq.rewardY * tileSize + tileSize / 2);
+                    ctx.restore();
+                }
+            }
+
+            // Enlaces de Mecanismos (Placa -> Reja)
+            for (const mec of mecanismos || []) {
+                const px = mec.plateX * tileSize + tileSize / 2;
+                const py = mec.plateY * tileSize + tileSize / 2;
+                const gx = mec.gateX * tileSize + tileSize / 2;
+                const gy = mec.gateY * tileSize + tileSize / 2;
+                ctx.save();
+                ctx.strokeStyle = '#ffd32a';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(gx, gy);
+                ctx.stroke();
+                ctx.fillStyle = '#ffd32a';
+                ctx.beginPath();
+                ctx.arc(gx, gy, 4, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Enlaces de Receptores (Receptor -> Reja)
+            for (const rec of receptores || []) {
+                const rx = rec.gridX * tileSize + tileSize / 2;
+                const ry = rec.gridY * tileSize + tileSize / 2;
+                const gx = rec.gateX * tileSize + tileSize / 2;
+                const gy = rec.gateY * tileSize + tileSize / 2;
+                ctx.save();
+                ctx.strokeStyle = '#05c46b';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(gx, gy);
+                ctx.stroke();
+                ctx.fillStyle = '#05c46b';
+                ctx.beginPath();
+                ctx.arc(gx, gy, 4, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
         }
+
+        // REDIBUJO PARCIAL DE UNA SOLA CELDA
+        function dibujarCeldaIndividual(c, r) {
+            if (!ctx) return;
+            const x = c * tileSize;
+            const y = r * tileSize;
+
+            // 1. Limpiar esa parte del canvas
+            ctx.clearRect(x, y, tileSize, tileSize);
+
+            // 2. Dibujar la baldosa base
+            const tileId = matrix[r][c];
+            const visual = TILE_DICT[tileId] || TILE_DICT[0];
+            const img = obtenerImagenTile(tileId, visual);
+
+            ctx.save();
+            if (!visual.solido && tileId !== 20 && tileId !== 19 && (r + c) % 2 === 0) {
+                ctx.globalAlpha = 0.93;
+            }
+            if (img.complete && img.naturalWidth !== 0) {
+                ctx.drawImage(img, x, y, tileSize, tileSize);
+            } else {
+                ctx.fillStyle = '#' + visual.color.toString(16).padStart(6, '0');
+                ctx.fillRect(x, y, tileSize, tileSize);
+            }
+            ctx.restore();
+
+            // 3. Dibujar bordes de la grilla para esta celda
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, tileSize, tileSize);
+
+            // 4. Delegar dibujado complejo a needsRedraw si hay elementos que se superponen mucho
+            const hasHoldout = (holdouts || []).some(h => Math.abs(h.gridX - c) <= h.radio && Math.abs(h.gridY - r) <= h.radio);
+            const hasLinks = (mecanismos || []).some(m => m.plateX === c || m.gateX === c) || (receptores || []).some(rec => rec.gridX === c || rec.gateX === c);
+            const hasSeq = (secuencias || []).some(s => s.pasos.some(p => p.x === c && p.y === r) || (s.rewardX === c && s.rewardY === r));
+
+            if (hasHoldout || hasLinks || hasSeq) {
+                needsRedraw = true; // El render loop lo redibujará en el siguiente frame
+            } else {
+                // Redibujar entidades locales
+                for (const en of enemigos) {
+                    if (en.gridX === c && en.gridY === r) {
+                        dibujarEnemigoCanvas(ctx, en.type, x + tileSize / 2, y + tileSize / 2);
+                    }
+                }
+                for (const box of cajas || []) {
+                    if (box.gridX === c && box.gridY === r) {
+                        ctx.save();
+                        ctx.fillStyle = '#8c7ae6';
+                        ctx.strokeStyle = '#f5cd79';
+                        ctx.lineWidth = 2;
+                        ctx.fillRect(x + 4, y + 4, tileSize - 8, tileSize - 8);
+                        ctx.strokeRect(x + 4, y + 4, tileSize - 8, tileSize - 8);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = `${tileSize * 0.4}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('📦', x + tileSize / 2, y + tileSize / 2);
+                        ctx.restore();
+                    }
+                }
+                for (const laser of lasers || []) {
+                    if (laser.gridX === c && laser.gridY === r) {
+                        ctx.save();
+                        ctx.fillStyle = '#e84118';
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(x + tileSize / 2, y + tileSize / 2, tileSize * 0.35, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = `bold ${tileSize * 0.3}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        let dirChar = '↑';
+                        if (laser.dir === 'DOWN') dirChar = '↓';
+                        if (laser.dir === 'LEFT') dirChar = '←';
+                        if (laser.dir === 'RIGHT') dirChar = '→';
+                        ctx.fillText('🚨' + dirChar, x + tileSize / 2, y + tileSize / 2);
+                        ctx.restore();
+                    }
+                }
+                for (const esp of espejos || []) {
+                    if (esp.gridX === c && esp.gridY === r) {
+                        ctx.save();
+                        ctx.strokeStyle = '#dcdde1';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        if (esp.angulo === 45) {
+                            ctx.moveTo(x + 4, y + tileSize - 4);
+                            ctx.lineTo(x + tileSize - 4, y + 4);
+                        } else {
+                            ctx.moveTo(x + 4, y + 4);
+                            ctx.lineTo(x + tileSize - 4, y + tileSize - 4);
+                        }
+                        ctx.stroke();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = `${tileSize * 0.3}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('🪞', x + tileSize / 2, y + tileSize / 2);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
 
         // TEXTURAS DE BALDOSAS SVG (IDÉNTICAS AL JUEGO)
         function colorAHex(color) {
@@ -849,6 +1521,15 @@
                     break;
                 case 20: // Cofre
                     decoracion = `<rect x="14" y="26" width="36" height="24" rx="4" fill="#a0522d" stroke="#5c2e16" stroke-width="2"/><path d="M14 26 C14 12, 50 12, 50 26 Z" fill="#8b4513" stroke="#5c2e16" stroke-width="2"/><rect x="29" y="22" width="6" height="8" fill="#ffd700" stroke="#b8860b" stroke-width="1"/>`;
+                    break;
+                case 23: // Placa Presión
+                    decoracion = `<rect x="18" y="18" width="28" height="28" rx="4" fill="#e1b12c" stroke="#f5cd79" stroke-width="2"/><circle cx="32" cy="32" r="5" fill="#f5cd79"/>`;
+                    break;
+                case 24: // Muro Conectado
+                    decoracion = `<rect x="8" y="8" width="48" height="48" rx="6" fill="#2c3e50" stroke="#44bd32" stroke-width="3"/><line x1="8" y1="32" x2="56" y2="32" stroke="#44bd32" stroke-width="2"/><line x1="32" y1="8" x2="32" y2="56" stroke="#44bd32" stroke-width="2"/>`;
+                    break;
+                case 25: // Receptor Láser
+                    decoracion = `<rect x="8" y="8" width="48" height="48" rx="6" fill="#12cbc4" stroke="#dff9fb" stroke-width="3"/><circle cx="32" cy="32" r="10" fill="#dff9fb"/><circle cx="32" cy="32" r="4" fill="#ff7f50"/>`;
                     break;
                 default:
                     decoracion = `<circle cx="20" cy="19" r="4" fill="rgba(255,255,255,0.12)"/><circle cx="42" cy="44" r="3" fill="rgba(0,0,0,0.06)"/>`;
@@ -888,28 +1569,28 @@
         // RENDER DE ENEMIGOS EN CANVAS 2D (SÍMBOLOS)
         function dibujarEnemigoCanvas(ctx, type, x, y) {
             ctx.save();
-            if (type === 'MONSTER_SPAWNER') {
+            if (type === 'MONSTER_SPAWNER' || type === 'Generador Esqueletos') {
                 ctx.fillStyle = '#2d3748';
                 ctx.fillRect(x - 14, y - 14, 28, 28);
                 ctx.strokeStyle = '#d69e2e';
                 ctx.lineWidth = 1.5;
                 ctx.strokeRect(x - 14, y - 14, 28, 28);
-                
+
                 ctx.fillStyle = '#805ad5';
                 ctx.beginPath();
                 ctx.ellipse(x, y, 7, 10, 0, 0, 2 * Math.PI);
                 ctx.fill();
-            } else if (type === 'NECROMANCER') {
+            } else if (type === 'NECROMANCER' || type === 'NIGROMANTE') {
                 ctx.fillStyle = '#1a202c';
                 ctx.beginPath();
                 ctx.arc(x, y, 11, 0, 2 * Math.PI);
                 ctx.fill();
-                
+
                 ctx.fillStyle = '#edf2f7';
                 ctx.beginPath();
                 ctx.ellipse(x, y - 2, 5, 6, 0, 0, 2 * Math.PI);
                 ctx.fill();
-                
+
                 ctx.fillStyle = '#319795';
                 ctx.beginPath();
                 ctx.arc(x - 2, y - 2, 1, 0, 2 * Math.PI);
@@ -920,10 +1601,10 @@
                 ctx.beginPath();
                 ctx.arc(x, y, 17, 0, 2 * Math.PI);
                 ctx.fill();
-                
+
                 ctx.fillStyle = '#4a5568';
                 ctx.fillRect(x - 8, y - 12, 16, 11);
-                
+
                 ctx.fillStyle = '#e53e3e';
                 ctx.beginPath();
                 ctx.arc(x - 3, y - 9, 1.5, 0, 2 * Math.PI);
@@ -939,12 +1620,12 @@
                 ctx.beginPath();
                 ctx.arc(x, y, 11, 0, 2 * Math.PI);
                 ctx.fill();
-                
+
                 ctx.fillStyle = '#8e44ad';
                 ctx.beginPath();
                 ctx.arc(x, y - 4, 7, 0, 2 * Math.PI);
                 ctx.fill();
-                
+
                 ctx.fillStyle = '#ff3f34';
                 ctx.beginPath();
                 ctx.arc(x - 2, y - 1, 1.5, 0, 2 * Math.PI);
@@ -955,7 +1636,7 @@
                 ctx.beginPath();
                 ctx.arc(x, y, 7, 0, 2 * Math.PI);
                 ctx.fill();
-                
+
                 ctx.fillStyle = '#34e7f4';
                 ctx.beginPath();
                 ctx.arc(x - 2, y - 1, 1, 0, 2 * Math.PI);
@@ -967,7 +1648,7 @@
                 ctx.beginPath();
                 ctx.arc(x, y, 9, 0, 2 * Math.PI);
                 ctx.fill();
-                
+
                 ctx.fillStyle = '#ff3f34';
                 ctx.beginPath();
                 ctx.arc(x - 2, y - 2, 1.5, 0, 2 * Math.PI);
@@ -984,6 +1665,7 @@
             tilesPalette.innerHTML = '';
             for (const [id, visual] of Object.entries(TILE_DICT)) {
                 const idNum = parseInt(id);
+                if (idNum === 21) continue;
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `palette-item ${selectedTool.type === 'tile' && selectedTool.id === idNum ? 'active' : ''}`;
                 itemDiv.onclick = () => seleccionarHerramienta('tile', idNum);
@@ -1014,12 +1696,32 @@
                 itemDiv.title = details.desc;
                 enemiesPalette.appendChild(itemDiv);
             }
+
+            // Puzzles
+            const puzzlesPalette = document.getElementById('puzzlesPalette');
+            puzzlesPalette.innerHTML = '';
+            for (const [key, details] of Object.entries(PUZZLE_DICT)) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `palette-item ${selectedTool.type === 'puzzle' && selectedTool.id === key ? 'active' : ''}`;
+                itemDiv.onclick = () => seleccionarHerramienta('puzzle', key);
+
+                // Generar vista previa coloreada con icono
+                const svgPreview = `
+                    <svg viewBox="0 0 40 40" width="48" height="48">
+                        <circle cx="20" cy="20" r="16" fill="${details.color}" stroke="#ffd700" stroke-width="2"/>
+                        <text x="20" y="25" font-size="16" fill="#ffffff" text-anchor="middle">${details.icon}</text>
+                    </svg>
+                `;
+                itemDiv.innerHTML = `${svgPreview}<span>${details.name}</span>`;
+                itemDiv.title = details.desc;
+                puzzlesPalette.appendChild(itemDiv);
+            }
         }
 
         function seleccionarHerramienta(type, id) {
             selectedTool = { type, id };
             actualizarIndicadorHerramienta();
-            
+
             // Actualizar clases activas en la paleta
             const items = document.querySelectorAll('.palette-item');
             items.forEach(el => el.classList.remove('active'));
@@ -1030,60 +1732,170 @@
             const indicator = document.getElementById('toolIndicator');
             if (selectedTool.type === 'tile') {
                 indicator.innerText = `Herramienta: Baldosa ${TILE_DICT[selectedTool.id].name} (ID: ${selectedTool.id})`;
-            } else {
+            } else if (selectedTool.type === 'enemy') {
                 indicator.innerText = `Herramienta: Enemigo ${ENEMY_DICT[selectedTool.id].name} (${selectedTool.id})`;
+            } else {
+                indicator.innerText = `Herramienta: Puzzle ${PUZZLE_DICT[selectedTool.id].name} (${selectedTool.id})`;
             }
         }
 
-        // NAVEGACIÓN DE PESTAÑAS (BALDOSAS / ENEMIGOS)
+        // NAVEGACIÓN DE PESTAÑAS (BALDOSAS / ENEMIGOS / PUZZLES)
         function cambiarPestaña(target) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
+            document.getElementById('tilesPalette').style.display = 'none';
+            document.getElementById('enemiesPalette').style.display = 'none';
+            document.getElementById('puzzlesPalette').style.display = 'none';
+
             if (target === 'tiles') {
                 document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
                 document.getElementById('tilesPalette').style.display = 'grid';
-                document.getElementById('enemiesPalette').style.display = 'none';
-            } else {
+            } else if (target === 'enemies') {
                 document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-                document.getElementById('tilesPalette').style.display = 'none';
                 document.getElementById('enemiesPalette').style.display = 'grid';
+            } else {
+                document.querySelector('.tab-btn:nth-child(3)').classList.add('active');
+                document.getElementById('puzzlesPalette').style.display = 'grid';
             }
         }
 
         // EVENTOS DE EDICIÓN DEL CANVAS
+        // VARIABLES DE ESTADO Y FLUX DE ENLACE DE PORTALES
+        let portalExitPlacementMode = null;
+        let linkMecanismoSource = null;
+        let linkReceptorSource = null;
+
+        function mostrarBannerConexion(text) {
+            document.getElementById('connectionBannerText').innerText = text;
+            document.getElementById('connectionBanner').style.display = 'block';
+        }
+
+        function ocultarBannerConexion() {
+            document.getElementById('connectionBanner').style.display = 'none';
+        }
+
+        function cancelarConexion() {
+            linkMecanismoSource = null;
+            linkReceptorSource = null;
+            ocultarBannerConexion();
+            needsRedraw = true;
+        }
+
+        function guardarHoldout() {
+            const rad = parseInt(document.getElementById('holdoutRadio').value) || 3;
+            const time = parseInt(document.getElementById('holdoutTiempo').value) || 30;
+            const penalidad = document.getElementById('holdoutPenalidad').value || 'RESTART_MINIGAME';
+
+            const x = activeCellConfig.x;
+            const y = activeCellConfig.y;
+
+            // Reemplazar holdout en esta celda si ya existe
+            holdouts = holdouts.filter(h => !(h.gridX === x && h.gridY === y));
+            holdouts.push({
+                gridX: x,
+                gridY: y,
+                radio: rad,
+                tiempo: time,
+                penalidad: penalidad
+            });
+
+            cerrarModal('modalHoldout');
+            needsRedraw = true;
+        }
+
+        // EVENTOS DE EDICIÓN DEL CANVAS
         function onCanvasMouseDown(e) {
+            if (e.button === 1) { // Click del botón del medio para arrastrar cámara (pan)
+                isPanning = true;
+                startPanX = e.clientX;
+                startPanY = e.clientY;
+                const container = document.getElementById('canvasContainer');
+                scrollLeftStart = container.scrollLeft;
+                scrollTopStart = container.scrollTop;
+                canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+                return;
+            }
+
             isMouseDown = true;
             const bounds = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - bounds.left;
-            const mouseY = e.clientY - bounds.top;
+            const mouseX = (e.clientX - bounds.left) * (canvas.width / bounds.width);
+            const mouseY = (e.clientY - bounds.top) * (canvas.height / bounds.height);
 
             const gridX = Math.floor(mouseX / tileSize);
             const gridY = Math.floor(mouseY / tileSize);
 
             if (gridX >= 0 && gridX < N && gridY >= 0 && gridY < N) {
                 if (e.button === 2) {
+                    if (portalExitPlacementMode || linkMecanismoSource || linkReceptorSource) {
+                        mostrarAlerta("No puedes borrar celdas mientras estás en modo de vinculación. Cancela el enlace primero.");
+                        return;
+                    }
                     borrarCelda(gridX, gridY);
                 } else {
-                    aplicarHerramienta(gridX, gridY, true);
+                    if (linkMecanismoSource) {
+                        if (matrix[gridY][gridX] !== 24) {
+                            mostrarAlerta("Debes hacer clic en una Reja Conectada (Baldosa ID 24) para completar el enlace.");
+                            return;
+                        }
+                        mecanismos = mecanismos.filter(m => !(m.plateX === linkMecanismoSource.x && m.plateY === linkMecanismoSource.y));
+                        mecanismos.push({
+                            plateX: linkMecanismoSource.x,
+                            plateY: linkMecanismoSource.y,
+                            gateX: gridX,
+                            gateY: gridY
+                        });
+                        linkMecanismoSource = null;
+                        ocultarBannerConexion();
+                        needsRedraw = true;
+                    } else if (linkReceptorSource) {
+                        if (matrix[gridY][gridX] !== 24) {
+                            mostrarAlerta("Debes hacer clic en una Reja Conectada (Baldosa ID 24) para completar el enlace.");
+                            return;
+                        }
+                        receptores = receptores.filter(r => !(r.gridX === linkReceptorSource.x && r.gridY === linkReceptorSource.y));
+                        receptores.push({
+                            gridX: linkReceptorSource.x,
+                            gridY: linkReceptorSource.y,
+                            gateX: gridX,
+                            gateY: gridY
+                        });
+                        linkReceptorSource = null;
+                        ocultarBannerConexion();
+                        needsRedraw = true;
+                    } else if (portalExitPlacementMode) {
+                        colocarSalidaPortal(gridX, gridY);
+                    } else {
+                        aplicarHerramienta(gridX, gridY, true);
+                    }
                 }
             }
         }
 
         function onCanvasMouseMove(e) {
+            if (isPanning) {
+                const dx = e.clientX - startPanX;
+                const dy = e.clientY - startPanY;
+                const container = document.getElementById('canvasContainer');
+                container.scrollLeft = scrollLeftStart - dx;
+                container.scrollTop = scrollTopStart - dy;
+                return;
+            }
+
             if (!isMouseDown) return;
             const bounds = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - bounds.left;
-            const mouseY = e.clientY - bounds.top;
+            const mouseX = (e.clientX - bounds.left) * (canvas.width / bounds.width);
+            const mouseY = (e.clientY - bounds.top) * (canvas.height / bounds.height);
 
             const gridX = Math.floor(mouseX / tileSize);
             const gridY = Math.floor(mouseY / tileSize);
 
             if (gridX >= 0 && gridX < N && gridY >= 0 && gridY < N) {
                 if (e.buttons === 2) {
+                    if (portalExitPlacementMode) return;
                     borrarCelda(gridX, gridY);
                 } else if (e.buttons === 1) {
-                    // Solo pintar baldosas en arrastre (para no colocar múltiples jefes/cofres accidentalmente)
                     if (selectedTool.type === 'tile') {
+                        if (portalExitPlacementMode) return;
                         aplicarHerramienta(gridX, gridY, false);
                     }
                 }
@@ -1092,26 +1904,61 @@
 
         function aplicarHerramienta(gridX, gridY, showFeedback = false) {
             if (selectedTool.type === 'tile') {
+                const currentTile = matrix[gridY][gridX];
+                if ((currentTile === 19 || currentTile === 21) && selectedTool.id !== currentTile) {
+                    if (showFeedback) {
+                        mostrarAlerta("No puedes colocar un bloque encima de un portal. Debes borrar el portal primero.");
+                    }
+                    return;
+                }
+
                 const tileInfo = TILE_DICT[selectedTool.id];
                 if (tileInfo && tileInfo.solido) {
                     const tieneEnemigo = enemigos.some(en => en.gridX === gridX && en.gridY === gridY);
                     if (tieneEnemigo) {
                         if (showFeedback) {
-                            alert("No puedes colocar un bloque sólido sobre un enemigo.");
+                            mostrarAlerta("No puedes colocar un bloque sólido sobre un enemigo.");
                         }
                         return;
+                    }
+                }
+
+                // Si estamos colocando un portal, verificar que no haya enemigos
+                if (selectedTool.id === 19) {
+                    const tieneEnemigo = enemigos.some(en => en.gridX === gridX && en.gridY === gridY);
+                    if (tieneEnemigo) {
+                        if (showFeedback) {
+                            mostrarAlerta("No puedes colocar un portal encima de un enemigo.");
+                        }
+                        return;
+                    }
+                }
+
+                // VALIDACIÓN DE SPAWN ÚNICO
+                if (selectedTool.id === 3) {
+                    if (activeMapName !== 'principal') {
+                        if (showFeedback) {
+                            mostrarAlerta("Únicamente se pueden colocar spawn jugador en el mapa principal.");
+                        }
+                        return;
+                    }
+                    // Quitar cualquier otro spawn en el mapa principal
+                    for (let r = 0; r < N; r++) {
+                        for (let c = 0; c < N; c++) {
+                            if (matrix[r][c] === 3) {
+                                matrix[r][c] = 0;
+                                dibujarCeldaIndividual(c, r);
+                            }
+                        }
                     }
                 }
 
                 // Guardar baldosa
                 matrix[gridY][gridX] = selectedTool.id;
 
-                // Si es un portal (19), crear configuración
+                // Si es un portal (19), iniciar enlace
                 if (selectedTool.id === 19) {
-                    if (!portales.find(p => p.gridX === gridX && p.gridY === gridY)) {
-                        portales.push({ gridX, gridY, etiqueta: `portal_${gridX}_${gridY}`, destinoMapa: 'cueva', destinoPortal: 'salida' });
-                    }
-                    abrirModalPortal(gridX, gridY);
+                    iniciarEnlacePortal(gridX, gridY);
                 }
                 // Si es cofre (20), crear configuración
                 else if (selectedTool.id === 20) {
@@ -1123,47 +1970,208 @@
                     // Si se sobrescribió un cofre/portal especial, eliminar su config
                     removerConfigsAdicionales(gridX, gridY);
                 }
-            } else {
+            } else if (selectedTool.type === 'enemy') {
                 // Colocar Enemigo (evitar poner en paredes sólidas)
                 const tileInfo = TILE_DICT[matrix[gridY][gridX]];
                 if (tileInfo && tileInfo.solido) {
                     if (showFeedback) {
-                        alert("No puedes colocar un enemigo sobre un muro sólido.");
+                        mostrarAlerta("No puedes colocar un enemigo sobre un muro sólido.");
                     }
                     return;
+                }
+
+                // Validar que no haya un portal en esa celda
+                const currentTile = matrix[gridY][gridX];
+                if (currentTile === 19 || currentTile === 21) {
+                    if (showFeedback) {
+                        mostrarAlerta("No puedes colocar un enemigo encima de un portal.");
+                    }
+                    return;
+                }
+
+                // Validar que no haya un puzzle o bloque de minijuego (cajas, laser, etc)
+                const isPuzzleBlock = (cajas || []).some(c => c.gridX === gridX && c.gridY === gridY) ||
+                    (lasers || []).some(l => l.gridX === gridX && l.gridY === gridY) ||
+                    (espejos || []).some(e => e.gridX === gridX && e.gridY === gridY) ||
+                    (holdouts || []).some(h => h.gridX === gridX && h.gridY === gridY);
+
+                if (isPuzzleBlock) {
+                    if (showFeedback) mostrarAlerta("No puedes colocar un enemigo encima de un bloque de minijuego.");
+                    return;
+                }
+
+                // Si ya existe un enemigo en esa celda
+                const existingEnemy = enemigos.find(en => en.gridX === gridX && en.gridY === gridY);
+                if (existingEnemy) {
+                    if (existingEnemy.type === selectedTool.id) {
+                        abrirModalEnemigo(gridX, gridY);
+                        return;
+                    }
                 }
 
                 // Eliminar enemigo previo en esa celda si existe
                 enemigos = enemigos.filter(en => !(en.gridX === gridX && en.gridY === gridY));
 
                 // Registrar nuevo enemigo
+                const defaultVida = selectedTool.id === 'ORC_BOSS' ? 450 : (selectedTool.id === 'NIGROMANTE' || selectedTool.id === 'NECROMANCER' ? 220 : 70);
+                const defaultVel = selectedTool.id === 'ORC_BOSS' ? 75 : (selectedTool.id === 'NIGROMANTE' || selectedTool.id === 'NECROMANCER' ? 90 : 85);
+                const defaultDef = selectedTool.id === 'ORC_BOSS' ? 20 : 10;
+                const defaultDmg = selectedTool.id === 'ORC_BOSS' ? 5 : 2;
+
                 enemigos.push({
                     type: selectedTool.id,
                     tipo: selectedTool.id,
                     gridX,
                     gridY,
-                    vida: selectedTool.id === 'ORC_BOSS' ? 450 : (selectedTool.id === 'NECROMANCER' ? 220 : 70),
-                    velocidad: selectedTool.id === 'ORC_BOSS' ? 75 : (selectedTool.id === 'NECROMANCER' ? 90 : 85),
-                    defensa: selectedTool.id === 'ORC_BOSS' ? 20 : 10,
+                    vida: defaultVida,
+                    velocidad: defaultVel,
+                    defensa: defaultDef,
                     resistencias: {},
                     decoradores: [],
-                    danioBase: selectedTool.id === 'ORC_BOSS' ? 5 : 2,
-                    tipoDanio: 'PORCENTAJE_BASE'
+                    danioBase: defaultDmg,
+                    tipoDanio: 'PORCENTAJE_BASE',
+                    cantidad: 1,
+                    spawnCount: 1
                 });
+
+                abrirModalEnemigo(gridX, gridY);
+            } else if (selectedTool.type === 'puzzle') {
+                const tileInfo = TILE_DICT[matrix[gridY][gridX]] || TILE_DICT[0];
+
+                if (selectedTool.id === 'caja') {
+                    if (tileInfo.solido) {
+                        if (showFeedback) mostrarAlerta("No puedes colocar una caja sobre un bloque sólido.");
+                        return;
+                    }
+                    if (enemigos.some(e => e.gridX === gridX && e.gridY === gridY) || matrix[gridY][gridX] === 19 || matrix[gridY][gridX] === 21) {
+                        if (showFeedback) mostrarAlerta("No puedes colocar una caja sobre un enemigo o portal.");
+                        return;
+                    }
+                    removerConfigsAdicionales(gridX, gridY);
+                    cajas.push({ gridX, gridY });
+                }
+                else if (selectedTool.id === 'emisor_laser') {
+                    if (tileInfo.solido) {
+                        if (showFeedback) mostrarAlerta("No puedes colocar un emisor láser sobre un bloque sólido.");
+                        return;
+                    }
+                    if (enemigos.some(e => e.gridX === gridX && e.gridY === gridY) || matrix[gridY][gridX] === 19 || matrix[gridY][gridX] === 21) {
+                        if (showFeedback) mostrarAlerta("No puedes colocar un emisor láser sobre un enemigo o portal.");
+                        return;
+                    }
+                    const existing = lasers.find(l => l.gridX === gridX && l.gridY === gridY);
+                    if (existing) {
+                        const dirs = ['RIGHT', 'DOWN', 'LEFT', 'UP'];
+                        const nextIdx = (dirs.indexOf(existing.dir) + 1) % dirs.length;
+                        existing.dir = dirs[nextIdx];
+                    } else {
+                        removerConfigsAdicionales(gridX, gridY);
+                        lasers.push({ gridX, gridY, dir: 'RIGHT' });
+                    }
+                }
+                else if (selectedTool.id === 'espejo_45') {
+                    if (tileInfo.solido) {
+                        if (showFeedback) mostrarAlerta("No puedes colocar un espejo sobre un bloque sólido.");
+                        return;
+                    }
+                    if (enemigos.some(e => e.gridX === gridX && e.gridY === gridY) || matrix[gridY][gridX] === 19 || matrix[gridY][gridX] === 21) {
+                        if (showFeedback) mostrarAlerta("No puedes colocar un espejo sobre un enemigo o portal.");
+                        return;
+                    }
+                    const existing = espejos.find(e => e.gridX === gridX && e.gridY === gridY);
+                    if (existing) {
+                        existing.angulo = existing.angulo === 45 ? 135 : 45;
+                    } else {
+                        removerConfigsAdicionales(gridX, gridY);
+                        espejos.push({ gridX, gridY, angulo: 45 });
+                    }
+                }
+                else if (selectedTool.id === 'holdout') {
+                    if (tileInfo.solido) {
+                        if (showFeedback) mostrarAlerta("No puedes colocar el centro de defensa sobre un bloque sólido.");
+                        return;
+                    }
+                    activeCellConfig = { x: gridX, y: gridY };
+                    const existing = (holdouts || []).find(h => h.gridX === gridX && h.gridY === gridY);
+                    document.getElementById('holdoutRadio').value = existing ? existing.radio : 3;
+                    document.getElementById('holdoutTiempo').value = existing ? existing.tiempo : 30;
+                    document.getElementById('holdoutPenalidad').value = existing && existing.penalidad ? existing.penalidad : 'RESTART_MINIGAME';
+                    abrirModal('modalHoldout');
+                }
+                else if (selectedTool.id === 'secuencia') {
+                    if (matrix[gridY][gridX] === 20) {
+                        let seq = secuencias[0];
+                        if (!seq) {
+                            seq = { pasos: [], rewardX: gridX, rewardY: gridY };
+                            secuencias.push(seq);
+                        } else {
+                            seq.rewardX = gridX;
+                            seq.rewardY = gridY;
+                        }
+                        if (showFeedback) mostrarAlerta("¡Celda de recompensa (Cofre) establecida con éxito para Simon Dice!", "¡Recompensa Vinculada!");
+                    } else {
+                        if (tileInfo.solido) {
+                            if (showFeedback) mostrarAlerta("Las celdas de secuencia Simon deben ser transitables.");
+                            return;
+                        }
+                        let seq = secuencias[0];
+                        if (!seq) {
+                            seq = { pasos: [], rewardX: 0, rewardY: 0 };
+                            secuencias.push(seq);
+                        }
+                        const idx = seq.pasos.findIndex(p => p.x === gridX && p.y === gridY);
+                        if (idx !== -1) {
+                            seq.pasos.splice(idx, 1);
+                        } else {
+                            seq.pasos.push({ x: gridX, y: gridY });
+                        }
+                    }
+                }
+                else if (selectedTool.id === 'vincular_mecanismo') {
+                    if (matrix[gridY][gridX] !== 23) {
+                        if (showFeedback) mostrarAlerta("Debes hacer clic en una Placa de Presión (ID 23) para iniciar el vínculo.");
+                        return;
+                    }
+                    linkMecanismoSource = { x: gridX, y: gridY };
+                    mostrarBannerConexion("VINCULAR PLACA: Ahora haz clic en la Reja Conectada (Baldosa ID 24) correspondiente.");
+                }
+                else if (selectedTool.id === 'vincular_receptor') {
+                    if (matrix[gridY][gridX] !== 25) {
+                        if (showFeedback) mostrarAlerta("Debes hacer clic en un Receptor Láser (ID 25) para iniciar el vínculo.");
+                        return;
+                    }
+                    linkReceptorSource = { x: gridX, y: gridY };
+                    mostrarBannerConexion("VINCULAR RECEPTOR: Ahora haz clic en la Reja Conectada (Baldosa ID 24) correspondiente.");
+                }
             }
-            dibujarGrilla();
+            dibujarCeldaIndividual(gridX, gridY);
         }
 
         function borrarCelda(gridX, gridY) {
             matrix[gridY][gridX] = 0; // Cambiar a Suelo
             enemigos = enemigos.filter(en => !(en.gridX === gridX && en.gridY === gridY));
             removerConfigsAdicionales(gridX, gridY);
-            dibujarGrilla();
+            dibujarCeldaIndividual(gridX, gridY);
         }
 
         function removerConfigsAdicionales(gridX, gridY) {
-            portales = portales.filter(p => !(p.gridX === gridX && p.gridY === gridY));
+            removerPortalYSuPar(gridX, gridY);
             cofres = cofres.filter(c => !(c.gridX === gridX && c.gridY === gridY));
+            cajas = (cajas || []).filter(c => !(c.gridX === gridX && c.gridY === gridY));
+            lasers = (lasers || []).filter(l => !(l.gridX === gridX && l.gridY === gridY));
+            espejos = (espejos || []).filter(e => !(e.gridX === gridX && e.gridY === gridY));
+            holdouts = (holdouts || []).filter(h => !(h.gridX === gridX && h.gridY === gridY));
+            mecanismos = (mecanismos || []).filter(m => !(m.plateX === gridX && m.plateY === gridY) && !(m.gateX === gridX && m.gateY === gridY));
+            receptores = (receptores || []).filter(r => !(r.gridX === gridX && r.gridY === gridY) && !(r.gateX === gridX && r.gateY === gridY));
+
+            if (secuencias && secuencias.length > 0) {
+                const seq = secuencias[0];
+                seq.pasos = seq.pasos.filter(p => !(p.x === gridX && p.y === gridY));
+                if (seq.rewardX === gridX && seq.rewardY === gridY) {
+                    seq.rewardX = 0;
+                    seq.rewardY = 0;
+                }
+            }
         }
 
         // REDIMENSIONAR GRILLA
@@ -1172,11 +2180,11 @@
             const nuevoVal = parseInt(nud.value);
             if (nuevoVal >= 5 && nuevoVal <= 50) {
                 N = nuevoVal;
-                
+
                 // Conservar contenido previo en la nueva matriz
                 const viejaMatriz = matrix;
                 matrix = Array(N).fill(null).map(() => Array(N).fill(0));
-                
+
                 for (let r = 0; r < Math.min(N, viejaMatriz.length); r++) {
                     for (let c = 0; c < Math.min(N, viejaMatriz[0].length); c++) {
                         matrix[r][c] = viejaMatriz[r][c];
@@ -1191,7 +2199,8 @@
                 // Redimensionar Canvas HTML5
                 canvas.width = N * tileSize;
                 canvas.height = N * tileSize;
-                dibujarGrilla();
+                actualizarZoom();
+                needsRedraw = true;
             }
         }
 
@@ -1204,27 +2213,245 @@
             document.getElementById(id).classList.remove('open');
         }
 
-        // Config Portal
-        function abrirModalPortal(x, y) {
-            activeCellConfig = { x, y };
-            const portal = portales.find(p => p.gridX === x && p.gridY === y);
-            if (portal) {
-                document.getElementById('portalTag').value = portal.etiqueta || '';
-                document.getElementById('portalDestMap').value = portal.destinoMapa || '';
-                document.getElementById('portalDestTag').value = portal.destinoPortal || '';
-                abrirModal('modalPortal');
+        // ALERTAS Y CONFIRMACIONES PERSONALIZADAS
+        function mostrarAlerta(mensaje, titulo = "Aviso") {
+            document.getElementById('alertTitle').innerText = titulo;
+            document.getElementById('alertMessage').innerText = mensaje;
+            abrirModal('modalAlert');
+        }
+
+        function mostrarConfirmacion(mensaje, onConfirm, titulo = "Confirmación") {
+            document.getElementById('confirmTitle').innerText = titulo;
+            document.getElementById('confirmMessage').innerText = mensaje;
+
+            const btnConfirm = document.getElementById('btnConfirmAction');
+            btnConfirm.onclick = () => {
+                cerrarModal('modalConfirm');
+                if (onConfirm) onConfirm();
+            };
+
+            abrirModal('modalConfirm');
+        }
+
+        // Config Portal Autogenerado e Interactivo
+        function iniciarEnlacePortal(gridX, gridY) {
+            // Validar que existan sub-mapas creados (otros mapas)
+            const otherMaps = Object.keys(mapsOfPack).filter(name => name !== activeMapName);
+            if (otherMaps.length === 0) {
+                mostrarAlerta("Primero crea un sub mapa para colocar un portal.");
+                matrix[gridY][gridX] = 0; // Revertir baldosa
+                dibujarGrilla();
+                return;
+            }
+
+            activeCellConfig = { x: gridX, y: gridY };
+
+            // Llenar las opciones del modal
+            const container = document.getElementById('destMapOptionsContainer');
+            container.innerHTML = '';
+            otherMaps.forEach(mapName => {
+                const btn = document.createElement('button');
+                btn.innerText = `Ir a "${mapName}"`;
+                btn.className = 'btn-modal btn-modal-save';
+                btn.style.width = '100%';
+                btn.onclick = () => {
+                    cerrarModal('modalSelectDestMap');
+                    confirmarDestinoPortal(mapName);
+                };
+                container.appendChild(btn);
+            });
+
+            abrirModal('modalSelectDestMap');
+        }
+
+        function cancelarEnlacePortal() {
+            const { x, y } = activeCellConfig;
+            matrix[y][x] = 0;
+            removerConfigsAdicionales(x, y);
+            cerrarModal('modalSelectDestMap');
+            needsRedraw = true;
+        }
+
+        function confirmarDestinoPortal(destMapName) {
+            const originMapName = activeMapName;
+            const originX = activeCellConfig.x;
+            const originY = activeCellConfig.y;
+
+            // Cambiar al mapa destino
+            switchMap(destMapName);
+
+            // Entrar en modo colocación de salida
+            portalExitPlacementMode = {
+                originMap: originMapName,
+                originX: originX,
+                originY: originY,
+                destMap: destMapName
+            };
+
+            // Mostrar el banner flotante
+            const banner = document.getElementById('portalBanner');
+            const bannerText = document.getElementById('portalBannerText');
+            bannerText.innerText = `MODO ENLACE PORTAL: Haz clic en un suelo no sólido de "${destMapName}" para colocar la SALIDA (violeta claro).`;
+            banner.style.display = 'block';
+        }
+
+        function colocarSalidaPortal(gridX, gridY) {
+            const tileInfo = TILE_DICT[matrix[gridY][gridX]] || TILE_DICT[0];
+            if (tileInfo.solido) {
+                mostrarAlerta("No puedes colocar el portal de salida sobre una estructura sólida. Elige una baldosa de suelo transitable.");
+                return;
+            }
+
+            // Validar que no haya un enemigo en la celda
+            const tieneEnemigo = enemigos.some(en => en.gridX === gridX && en.gridY === gridY);
+            if (tieneEnemigo) {
+                mostrarAlerta("No puedes colocar el portal de salida encima de un enemigo.");
+                return;
+            }
+
+            // Validar que no haya otro portal en la celda
+            const currentTile = matrix[gridY][gridX];
+            if (currentTile === 19 || currentTile === 21) {
+                mostrarAlerta("No puedes colocar un portal encima de otro portal.");
+                return;
+            }
+
+            const mode = portalExitPlacementMode;
+            portalExitPlacementMode = null;
+
+            // Ocultar banner
+            document.getElementById('portalBanner').style.display = 'none';
+
+            // Colocar baldosa de salida (ID 21)
+            matrix[gridY][gridX] = 21;
+
+            // Generar etiquetas únicas
+            const tagOrigin = `portal_${mode.originMap}_to_${mode.destMap}_${mode.originX}_${mode.originY}`;
+            const tagDest = `portal_${mode.destMap}_to_${mode.originMap}_${gridX}_${gridY}`;
+
+            // Registrar portal salida en el mapa actual
+            portales.push({
+                gridX: gridX,
+                gridY: gridY,
+                etiqueta: tagDest,
+                destinoMapa: mode.originMap,
+                destinoPortal: tagOrigin
+            });
+
+            // Registrar portal entrada en el mapa origen
+            const originMap = mapsOfPack[mode.originMap];
+            if (originMap) {
+                originMap.portales = originMap.portales.filter(p => !(p.gridX === mode.originX && p.gridY === mode.originY));
+                originMap.portales.push({
+                    gridX: mode.originX,
+                    gridY: mode.originY,
+                    etiqueta: tagOrigin,
+                    destinoMapa: mode.destMap,
+                    destinoPortal: tagDest
+                });
+                originMap.matrix[mode.originY][mode.originX] = 19;
+            }
+
+            needsRedraw = true;
+            mostrarAlerta("¡Portales conectados bidireccionalmente con éxito!", "¡Enlace Creado!");
+        }
+
+        function cancelarColocacionSalida() {
+            const mode = portalExitPlacementMode;
+            portalExitPlacementMode = null;
+            document.getElementById('portalBanner').style.display = 'none';
+
+            // Volver al mapa de origen y limpiar el portal colocado
+            switchMap(mode.originMap);
+            matrix[mode.originY][mode.originX] = 0;
+            removerConfigsAdicionales(mode.originX, mode.originY);
+            needsRedraw = true;
+        }
+
+        function removerPortalYSuPar(gridX, gridY) {
+            const p = portales.find(x => x.gridX === gridX && x.gridY === gridY);
+            if (p) {
+                const destMapName = p.destinoMapa;
+                const destTag = p.destinoPortal;
+                if (destMapName === activeMapName) {
+                    const pairIndex = portales.findIndex(x => x.etiqueta === destTag);
+                    if (pairIndex !== -1) {
+                        const pair = portales[pairIndex];
+                        matrix[pair.gridY][pair.gridX] = 0; // Revertir a suelo
+                        portales.splice(pairIndex, 1);
+                    }
+                } else if (mapsOfPack[destMapName]) {
+                    const destMap = mapsOfPack[destMapName];
+                    const pairIndex = destMap.portales.findIndex(x => x.etiqueta === destTag);
+                    if (pairIndex !== -1) {
+                        const pair = destMap.portales[pairIndex];
+                        destMap.matrix[pair.gridY][pair.gridX] = 0; // Revertir a suelo
+                        destMap.portales.splice(pairIndex, 1);
+                    }
+                }
+                portales = portales.filter(x => !(x.gridX === gridX && x.gridY === gridY));
             }
         }
 
-        function guardarConfigPortal() {
-            const portal = portales.find(p => p.gridX === activeCellConfig.x && p.gridY === activeCellConfig.y);
-            if (portal) {
-                portal.etiqueta = document.getElementById('portalTag').value.trim();
-                portal.destinoMapa = document.getElementById('portalDestMap').value.trim();
-                portal.destinoPortal = document.getElementById('portalDestTag').value.trim();
+        // Configuración y Edición de Enemigos
+        function abrirModalEnemigo(x, y) {
+            activeCellConfig = { x, y };
+            const en = enemigos.find(e => e.gridX === x && e.gridY === y);
+            if (en) {
+                const details = ENEMY_DICT[en.type] || { name: en.type };
+                document.getElementById('enemigoHeader').innerText = `Configurar ${details.name}`;
+                document.getElementById('enemyVida').value = en.vida || 70;
+                document.getElementById('enemyVelocidad').value = en.velocidad || 85;
+                document.getElementById('enemyDefensa').value = en.defensa || 10;
+                document.getElementById('enemyDanio').value = en.danioBase || 2;
+
+                const groupCant = document.getElementById('groupEnemyCantidad');
+                const groupSpawn = document.getElementById('groupEnemySpawnCount');
+                groupCant.style.display = 'none';
+                groupSpawn.style.display = 'none';
+
+                if (en.type === 'BASE' || en.type === 'BAKU') {
+                    groupCant.style.display = 'flex';
+                    const maxVal = en.type === 'BASE' ? 10 : 5;
+                    const lbl = document.getElementById('lblEnemyCantidad');
+                    lbl.innerText = `👥 Cantidad a aparecer (1-${maxVal}):`;
+                    const inputCant = document.getElementById('enemyCantidad');
+                    inputCant.max = maxVal;
+                    inputCant.value = en.cantidad || 1;
+                } else if (en.type === 'Generador Esqueletos' || en.type === 'MONSTER_SPAWNER') {
+                    groupSpawn.style.display = 'flex';
+                    document.getElementById('enemySpawnCount').value = en.spawnCount || 1;
+                }
+
+                abrirModal('modalEnemigo');
             }
-            cerrarModal('modalPortal');
-            dibujarGrilla();
+        }
+
+        function guardarConfigEnemigo() {
+            const en = enemigos.find(e => e.gridX === activeCellConfig.x && e.gridY === activeCellConfig.y);
+            if (en) {
+                en.vida = parseInt(document.getElementById('enemyVida').value) || 70;
+                en.velocidad = parseInt(document.getElementById('enemyVelocidad').value) || 85;
+                en.defensa = parseInt(document.getElementById('enemyDefensa').value) || 10;
+                en.danioBase = parseInt(document.getElementById('enemyDanio').value) || 2;
+
+                if (en.type === 'BASE' || en.type === 'BAKU') {
+                    const inputCant = document.getElementById('enemyCantidad');
+                    let val = parseInt(inputCant.value) || 1;
+                    const maxVal = en.type === 'BASE' ? 10 : 5;
+                    if (val < 1) val = 1;
+                    if (val > maxVal) val = maxVal;
+                    en.cantidad = val;
+                } else if (en.type === 'Generador Esqueletos' || en.type === 'MONSTER_SPAWNER') {
+                    const inputSpawn = document.getElementById('enemySpawnCount');
+                    let val = parseInt(inputSpawn.value) || 1;
+                    if (val < 1) val = 1;
+                    if (val > 10) val = 10;
+                    en.spawnCount = val;
+                }
+            }
+            cerrarModal('modalEnemigo');
+            needsRedraw = true;
         }
 
         // Config Cofre
@@ -1249,18 +2476,25 @@
                 cofre.items.escudo_hierro = parseInt(document.getElementById('lootShields').value) || 0;
             }
             cerrarModal('modalCofre');
-            dibujarGrilla();
+            needsRedraw = true;
         }
 
         // LIMPIAR TODO
         function confirmarLimpiarTodo() {
-            if (confirm("¿Estás seguro de que deseas vaciar por completo el mapa actual? Perderás todo el progreso no guardado.")) {
+            mostrarConfirmacion("¿Estás seguro de que deseas vaciar por completo el mapa actual? Perderás todo el progreso no guardado.", () => {
                 matrix = Array(N).fill(null).map(() => Array(N).fill(0));
                 enemigos = [];
                 portales = [];
                 cofres = [];
-                dibujarGrilla();
-            }
+                cajas = [];
+                mecanismos = [];
+                holdouts = [];
+                lasers = [];
+                espejos = [];
+                receptores = [];
+                secuencias = [];
+                needsRedraw = true;
+            });
         }
 
         // IMPORTAR / EXPORTAR JSON
@@ -1271,7 +2505,14 @@
                 matrix: matrix.map(row => row.slice()),
                 enemigos: JSON.parse(JSON.stringify(enemigos)),
                 portales: JSON.parse(JSON.stringify(portales)),
-                cofres: JSON.parse(JSON.stringify(cofres))
+                cofres: JSON.parse(JSON.stringify(cofres)),
+                cajas: JSON.parse(JSON.stringify(cajas || [])),
+                mecanismos: JSON.parse(JSON.stringify(mecanismos || [])),
+                holdouts: JSON.parse(JSON.stringify(holdouts || [])),
+                lasers: JSON.parse(JSON.stringify(lasers || [])),
+                espejos: JSON.parse(JSON.stringify(espejos || [])),
+                receptores: JSON.parse(JSON.stringify(receptores || [])),
+                secuencias: JSON.parse(JSON.stringify(secuencias || []))
             };
 
             const dataPack = {};
@@ -1280,7 +2521,14 @@
                     matriz: mapData.matrix,
                     enemigos: mapData.enemigos,
                     portales: mapData.portales,
-                    cofres: mapData.cofres
+                    cofres: mapData.cofres,
+                    cajas: mapData.cajas || [],
+                    mecanismos: mapData.mecanismos || [],
+                    holdouts: mapData.holdouts || [],
+                    lasers: mapData.lasers || [],
+                    espejos: mapData.espejos || [],
+                    receptores: mapData.receptores || [],
+                    secuencias: mapData.secuencias || []
                 };
             }
             const jsCode = `export const NIVEL_PACK = ${JSON.stringify(dataPack, null, 4)};`;
@@ -1297,14 +2545,14 @@
             const textarea = document.getElementById('jsonTextArea');
             textarea.select();
             document.execCommand('copy');
-            alert("¡Código del nivel copiado al portapapeles! Puedes pegarlo directamente en tu archivo Mapa_1.js.");
+            mostrarAlerta("¡Código del nivel copiado al portapapeles! Puedes pegarlo directamente en tu archivo Mapa_1.js.", "¡Copiado!");
         }
 
         function descargarJSON() {
             const jsCode = construirJSONMapa();
             const blob = new Blob([jsCode], { type: "text/javascript;charset=utf-8" });
             const url = URL.createObjectURL(blob);
-            
+
             const link = document.createElement("a");
             link.href = url;
             link.download = "Mapa_1.js";
@@ -1325,7 +2573,7 @@
                 }
 
                 const dataPack = JSON.parse(jsonText);
-                
+
                 let importedPack = {};
                 if (dataPack.principal && dataPack.principal.matriz) {
                     importedPack = dataPack;
@@ -1345,7 +2593,14 @@
                         matrix: mapData.matriz,
                         enemigos: mapData.enemigos || [],
                         portales: mapData.portales || [],
-                        cofres: mapData.cofres || []
+                        cofres: mapData.cofres || [],
+                        cajas: mapData.cajas || [],
+                        mecanismos: mapData.mecanismos || [],
+                        holdouts: mapData.holdouts || [],
+                        lasers: mapData.lasers || [],
+                        espejos: mapData.espejos || [],
+                        receptores: mapData.receptores || [],
+                        secuencias: mapData.secuencias || []
                     };
                 }
 
@@ -1357,20 +2612,29 @@
                 enemigos = targetMap.enemigos;
                 portales = targetMap.portales;
                 cofres = targetMap.cofres;
+                cajas = targetMap.cajas || [];
+                mecanismos = targetMap.mecanismos || [];
+                holdouts = targetMap.holdouts || [];
+                lasers = targetMap.lasers || [];
+                espejos = targetMap.espejos || [];
+                receptores = targetMap.receptores || [];
+                secuencias = targetMap.secuencias || [];
 
                 document.getElementById('gridSize').value = N;
 
                 canvas.width = N * tileSize;
                 canvas.height = N * tileSize;
-                dibujarGrilla();
+                actualizarZoom();
+                needsRedraw = true;
                 renderMapTabs();
 
                 cerrarModal('modalImportExport');
-                alert("¡Paquete de niveles cargado e importado con éxito!");
+                mostrarAlerta("¡Paquete de niveles cargado e importado con éxito!", "¡Éxito!");
             } catch (ex) {
-                alert("Error al importar el JSON: " + ex.message + "\n\nAsegúrate de que tenga el formato correcto.");
+                mostrarAlerta("Error al importar el JSON:\n" + ex.message + "\n\nAsegúrate de que tenga el formato correcto.", "Error de Importación");
             }
         }
     </script>
 </body>
+
 </html>

@@ -4,6 +4,7 @@ export class CollisionManager {
     constructor(mapaMatriz, tileSize) {
         this.mapaMatriz = mapaMatriz;
         this.tileSize = tileSize;
+        this.nivel = null;
     }
 
     // --- COLISIONES CON EL ENTORNO (Grid Espacial O(1)) ---
@@ -12,6 +13,10 @@ export class CollisionManager {
         const fila = Math.floor(y / this.tileSize);
 
         if (fila < 0 || fila >= this.mapaMatriz.length || col < 0 || col >= this.mapaMatriz[0].length) {
+            return true;
+        }
+
+        if (this.nivel && this.nivel.cajas && this.nivel.cajas.some(c => c.gridX === col && c.gridY === fila)) {
             return true;
         }
 

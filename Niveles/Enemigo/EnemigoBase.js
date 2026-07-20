@@ -61,8 +61,8 @@ export class EnemigoBase {
         const dy = player.y - this.y;
         const distSq = dx * dx + dy * dy;
 
-        // Activar aggro si el jugador está a menos de 250px
-        if (distSq < 250 * 250) {
+        // Activar aggro si el jugador está a menos de 240px (5 bloques)
+        if (distSq < 240 * 240) {
             this.hasAggro = true;
         }
 
@@ -138,17 +138,15 @@ export class EnemigoBase {
             }
         }
     }
-}
-
-export class Baku extends EnemigoBase {
+}export class Baku extends EnemigoBase {
     constructor(data, tileSize) {
         super(data, tileSize);
 
         this.tipo = 'BAKU';
-        this.velocidad = 150; 
-        this.vidaMaxima = 200;
-        this.vidaActual = 200;
-        this.defensaBase = 15;
+        this.velocidad = data.velocidad || 150; 
+        this.vidaMaxima = data.vida || 200;
+        this.vidaActual = this.vidaMaxima;
+        this.defensaBase = data.defensa || 15;
         this.radioColision = tileSize * 0.45;
         
         // ¡LA SOLUCIÓN PARA BAKU! (Le damos una dirección inicial)
@@ -156,23 +154,44 @@ export class Baku extends EnemigoBase {
     }
     
     update(dt, player, engine) {
-        // 1. Calculamos hacia dónde queremos ir
-        this.vx = this.dirX * this.velocidad;
-        const nextX = this.x + (this.vx * dt);
+        if (this.isDead) return;
 
-        // 2. LE PREGUNTAMOS AL INSPECTOR (CollisionManager)
-        const hayPared = engine.collisionManager.esPared(nextX, this.y);
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const distSq = dx * dx + dy * dy;
 
-        if (hayPared) {
-            this.dirX *= -1; // ¡Rebote!
-        } else {
-            this.x = nextX; // Todo libre, nos movemos
+        // Activar aggro si el jugador está a menos de 336px (7 bloques)
+        if (distSq < 336 * 336) {
+            this.hasAggro = true;
         }
 
-        // 3. Actualizamos visual
+        if (this.hasAggro && !player.isDead) {
+            const dist = Math.sqrt(distSq);
+            if (dist > 0) {
+                this.vx = (dx / dist) * this.velocidad;
+                this.vy = (dy / dist) * this.velocidad;
+            } else {
+                this.vx = 0;
+                this.vy = 0;
+            }
+            engine.collisionManager.resolverMovimiento(this, this.vx, this.vy, dt);
+        } else {
+            // Patrulla horizontal por defecto rebotando
+            this.vx = this.dirX * this.velocidad;
+            this.vy = 0;
+            const nextX = this.x + (this.vx * dt);
+            const hayPared = engine.collisionManager.esPared(nextX, this.y);
+
+            if (hayPared) {
+                this.dirX *= -1; // Rebote!
+            } else {
+                this.x = nextX;
+            }
+        }
+
         if (this.sprite) {
             this.sprite.x = this.x;
-            this.sprite.y = this.y; // Agregado para que no pierda su Y
+            this.sprite.y = this.y;
         }
     }
 }
@@ -309,9 +328,13 @@ export class ExplosiveShooter extends EnemigoBase {
         spriteBala.drawCircle(0, 0, 7);
         spriteBala.endFill();
 
+        const offset = (this.radioColision || 16) + 8;
+        const startX = this.x + Math.cos(angulo) * offset;
+        const startY = this.y + Math.sin(angulo) * offset;
+
         const bala = {
-            x: this.x,
-            y: this.y,
+            x: startX,
+            y: startY,
             vx: Math.cos(angulo) * velocidadBala,
             vy: Math.sin(angulo) * velocidadBala,
             sprite: spriteBala,
@@ -382,13 +405,17 @@ export class ExplosiveShooter extends EnemigoBase {
                     gridX: Math.floor(this.x / engine.tileSize),
                     gridY: Math.floor(this.y / engine.tileSize),
                     vida: 50,
-                    velocidad: 110,
+                    velocidad: 170, // 2x velocidad base jugador (85)
                     decoradores: []
                 };
-                const hijo = engine.enemyManager.fabricaDeEnemigos(dataHijo);
+                const hijo = engine.enemyManager.spawnEnemy(dataHijo);
                 // Esparcirlos un poco
                 hijo.x += (Math.random() - 0.5) * 40;
                 hijo.y += (Math.random() - 0.5) * 40;
+                if (hijo.sprite) {
+                    hijo.sprite.x = hijo.x;
+                    hijo.sprite.y = hijo.y;
+                }
             }
         }
     }
@@ -398,10 +425,53 @@ export class ShooterChild extends EnemigoBase {
     constructor(data, tileSize) {
         super(data, tileSize);
         this.tipo = 'SHOOTER_CHILD';
-        this.velocidad = data.velocidad || 110;
+        this.velocidad = data.velocidad || 170; // 2x velocidad base jugador (85)
         this.vidaMaxima = data.vida || 50;
         this.vidaActual = this.vidaMaxima;
         this.radioColision = tileSize * 0.25;
+        this.noAtraviesaParedes = data.noAtraviesaParedes || false;
+    }
+
+    update(dt, player, engine) {
+        if (this.isDead) return;
+
+        this.recalcularTimer -= dt;
+
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const distSq = dx * dx + dy * dy;
+
+        // Activar aggro si el jugador está a menos de 144px (3 bloques)
+        if (distSq < 144 * 144) {
+            this.hasAggro = true;
+        }
+
+        if (!this.hasAggro) {
+            this.vx = 0;
+            this.vy = 0;
+            return;
+        }
+
+        if (this.recalcularTimer <= 0) {
+            if (distSq > 0) {
+                const dist = Math.sqrt(distSq);
+                this.vx = (dx / dist) * this.velocidad;
+                this.vy = (dy / dist) * this.velocidad;
+            }
+            this.recalcularTimer = 0.2;
+        }
+
+        if (this.noAtraviesaParedes) {
+            engine.collisionManager.resolverMovimiento(this, this.vx, this.vy, dt);
+        } else {
+            this.x += this.vx * dt;
+            this.y += this.vy * dt;
+        }
+
+        if (this.sprite) {
+            this.sprite.x = this.x;
+            this.sprite.y = this.y;
+        }
     }
 }
 
@@ -416,6 +486,8 @@ export class MonsterSpawner extends EnemigoBase {
         this.spawnCooldown = 6.0;
         this.spawnTimer = 2.0; // Invoca rápido al principio
         this.hasAggro = true; // El spawner está siempre activo
+        this.spawnCount = data.spawnCount || 1;
+        this.spawnCycle = 0;
     }
 
     update(dt, player, engine) {
@@ -430,7 +502,10 @@ export class MonsterSpawner extends EnemigoBase {
 
             // Solo invoca si el jugador está a menos de 550px para no sobrecargar
             if (dist < 550 && !player.isDead) {
-                this.invocarEsqueleto(engine);
+                this.spawnCycle++;
+                for (let i = 0; i < this.spawnCount; i++) {
+                    this.invocarEsqueleto(engine);
+                }
             }
             this.spawnTimer = this.spawnCooldown;
         }
@@ -448,11 +523,13 @@ export class MonsterSpawner extends EnemigoBase {
         
         // Direcciones adyacentes
         const offsets = [
-            {x: 0, y: 1}, {x: 0, y: -1}, {x: 1, y: 0}, {x: -1, y: 0}
+            {x: 0, y: 1}, {x: 0, y: -1}, {x: 1, y: 0}, {x: -1, y: 0},
+            {x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}
         ];
         
         let spawnCell = null;
-        for (const offset of offsets) {
+        const shuffledOffsets = offsets.sort(() => Math.random() - 0.5);
+        for (const offset of shuffledOffsets) {
             const tx = gridX + offset.x;
             const ty = gridY + offset.y;
             if (!engine.collisionManager.esPared(tx * engine.tileSize + 16, ty * engine.tileSize + 16)) {
@@ -463,16 +540,28 @@ export class MonsterSpawner extends EnemigoBase {
 
         if (!spawnCell) spawnCell = {gridX, gridY};
 
+        // Escalar dificultad por ciclo (+5% vida, +1% def, +3% dmg)
+        const scaleHP = 1 + (0.05 * this.spawnCycle);
+        const scaleDef = 1 + (0.01 * this.spawnCycle);
+        const scaleDmg = 1 + (0.03 * this.spawnCycle);
+
         const dataEnemigo = {
             tipo: 'BASE', // Esqueleto base
             gridX: spawnCell.gridX,
             gridY: spawnCell.gridY,
-            vida: 70,
-            velocidad: 85
+            vida: Math.round(70 * scaleHP),
+            velocidad: 85,
+            defensa: Math.round(10 * scaleDef),
+            danioBase: Math.round(2 * scaleDmg),
+            tipoDanio: 'PORCENTAJE_BASE'
         };
 
-        const esqueleto = engine.enemyManager.fabricaDeEnemigos(dataEnemigo);
+        const esqueleto = engine.enemyManager.spawnEnemy(dataEnemigo);
         esqueleto.hasAggro = true; // Activo inmediatamente
+        if (esqueleto.sprite) {
+            esqueleto.sprite.x = esqueleto.x;
+            esqueleto.sprite.y = esqueleto.y;
+        }
         
         // Efecto visual de invocación (destello morado)
         const destello = new PIXI.Graphics();
@@ -495,7 +584,7 @@ export class MonsterSpawner extends EnemigoBase {
         };
         ticker.add(animarDestello);
         
-        console.log("¡Portal generó un esqueleto!");
+        console.log("¡Portal generó un esqueleto escalado!");
     }
 }
 
@@ -507,8 +596,9 @@ export class Necromancer extends EnemigoBase {
         this.vidaMaxima = data.vida || 220;
         this.vidaActual = this.vidaMaxima;
         this.radioColision = tileSize * 0.40;
-        this.summonCooldown = 7.0;
-        this.summonTimer = 3.0;
+        this.summonCooldown = 4.0; // Invoca cada 4 segundos
+        this.summonTimer = 2.0;
+        this.summonCycle = 0;
     }
 
     update(dt, player, engine) {
@@ -544,26 +634,21 @@ export class Necromancer extends EnemigoBase {
             this.recalcularTimer = 0.25;
         }
 
-        // Moverse comprobando colisión con paredes
-        const nextX = this.x + this.vx * dt;
-        const nextY = this.y + this.vy * dt;
-        
-        if (!engine.collisionManager.esPared(nextX, this.y)) {
-            this.x = nextX;
-        }
-        if (!engine.collisionManager.esPared(this.x, nextY)) {
-            this.y = nextY;
-        }
+        // Moverse comprobando colisión con paredes deslizante
+        engine.collisionManager.resolverMovimiento(this, this.vx, this.vy, dt);
 
         if (this.sprite) {
             this.sprite.x = this.x;
             this.sprite.y = this.y;
         }
 
-        // Invocar Espectros (SHOOTER_CHILD en lógica interna)
+        // Invocar Espectros
         this.summonTimer -= dt;
         if (this.summonTimer <= 0 && dist < 450 && !player.isDead) {
-            this.invocarEspectro(engine);
+            this.summonCycle++;
+            for (let i = 0; i < 3; i++) {
+                this.invocarEspectro(engine);
+            }
             this.summonTimer = this.summonCooldown;
         }
     }
@@ -572,17 +657,28 @@ export class Necromancer extends EnemigoBase {
         const gridX = Math.floor(this.x / engine.tileSize);
         const gridY = Math.floor(this.y / engine.tileSize);
         
+        // Dificultad escalada por ciclo (+1% HP, +1% DMG)
+        const scaleHP = 1 + (0.01 * this.summonCycle);
+        const scaleDmg = 1 + (0.01 * this.summonCycle);
+
         const dataHijo = {
             tipo: 'SHOOTER_CHILD',
             gridX: gridX,
             gridY: gridY,
-            vida: 40,
-            velocidad: 110
+            vida: Math.round(40 * scaleHP),
+            velocidad: 110,
+            danioBase: Math.round(2 * scaleDmg),
+            tipoDanio: 'PORCENTAJE_BASE',
+            noAtraviesaParedes: true // Nigromante espectros no atraviesan paredes
         };
-        const espectro = engine.enemyManager.fabricaDeEnemigos(dataHijo);
+        const espectro = engine.enemyManager.spawnEnemy(dataHijo);
         espectro.hasAggro = true;
         espectro.x += (Math.random() - 0.5) * 30;
         espectro.y += (Math.random() - 0.5) * 30;
+        if (espectro.sprite) {
+            espectro.sprite.x = espectro.x;
+            espectro.sprite.y = espectro.y;
+        }
         
         // Destello oscuro
         const destello = new PIXI.Graphics();
@@ -605,7 +701,7 @@ export class Necromancer extends EnemigoBase {
         };
         ticker.add(animarDestello);
         
-        console.log("¡Nigromante invocó un esqueleto!");
+        console.log("¡Nigromante invocó un espectro escalado!");
     }
 }
 
@@ -762,10 +858,13 @@ export class OrcBoss extends EnemigoBase {
 
 export const ENEMY_CLASSES = {
     'BAKU': Baku,
+    'Orco': Baku,
     'BASE': EnemigoBase,
     'EXPLOSIVE_SHOOTER': ExplosiveShooter,
     'SHOOTER_CHILD': ShooterChild,
     'MONSTER_SPAWNER': MonsterSpawner,
+    'Generador Esqueletos': MonsterSpawner,
     'NECROMANCER': Necromancer,
+    'NIGROMANTE': Necromancer,
     'ORC_BOSS': OrcBoss
 };
