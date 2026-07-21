@@ -1,127 +1,43 @@
-# Plan de Implementación: Mecánicas de Puzzle Interactivas en el Editor y el Motor
+# Plan de Implementación: Auto-Ataque del Mago y Habilidades Especiales
 
-Este plan describe cómo incorporar 5 mecánicas de puzzle y modos de juego en el editor (`editor.html`) y el motor de juego (`Nivel_1.js` y clases asociadas). La configuración de todas las mecánicas será 100% visual y asistida mediante una interfaz interactiva de arrastrar, hacer clic o seleccionar coordenadas.
+El objetivo es darle al Mago un ataque base infinito (sin desgaste de durabilidad) que dispare esferas mágicas cada 0.5 segundos con 10 de daño. Además, implementaremos un sistema de Habilidades Especiales con barra de carga (tecla R) tanto para el Guerrero como para el Mago.
 
----
+> [!IMPORTANT]  
+> **Necesito tu confirmación:** Mencionas que la barra recarga `0.01%` por enemigo eliminado. Si usamos ese porcentaje, ¡haría falta matar 10,000 enemigos para cargarla! Asumiré que te referías a un **10%** o **20%** por enemigo (para usarla cada 5-10 bajas). También asumiré que la "pelotita" del mago se disparará hacia donde apunte tu mouse automáticamente mientras tengas presionado, o bien usaré auto-apuntado al enemigo más cercano (tú decides abajo).
 
-## Arquitectura de Datos del Paquete (`NIVEL_PACK`)
-Añadiremos claves dedicadas dentro de cada objeto de mapa en `mapsOfPack`:
-```typescript
-interface SubMapa {
-  matriz: number[][];
-  enemigos: EnemigoConfig[];
-  portales: PortalConfig[];
-  cofres: CofreConfig[];
-  
-  // NUEVO: Estructura de Puzzles
-  cajas?: { gridX: number; gridY: number }[];
-  mecanismos?: { plateX: number; plateY: number; gateX: number; gateY: number }[];
-  holdouts?: { gridX: number; gridY: number; radio: number; tiempo: number }[];
-  lasers?: { gridX: number; gridY: number; dir: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' }[];
-  espejos?: { gridX: number; gridY: number; angulo: 45 | 135 }[];
-  receptores?: { gridX: number; gridY: number; gateX: number; gateY: number }[];
-  secuencias?: { pasos: { x: number; y: number }[]; rewardX: number; rewardY: number }[];
-}
-```
+## 1. Opciones de Habilidades Especiales (¡Elige una para cada clase!)
 
----
+### 🧙‍♂️ Opciones para el Mago (Mage)
+1. **Lluvia de Meteoros:** Causa un gran daño en área en la posición del mouse o alrededor del jugador, limpiando a los enemigos cercanos.
+2. **Agujero Negro:** Crea un vórtice mágico que atrae a todos los enemigos a un punto central durante 4 segundos y los inmoviliza, haciéndoles daño continuo.
+3. **Nova de Hielo:** Congela a todos los enemigos en pantalla durante 5 segundos y les inflige un daño inicial, permitiéndote reposicionarte fácilmente.
 
-## Propuesta de Nuevas Baldosas en `TilemapRenderer.js`
-Añadiremos 3 nuevos tipos de baldosas para dar soporte a los elementos estáticos de los puzzles:
-- **Placa de Presión (ID 23)**: Color `0xe1b12c`. Se activa cuando el jugador o una caja se posiciona encima.
-- **Muro Conectado / Reja (ID 24)**: Color `0x2c3e50` (borde verde `0x44bd32`). Bloque sólido que cambia a transitable cuando su placa asociada se activa.
-- **Láser Receptor (ID 25)**: Color `0x12cbc4`. Abre una reja asociada al ser golpeado por un haz de luz láser.
+### ⚔️ Opciones para el Guerrero (Knight)
+1. **Furia Berserker:** Durante 10 segundos, el guerrero se vuelve rojo, duplica su velocidad de movimiento y su daño, y no sufre empuje (knockback) al ser golpeado.
+2. **Terremoto (Stomp):** El guerrero golpea el suelo causando un temblor. Aturde (stunea) a los enemigos cercanos por 3 segundos y les hace un daño físico masivo.
+3. **Torbellino de Cuchillas (Whirlwind):** El guerrero gira su arma a toda velocidad durante 4 segundos, volviéndose invulnerable y dañando continuamente a todo lo que toque mientras se mueve libremente.
 
----
+> [!TIP]
+> **Responde en el chat qué opción (1, 2 o 3) prefieres para el Mago y qué opción para el Guerrero.**
 
-## 1. Diseño de la Interfaz del Editor (`editor.html`)
+## 2. Cambios Propuestos en el Código
 
-### Pestaña de Puzzles
-Añadiremos una tercera pestaña lateral llamada **Puzzles** junto a *Baldosas* y *Enemigos*:
-```
-+------------------------------------+
-|   Baldosas  |  Enemigos  | Puzzles |  <-- Nueva pestaña activa
-+------------------------------------+
-| [ ] Caja Sokoban (Objeto)          |
-| [ ] Placa de Presión (ID 23)       |
-| [ ] Reja Conectada (ID 24)         |
-| [ ] Enlace Mecanismo (Vincular)    |
-| [ ] Emisor Láser (Objeto)          |
-| [ ] Espejo Reflector (Objeto)      |
-| [ ] Receptor Láser (ID 25)         |
-| [ ] Evento Defensa de Zona (Zona)  |
-| [ ] Secuencia de Pasos (Simon)     |
-+------------------------------------+
-```
+### `InputManager.js`
+#### [MODIFY] `InputManager.js`
+- Agregar la detección de la tecla `R` o `r` (acción `SPECIAL`) en `isActionPressed` y `onKeyDown`.
 
-### Herramienta de Enlace Interactivo
-Para facilitar el trabajo de los diseñadores sin experiencia en programación:
-- **Vincular Placa/Reja**: Al seleccionar "Enlace Mecanismo", el diseñador hace clic en una Placa de Presión (ID 23) y luego hace clic en la Reja Conectada (ID 24). El editor dibuja una línea discontinua de color amarillo que conecta visualmente ambos elementos en el mapa para confirmar el enlace.
-- **Vincular Receptor/Reja**: Similar al anterior, haciendo clic en el Receptor (ID 25) y luego en la Reja (ID 24), dibujando una línea discontinua cian.
-- **Configurador de Evento Defensa**: Al hacer clic en el mapa para colocar el círculo de Defensa, se abre el modal `#modalHoldout` para configurar de manera visual el **Radio del círculo (de 1 a 5 bloques)** y el **Tiempo de supervivencia (de 10s a 120s)**.
-- **Configurador de Secuencias**: Permite hacer clic en orden en varias celdas para definir la secuencia correcta de paso de Simon Dice y luego seleccionar la recompensa (ej. spawnear un cofre).
-
-```mermaid
-graph TD
-    A[Click en Herramienta de Puzzles] --> B{¿Qué herramienta?}
-    B -->|Caja/Placa/Reja| C[Pintar en mapa]
-    B -->|Vincular Placa a Reja| D[Click en Placa -> Click en Reja -> Crear Enlace]
-    B -->|Defensa de Zona| E[Click en mapa -> Modal de Configuración de Radio y Tiempo]
-    B -->|Secuencia de Pasos| F[Hacer click ordenado en baldosas -> Seleccionar Recompensa]
-```
+### `Nivel_1.js`
+#### [MODIFY] `Nivel_1.js`
+- **Mago Auto-ataque:** Si `window.playerState.clase === 'mage'`, sobreescribir el ataque por defecto para que dispare un proyectil mágico infinito cada `0.5s` de `10` de daño, sin consumir desgaste de armas de inventario.
+- **Barra de Habilidad:** Agregar `this.specialCharge = 0;` (0 a 100).
+- **Recarga:** En el evento de muerte de enemigo (donde sueltan monedas), añadir `this.specialCharge += 15` (o la cantidad acordada).
+- **Interfaz (HUD):** Añadir una barra amarilla/azul pequeña debajo o junto a los corazones de vida para indicar el estado de recarga de la tecla [R].
+- **Lógica de Tecla R:** En el método `update`, verificar si `this.inputManager.isActionPressed('SPECIAL')` y `this.specialCharge >= 100`. Si se cumple, ejecutar la habilidad especial según la clase del jugador y resetear la carga a 0.
 
 ---
 
-## 2. Lógica del Motor de Juego (`Nivel_1.js`, `PlayerControllator.js`)
-
-### A. Sokoban (Cajas y Placas de Presión)
-- En `PlayerController.update(dt)`:
-  - Si el jugador se mueve en una dirección y colisiona contra una Caja (`cajas`):
-    - Se calcula la celda adyacente en la dirección del empuje.
-    - Si la celda adyacente está libre (no es pared, reja cerrada, otra caja o un enemigo), la caja se desplaza gradualmente hacia esa celda.
-- En `Nivel_1.update()`:
-  - En cada ciclo, se verifica si alguna placa de presión (ID 23) tiene una caja o al jugador encima de ella.
-  - Si una placa está activada, su reja asociada (ID 24) se abre (`matriz[y][x] = 0` y se reduce su opacidad).
-  - Si se libera la placa, la reja se vuelve a cerrar (`matriz[y][x] = 24` y vuelve a ser sólida).
-
-### B. Inercia y Deslizamiento en Hielo
-- En `PlayerController.calcularVelocidadActual()`:
-  - Si el jugador está sobre una baldosa de **Hielo (ID 4)** y no está congelado:
-    - Entra en "Modo Deslizamiento".
-    - El controlador ignora el teclado y arrastra al jugador a velocidad constante en la misma dirección hasta chocar contra un bloque sólido o entrar a una baldosa de suelo normal.
-
-### C. Defensa de Zona / Holdout
-- En `Nivel_1.update()`:
-  - Si el jugador entra en una zona de holdout:
-    - Se activa un círculo rojo translúcido y una interfaz en pantalla: `"SECTOR INTRUSO: Sobrevive XX.Xs"`.
-    - Las puertas de la sala se cierran (se configuran bloques sólidos temporales).
-    - Los generadores de esqueletos incrementan su velocidad de spawning al doble.
-    - Si el jugador resiste y el tiempo llega a cero, las puertas se abren y se genera un cofre con botín en el centro.
-
-### D. Láseres y Espejos
-- En `Nivel_1.update()`:
-  - Se traza un rayo (línea recta) desde cada emisor láser.
-  - Si el rayo choca con un **Espejo**, se dobla 90° según la orientación del espejo.
-  - Si choca con el jugador, le inflige 4% de daño cada 0.5s.
-  - Si choca con un **Receptor (ID 25)**, abre su reja asociada.
-  - El jugador puede presionar **Espacio** cerca de un espejo para rotar su orientación en 90°.
-
-### E. Simón Dice / Secuencia Rítmica
-- Al ingresar a la sala del puzzle:
-  - Las baldosas del patrón destellan en orden una sola vez.
-  - El jugador debe caminarlas en la misma secuencia.
-  - Si se equivoca, recibe una pequeña descarga de veneno y la secuencia se reinicia. Al completarlo con éxito, abre una puerta secreta o spawnea un cofre.
-
----
-
-## Plan de Verificación y Control de Errores
-
-### Pruebas en el Editor:
-- Confirmar que al cambiar de pestaña a "Puzzles" la paleta de baldosas se filtre y muestre las opciones correctas.
-- Validar visualmente los enlaces mediante renderizado de líneas de colores.
-- Impedir guardar si existen placas de presión o receptores láser huérfanos (sin ninguna reja asociada).
-
-### Pruebas en el Motor de Juego:
-- Validar que las cajas Sokoban no atraviesen muros sólidos ni se solapen con otras cajas.
-- Probar que el temporizador de la defensa de zona se detenga si el jugador muere.
-- Confirmar que las rotaciones del espejo desvíen correctamente la trayectoria del rayo láser en tiempo de ejecución.
+## Preguntas Abiertas para Ti:
+1. ¿Qué **Habilidad Especial de Mago** eliges? (1, 2 o 3)
+2. ¿Qué **Habilidad Especial de Guerrero** eliges? (1, 2 o 3)
+3. ¿Cuánto quieres que recargue exactamente matar a un enemigo? (Ej. 10%, 20%, 25% por enemigo).
+4. Para el Mago: ¿El disparo sale solo apuntando al enemigo más cercano (auto-aim), o sale disparado hacia el mouse automáticamente?

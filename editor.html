@@ -2156,21 +2156,53 @@
 
         function removerConfigsAdicionales(gridX, gridY) {
             removerPortalYSuPar(gridX, gridY);
+            let requiresRedraw = false;
+            
+            const prevCofres = cofres.length;
             cofres = cofres.filter(c => !(c.gridX === gridX && c.gridY === gridY));
+            if (prevCofres !== cofres.length) requiresRedraw = true;
+            
+            const prevCajas = (cajas || []).length;
             cajas = (cajas || []).filter(c => !(c.gridX === gridX && c.gridY === gridY));
+            if (prevCajas !== (cajas || []).length) requiresRedraw = true;
+            
+            const prevLasers = (lasers || []).length;
             lasers = (lasers || []).filter(l => !(l.gridX === gridX && l.gridY === gridY));
+            if (prevLasers !== (lasers || []).length) requiresRedraw = true;
+            
+            const prevEspejos = (espejos || []).length;
             espejos = (espejos || []).filter(e => !(e.gridX === gridX && e.gridY === gridY));
-            holdouts = (holdouts || []).filter(h => !(h.gridX === gridX && h.gridY === gridY));
+            if (prevEspejos !== (espejos || []).length) requiresRedraw = true;
+            
+            const prevHoldouts = (holdouts || []).length;
+            holdouts = (holdouts || []).filter(h => {
+                const inZone = Math.abs(h.gridX - gridX) <= h.radio && Math.abs(h.gridY - gridY) <= h.radio;
+                return !inZone;
+            });
+            if (prevHoldouts !== (holdouts || []).length) requiresRedraw = true;
+            
+            const prevMecanismos = (mecanismos || []).length;
             mecanismos = (mecanismos || []).filter(m => !(m.plateX === gridX && m.plateY === gridY) && !(m.gateX === gridX && m.gateY === gridY));
+            if (prevMecanismos !== (mecanismos || []).length) requiresRedraw = true;
+            
+            const prevReceptores = (receptores || []).length;
             receptores = (receptores || []).filter(r => !(r.gridX === gridX && r.gridY === gridY) && !(r.gateX === gridX && r.gateY === gridY));
-
+            if (prevReceptores !== (receptores || []).length) requiresRedraw = true;
+            
             if (secuencias && secuencias.length > 0) {
-                const seq = secuencias[0];
-                seq.pasos = seq.pasos.filter(p => !(p.x === gridX && p.y === gridY));
-                if (seq.rewardX === gridX && seq.rewardY === gridY) {
-                    seq.rewardX = 0;
-                    seq.rewardY = 0;
-                }
+                 const seq = secuencias[0];
+                 const prevLen = seq.pasos.length;
+                 seq.pasos = seq.pasos.filter(p => !(p.x === gridX && p.y === gridY));
+                 if (prevLen !== seq.pasos.length) requiresRedraw = true;
+                 if (seq.rewardX === gridX && seq.rewardY === gridY) {
+                     seq.rewardX = 0;
+                     seq.rewardY = 0;
+                     requiresRedraw = true;
+                 }
+            }
+            
+            if (requiresRedraw) {
+                needsRedraw = true;
             }
         }
 
