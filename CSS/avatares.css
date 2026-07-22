@@ -52,3 +52,36 @@
         transform: scaleY(0.1);
     }
 }
+
+.archer-oficial-avatar {
+    width: 180px;
+    height: 180px;
+    filter: drop-shadow(0 8px 16px rgba(46, 204, 113, 0.4));
+    animation: floatEffect 3s ease-in-out infinite alternate;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="bowGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23f1c40f"/><stop offset="100%" stop-color="%23e67e22"/></linearGradient></defs><circle cx="50" cy="50" r="45" fill="%2327ae60" stroke="%232ecc71" stroke-width="3"/><path d="M 30 20 Q 80 50 30 80" fill="none" stroke="url(%23bowGrad)" stroke-width="6" stroke-linecap="round"/><line x1="30" y1="20" x2="30" y2="80" stroke="%23ecf0f1" stroke-width="2"/><line x1="10" y1="50" x2="60" y2="50" stroke="%23ecf0f1" stroke-width="4"/><polygon points="60,45 75,50 60,55" fill="%23ecf0f1"/></svg>');
+}
+
+.shaman-oficial-avatar {
+    width: 180px;
+    height: 180px;
+    filter: drop-shadow(0 8px 16px rgba(230, 126, 34, 0.4));
+    animation: floatEffect 3s ease-in-out infinite alternate;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%238e44ad" stroke="%239b59b6" stroke-width="3"/><path d="M 30 40 Q 50 20 70 40 Q 90 60 70 80 Q 50 100 30 80 Q 10 60 30 40 Z" fill="%23e67e22" opacity="0.8"/><circle cx="50" cy="50" r="15" fill="%23f1c40f"/><circle cx="35" cy="45" r="5" fill="%23ecf0f1"/><circle cx="65" cy="45" r="5" fill="%23ecf0f1"/><path d="M 40 65 Q 50 75 60 65" fill="none" stroke="%23ecf0f1" stroke-width="4" stroke-linecap="round"/></svg>');
+}
+
+.summoner-oficial-avatar {
+    width: 180px;
+    height: 180px;
+    filter: drop-shadow(0 8px 16px rgba(52, 152, 219, 0.4));
+    animation: floatEffect 3s ease-in-out infinite alternate;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%2334495e" stroke="%232c3e50" stroke-width="3"/><circle cx="50" cy="50" r="25" fill="%233498db"/><circle cx="50" cy="50" r="10" fill="%23ecf0f1"/><path d="M 50 10 L 55 30 L 75 25 L 60 40 L 80 50 L 60 60 L 75 75 L 55 70 L 50 90 L 45 70 L 25 75 L 40 60 L 20 50 L 40 40 L 25 25 L 45 30 Z" fill="%23f1c40f" opacity="0.6"/></svg>');
+}

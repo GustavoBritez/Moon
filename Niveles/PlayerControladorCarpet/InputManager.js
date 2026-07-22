@@ -52,6 +52,15 @@ export class InputManager {
             case 'TURBO':
                 isKeyPressed = this.keys['shift'];
                 break;
+            case 'SKILL_1':
+                isKeyPressed = this.keys['q'];
+                break;
+            case 'SKILL_2':
+                isKeyPressed = this.keys['e'];
+                break;
+            case 'ULTIMATE':
+                isKeyPressed = this.keys['r'];
+                break;
         }
 
         // 2. Retornamos TRUE si el teclado lo presiona OR (||) si el móvil lo presiona

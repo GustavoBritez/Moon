@@ -24,6 +24,10 @@ export class EnemigoBase {
 
         this.recalcularTimer = Math.random() * 0.2;
         this.hasAggro = false; // Estado de aggro por defecto
+
+        this.targetX = this.x;
+        this.targetY = this.y;
+        this.serverControlled = false;
     }
 
     calcularDanio(player) {
@@ -33,19 +37,48 @@ export class EnemigoBase {
         return player.vidaMaxima * (this.danioBase / 100);
     }
 
-    recibirGolpe(cantidadDaño, tipoElemento = 'FISICO') {
+    recibirGolpe(cantidadDaño, tipoElemento = 'FISICO', skipNetwork = false) {
         if (this.isDead) return;
 
-        const porcentajeResistencia = this.resistencias[tipoElemento] || 0;
-        const bonusDefensa = this.defensaBase * porcentajeResistencia;
-        const defensaTotal = this.defensaBase + bonusDefensa;
+        let esCritico = false;
+        let danioModificado = cantidadDaño;
 
-        const dañoFinal = Math.max(1, cantidadDaño - defensaTotal);
+        // Calcular probabilidad de crítico (15% por defecto)
+        if (Math.random() < 0.15) {
+            esCritico = true;
+            danioModificado *= 1.5;
+        }
+
+        // Aplicar resistencias elementales
+        const resistencia = this.resistencias[tipoElemento] || 0;
+        let dañoFinal = danioModificado * (1 - resistencia);
+
+        // Aplicar fórmula de armadura/defensa
+        dañoFinal = Math.max(1, Math.round(dañoFinal * (100 / (100 + this.defensaBase))));
 
         this.vidaActual -= dañoFinal;
         this.hasAggro = true; // Alertar inmediatamente si recibe daño
 
+        if (this.manager && this.manager.engine && this.manager.engine.uiManager) {
+            if (esCritico) {
+                this.manager.engine.uiManager.mostrarMensajeFlotante(`💥 ¡CRÍTICO! ${dañoFinal}`, this.x, this.y - 20);
+            } else {
+                this.manager.engine.uiManager.mostrarMensajeFlotante(`-${dañoFinal}`, this.x, this.y - 15);
+            }
+        }
+
         console.log(`Recibió ${dañoFinal} daño de ${tipoElemento}. Vida restante: ${this.vidaActual}`);
+
+        // Sincronizar golpe con el servidor C# si la acción proviene del cliente local
+        const netMgr = this.manager?.engine?.networkManager || window.networkManagerInstance;
+        if (!skipNetwork && netMgr && this.id) {
+            netMgr.sendEnemyHit(
+                this.id,
+                dañoFinal,
+                this.vidaActual,
+                this.vidaActual <= 0
+            );
+        }
 
         if (this.vidaActual <= 0) {
             this.morir();
@@ -54,6 +87,17 @@ export class EnemigoBase {
 
     update(dt, player, engine) {
         if (this.isDead) return;
+
+        if (this.serverControlled) {
+            // Interpolación suave (lerp) hacia la posición oficial enviada por el servidor C#
+            this.x += (this.targetX - this.x) * Math.min(1, dt * 12);
+            this.y += (this.targetY - this.y) * Math.min(1, dt * 12);
+            if (this.sprite) {
+                this.sprite.x = this.x;
+                this.sprite.y = this.y;
+            }
+            return;
+        }
 
         this.recalcularTimer -= dt;
 
@@ -96,18 +140,33 @@ export class EnemigoBase {
         this.isDead = true;
         if (this.sprite) this.sprite.visible = false;
 
+        // Cargar Ultimate
+        if (this.manager && this.manager.engine && this.manager.engine.skillManager) {
+            this.manager.engine.skillManager.addUltimateCharge(0.2);
+        }
+
+        // Economía: Recompensa de Lunas (LN) si es un Boss
+        if (this.manager && this.manager.engine && this.manager.engine.economyManager) {
+            if (this.tipo === 'ORC_BOSS' || this.tipo === 'NECROMANCER') {
+                const lunasGanadas = this.manager.engine.economyManager.minarLunas(10); // 10 LN base por boss
+                if (lunasGanadas > 0) {
+                    this.manager.engine.uiManager.mostrarMensajeFlotante(`+${lunasGanadas.toFixed(2)} LN 🌙`, this.x, this.y - 35);
+                }
+            }
+        }
+
         // Otorgar experiencia (XP) al jugador
         if (window.playerState) {
             const xpPorTipo = {
-                'BASE': 0.01,
-                'BAKU': 0.02,
-                'EXPLOSIVE_SHOOTER': 0.03,
-                'SHOOTER_CHILD': 0.02,
-                'MONSTER_SPAWNER': 0.02,
-                'NECROMANCER': 0.03,
-                'ORC_BOSS': 0.05
+                'BASE': 0.0001,
+                'BAKU': 0.0002,
+                'EXPLOSIVE_SHOOTER': 0.0003,
+                'SHOOTER_CHILD': 0.0002,
+                'MONSTER_SPAWNER': 0.0002,
+                'NECROMANCER': 0.0003,
+                'ORC_BOSS': 0.0005
             };
-            const xpGanada = xpPorTipo[this.tipo] || 0.01;
+            const xpGanada = xpPorTipo[this.tipo] || 0.001;
             let lvl = window.playerState.nivel || 1;
 
             if (lvl < 32) {
@@ -131,28 +190,28 @@ export class EnemigoBase {
                         engine.uiManager.mostrarMensajeFlotante(`✨ ¡SUBIDA DE NIVEL! LVL ${lvl} ✨`, engine.player.x, engine.player.y - 50);
                     }
                 }
-                
+
                 if (window.playerState.xpActual < 0) {
                     window.playerState.xpActual = 0;
                 }
             }
         }
     }
-}export class Baku extends EnemigoBase {
+} export class Baku extends EnemigoBase {
     constructor(data, tileSize) {
         super(data, tileSize);
 
         this.tipo = 'BAKU';
-        this.velocidad = data.velocidad || 150; 
+        this.velocidad = data.velocidad || 150;
         this.vidaMaxima = data.vida || 200;
         this.vidaActual = this.vidaMaxima;
         this.defensaBase = data.defensa || 15;
         this.radioColision = tileSize * 0.45;
-        
+
         // ¡LA SOLUCIÓN PARA BAKU! (Le damos una dirección inicial)
-        this.dirX = 1; 
+        this.dirX = 1;
     }
-    
+
     update(dt, player, engine) {
         if (this.isDead) return;
 
@@ -202,17 +261,31 @@ export class EnemigoDecorator {
         this.enemigo = enemigo;
     }
 
+    get id() { return this.enemigo.id; }
+    set id(val) { this.enemigo.id = val; }
     get x() { return this.enemigo.x; }
     get y() { return this.enemigo.y; }
     set x(val) { this.enemigo.x = val; }
     set y(val) { this.enemigo.y = val; }
+    get targetX() { return this.enemigo.targetX; }
+    set targetX(val) { this.enemigo.targetX = val; }
+    get targetY() { return this.enemigo.targetY; }
+    set targetY(val) { this.enemigo.targetY = val; }
+    get serverControlled() { return this.enemigo.serverControlled; }
+    set serverControlled(val) { this.enemigo.serverControlled = val; }
+    get vidaActual() { return this.enemigo.vidaActual; }
+    set vidaActual(val) { this.enemigo.vidaActual = val; }
+    get vidaMaxima() { return this.enemigo.vidaMaxima; }
+    set vidaMaxima(val) { this.enemigo.vidaMaxima = val; }
     get sprite() { return this.enemigo.sprite; }
     set sprite(val) { this.enemigo.sprite = val; }
     get isDead() { return this.enemigo.isDead; } // Importante para el manager
     get tipo() { return this.enemigo.tipo; }
+    get manager() { return this.enemigo.manager; }
+    set manager(val) { this.enemigo.manager = val; }
 
-    recibirGolpe(cantidadDaño, tipoElemento) {
-        this.enemigo.recibirGolpe(cantidadDaño, tipoElemento);
+    recibirGolpe(cantidadDaño, tipoElemento = 'FISICO', skipNetwork = false) {
+        this.enemigo.recibirGolpe(cantidadDaño, tipoElemento, skipNetwork);
     }
 
     update(dt, player, engine) {
@@ -227,8 +300,8 @@ export class FireDecorator extends EnemigoDecorator {
 
         const dx = player.x - this.enemigo.x;
         const dy = player.y - this.enemigo.y;
-        
-        if ((dx * dx + dy * dy) < 1600) { 
+
+        if ((dx * dx + dy * dy) < 1600) {
             console.log("¡Jugador quemándose!");
         }
     }
@@ -255,16 +328,18 @@ export class SplitterDecorator extends EnemigoDecorator {
         this.engine = engineRef;
     }
 
-    recibirGolpe(cantidadDaño, tipoElemento) {
-        this.enemigo.vidaActual -= cantidadDaño;
+    recibirGolpe(cantidadDaño, tipoElemento = 'FISICO', skipNetwork = false) {
+        this.enemigo.recibirGolpe(cantidadDaño, tipoElemento, skipNetwork);
 
         if (this.enemigo.vidaActual <= 0 && !this.enemigo.isDead) {
             this.dividirse();
-            this.enemigo.morir();
         }
     }
 
     dividirse() {
+        if (this.serverControlled || (window.networkManagerInstance && window.networkManagerInstance.isConnected)) {
+            return; // No generar enemigos hijos no sincronizados en multijugador
+        }
         for (let i = 0; i < 4; i++) {
             const dataHijo = {
                 gridX: Math.floor(this.enemigo.x / this.engine.tileSize),
@@ -277,7 +352,7 @@ export class SplitterDecorator extends EnemigoDecorator {
 
             hijo.x += (Math.random() - 0.5) * 20;
             hijo.y += (Math.random() - 0.5) * 20;
-            
+
             // Reinsertamos al hijo en la lista (esto lo maneja normalmente el engine/manager)
             this.engine.enemies.push(hijo);
         }
@@ -348,12 +423,8 @@ export class ExplosiveShooter extends EnemigoBase {
         engine.projectiles.push(bala);
     }
 
-    recibirGolpe(cantidadDaño, tipoElemento = 'FISICO') {
-        if (this.isDead) return;
-        this.vidaActual -= cantidadDaño;
-        if (this.vidaActual <= 0) {
-            this.morir();
-        }
+    recibirGolpe(cantidadDaño, tipoElemento = 'FISICO', skipNetwork = false) {
+        super.recibirGolpe(cantidadDaño, tipoElemento, skipNetwork);
     }
 
     morir() {
@@ -398,7 +469,10 @@ export class ExplosiveShooter extends EnemigoBase {
             };
             ticker.add(animarExplosion);
 
-            // 2. Crear 3 hijos
+            // 2. Crear 3 hijos (solo en modo monojugador offline)
+            if (this.serverControlled || (window.networkManagerInstance && window.networkManagerInstance.isConnected)) {
+                return;
+            }
             for (let i = 0; i < 3; i++) {
                 const dataHijo = {
                     type: 'SHOOTER_CHILD',
@@ -520,25 +594,25 @@ export class MonsterSpawner extends EnemigoBase {
         // Buscar una celda libre adyacente
         const gridX = Math.floor(this.x / engine.tileSize);
         const gridY = Math.floor(this.y / engine.tileSize);
-        
+
         // Direcciones adyacentes
         const offsets = [
-            {x: 0, y: 1}, {x: 0, y: -1}, {x: 1, y: 0}, {x: -1, y: 0},
-            {x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}
+            { x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 },
+            { x: 1, y: 1 }, { x: -1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: -1 }
         ];
-        
+
         let spawnCell = null;
         const shuffledOffsets = offsets.sort(() => Math.random() - 0.5);
         for (const offset of shuffledOffsets) {
             const tx = gridX + offset.x;
             const ty = gridY + offset.y;
             if (!engine.collisionManager.esPared(tx * engine.tileSize + 16, ty * engine.tileSize + 16)) {
-                spawnCell = {gridX: tx, gridY: ty};
+                spawnCell = { gridX: tx, gridY: ty };
                 break;
             }
         }
 
-        if (!spawnCell) spawnCell = {gridX, gridY};
+        if (!spawnCell) spawnCell = { gridX, gridY };
 
         // Escalar dificultad por ciclo (+5% vida, +1% def, +3% dmg)
         const scaleHP = 1 + (0.05 * this.spawnCycle);
@@ -562,7 +636,7 @@ export class MonsterSpawner extends EnemigoBase {
             esqueleto.sprite.x = esqueleto.x;
             esqueleto.sprite.y = esqueleto.y;
         }
-        
+
         // Efecto visual de invocación (destello morado)
         const destello = new PIXI.Graphics();
         destello.beginFill(0x805ad5, 0.7);
@@ -583,7 +657,7 @@ export class MonsterSpawner extends EnemigoBase {
             }
         };
         ticker.add(animarDestello);
-        
+
         console.log("¡Portal generó un esqueleto escalado!");
     }
 }
@@ -656,7 +730,7 @@ export class Necromancer extends EnemigoBase {
     invocarEspectro(engine) {
         const gridX = Math.floor(this.x / engine.tileSize);
         const gridY = Math.floor(this.y / engine.tileSize);
-        
+
         // Dificultad escalada por ciclo (+1% HP, +1% DMG)
         const scaleHP = 1 + (0.01 * this.summonCycle);
         const scaleDmg = 1 + (0.01 * this.summonCycle);
@@ -679,7 +753,7 @@ export class Necromancer extends EnemigoBase {
             espectro.sprite.x = espectro.x;
             espectro.sprite.y = espectro.y;
         }
-        
+
         // Destello oscuro
         const destello = new PIXI.Graphics();
         destello.beginFill(0x319795, 0.7);
@@ -700,7 +774,7 @@ export class Necromancer extends EnemigoBase {
             }
         };
         ticker.add(animarDestello);
-        
+
         console.log("¡Nigromante invocó un espectro escalado!");
     }
 }
@@ -714,8 +788,8 @@ export class OrcBoss extends EnemigoBase {
         this.vidaActual = this.vidaMaxima;
 
         this.smashCooldown = 5.0;
-        this.smashTimer = 3.0; 
-        
+        this.smashTimer = 3.0;
+
         this.isCharging = false;
         this.chargeTimer = 0;
         this.targetX = 0;
@@ -747,7 +821,7 @@ export class OrcBoss extends EnemigoBase {
             this.vx = 0;
             this.vy = 0;
             this.chargeTimer -= dt;
-            
+
             if (this.chargeAreaGfx) {
                 this.chargeAreaGfx.alpha = 0.3 + 0.6 * (1 - this.chargeTimer / 1.2);
             }
@@ -760,7 +834,7 @@ export class OrcBoss extends EnemigoBase {
 
             const nextX = this.x + this.vx * dt;
             const nextY = this.y + this.vy * dt;
-            
+
             if (!engine.collisionManager.esPared(nextX, this.y)) this.x = nextX;
             if (!engine.collisionManager.esPared(this.x, nextY)) this.y = nextY;
 
@@ -783,9 +857,9 @@ export class OrcBoss extends EnemigoBase {
                 this.chargeAreaGfx.endFill();
                 this.chargeAreaGfx.x = this.targetX;
                 this.chargeAreaGfx.y = this.targetY;
-                
+
                 engine.capaEntidades.addChild(this.chargeAreaGfx);
-                
+
                 this.uiMensajeCarga(engine);
             }
         }
@@ -810,18 +884,18 @@ export class OrcBoss extends EnemigoBase {
 
         if (dist <= 85) {
             const damage = Math.round(player.vidaMaxima * 0.25);
-            
+
             if (player.isShielded) {
                 engine.uiManager.mostrarMensajeFlotante("🛡️ ¡Bloqueado!", player.x, player.y - 30);
             } else {
                 player.recibirDanio(damage);
                 engine.uiManager.mostrarMensajeFlotante(`-${damage} HP 💥`, player.x, player.y - 30);
-                
+
                 const anglePush = Math.atan2(player.y - this.y, player.x - this.x);
                 const pushDist = 95;
                 const targetPlayerX = player.x + Math.cos(anglePush) * pushDist;
                 const targetPlayerY = player.y + Math.sin(anglePush) * pushDist;
-                
+
                 if (!engine.collisionManager.esPared(targetPlayerX, player.y)) player.x = targetPlayerX;
                 if (!engine.collisionManager.esPared(player.x, targetPlayerY)) player.y = targetPlayerY;
             }

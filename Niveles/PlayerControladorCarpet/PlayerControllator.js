@@ -109,6 +109,12 @@ export class PlayerController {
                     if (this.player.isSliding) {
                         this.player.isSliding = false;
                     }
+
+                    // Notificar a la red sobre el movimiento de la caja Sokoban
+                    const boxIndex = this.nivel.cajas.indexOf(box);
+                    if (boxIndex !== -1 && typeof this.nivel.onBoxPushed === 'function') {
+                        this.nivel.onBoxPushed(boxIndex, destGridX, destGridY);
+                    }
                 }
             }
         }

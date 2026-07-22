@@ -22,7 +22,20 @@ export class Player {
             console.log("¡Daño bloqueado por el escudo!");
             return;
         }
-        this.vidaActual -= cantidad;
+
+        let danioFinal = cantidad;
+
+        // Defensa base (Caballero pasiva)
+        if (this.defensaBase) {
+            danioFinal = Math.max(1, danioFinal - Math.floor(this.defensaBase * 0.2));
+        }
+
+        // Escudo de Maná (Mago pasiva: 35% de mitigación)
+        if (this.escudoManaActivo) {
+            danioFinal = Math.max(1, Math.round(danioFinal * 0.65));
+        }
+
+        this.vidaActual -= danioFinal;
         if (this.vidaActual <= 0) {
             this.vidaActual = 0;
             this.isDead = true;

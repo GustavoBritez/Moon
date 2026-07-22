@@ -1,5 +1,6 @@
 import { GAME_LEVELS } from './Niveles/levels.js';
 import { GameFactory } from './Service/GameFactory.js';
+import { NetworkManager } from './Service/NetworkManager.js';
 
 export class AppOrchestrator {
     constructor(contenedorId) {
@@ -8,6 +9,10 @@ export class AppOrchestrator {
         this.gameState = "MENU";
 
         this.currentLevelId = 1;
+
+        if (!window.networkManagerInstance) {
+            window.networkManagerInstance = new NetworkManager();
+        }
 
         // Inicializar Estado Global del Jugador
         if (!window.playerState) {

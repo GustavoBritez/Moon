@@ -5,6 +5,10 @@ import { CollisionManager } from './PlayerControladorCarpet/CollisionManager.js'
 import { EnemyManager } from './Enemigo/EnemyManager.js';
 import { Player } from './PlayerControladorCarpet/Player.js';
 import { PlayerController } from './PlayerControladorCarpet/PlayerControllator.js';
+import { FieldOfView } from '../Service/FieldOfView.js';
+import { SkillTreeManager } from '../Service/SkillTreeManager.js';
+import { EconomyManager } from '../Service/EconomyManager.js';
+import { NetworkManager } from '../Service/NetworkManager.js';
 
 export class Nivel_1 {
     constructor(canvas, config, eventBus) {
@@ -73,7 +77,19 @@ export class Nivel_1 {
         this.capaPuzzles = new PIXI.Container();
 
         this.mundo.addChild(this.capaFondo, this.capaPuzzles, this.capaEntidades);
-        this.app.stage.addChild(this.mundo, this.capaUI);
+        
+        // Fondo negro base (para el Field of View)
+        this.fondoOscuro = new PIXI.Graphics();
+        this.fondoOscuro.beginFill(0x000000);
+        this.fondoOscuro.drawRect(-10000, -10000, 20000, 20000);
+        this.fondoOscuro.endFill();
+        
+        this.app.stage.addChild(this.fondoOscuro, this.mundo, this.capaUI);
+
+        // Máscara de visión
+        this.mascaraVision = new PIXI.Graphics();
+        this.app.stage.addChild(this.mascaraVision);
+        this.mundo.mask = this.mascaraVision;
 
         // 3. Inicializar el Modelo de Datos del Jugador
         this.player = new Player(
@@ -91,6 +107,7 @@ export class Nivel_1 {
         this.espejos = JSON.parse(JSON.stringify(mapaInicial.espejos || []));
         this.receptores = JSON.parse(JSON.stringify(mapaInicial.receptores || []));
         this.secuencias = JSON.parse(JSON.stringify(mapaInicial.secuencias || []));
+        this.cofres = []; // Arregla el crasheo al completar Holdout
 
         // 4. Mánagers
         this.inputManager = new InputManager();
@@ -102,6 +119,14 @@ export class Nivel_1 {
         this.uiManager = new UIManager(this.capaUI, this.capaEntidades);
         this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, this.enemigos);
         this.enemyManager.engine = this;
+        this.fov = new FieldOfView(this.tileSize, TILE_DICT);
+        this.skillManager = new SkillTreeManager(this);
+        this.economyManager = new EconomyManager();
+
+        // 5. Servidor Multijugador C#
+        this.remotePlayers = new Map();
+        this.networkManager = new NetworkManager();
+        this.configurarEventosRed();
 
         // Inicializar vistas de puzzles
         this.inicializarPuzzles();
@@ -220,6 +245,81 @@ export class Nivel_1 {
             brillo.endFill();
 
             visualHeroe.addChild(brilloExterior, cuerpo, nucleo, brillo);
+            visualHeroe.addChild(brilloExterior, cuerpo, nucleo, brillo);
+        } else if (window.playerState.clase === 'archer') {
+            // DISEÑO ARQUERO: Capucha verde, ágil
+            const brilloExterior = new PIXI.Graphics();
+            brilloExterior.beginFill(0x48bb78, 0.25);
+            brilloExterior.drawCircle(0, 0, radioBase + 3);
+            brilloExterior.endFill();
+
+            const cuerpo = new PIXI.Graphics();
+            cuerpo.beginFill(0x2f855a); // Verde bosque oscuro
+            cuerpo.drawCircle(0, 0, radioBase);
+            cuerpo.endFill();
+
+            const capucha = new PIXI.Graphics();
+            capucha.beginFill(0x276749); // Verde más oscuro
+            capucha.drawRect(-radioBase * 0.6, -radioBase * 0.8, radioBase * 1.2, radioBase * 0.8, 4);
+            capucha.endFill();
+
+            const pluma = new PIXI.Graphics();
+            pluma.beginFill(0xffffff); // Pluma blanca
+            pluma.drawRect(radioBase * 0.2, -radioBase * 1.2, 4, 15);
+            pluma.endFill();
+
+            visualHeroe.addChild(brilloExterior, cuerpo, capucha, pluma);
+        } else if (window.playerState.clase === 'shaman') {
+            // DISEÑO CHAMÁN: Adornos tribales, huesos y magia natural
+            const brilloExterior = new PIXI.Graphics();
+            brilloExterior.beginFill(0xed8936, 0.25);
+            brilloExterior.drawCircle(0, 0, radioBase + 5);
+            brilloExterior.endFill();
+
+            const cuerpo = new PIXI.Graphics();
+            cuerpo.beginFill(0xc05621); // Naranja tierra oscuro
+            cuerpo.drawCircle(0, 0, radioBase);
+            cuerpo.endFill();
+
+            const mascara = new PIXI.Graphics();
+            mascara.beginFill(0xffffff); // Máscara de hueso
+            mascara.drawEllipse(0, -radioBase * 0.2, radioBase * 0.6, radioBase * 0.4);
+            mascara.endFill();
+
+            const ojoIzq = new PIXI.Graphics();
+            ojoIzq.beginFill(0xe53e3e); // Ojos rojos brillantes
+            ojoIzq.drawCircle(-radioBase * 0.2, -radioBase * 0.2, 3);
+            ojoIzq.endFill();
+
+            const ojoDer = new PIXI.Graphics();
+            ojoDer.beginFill(0xe53e3e);
+            ojoDer.drawCircle(radioBase * 0.2, -radioBase * 0.2, 3);
+            ojoDer.endFill();
+
+            visualHeroe.addChild(brilloExterior, cuerpo, mascara, ojoIzq, ojoDer);
+        } else if (window.playerState.clase === 'summoner') {
+            // DISEÑO INVOCADOR: Túnica oscura con runas brillantes cyan
+            const brilloExterior = new PIXI.Graphics();
+            brilloExterior.beginFill(0x0bc5ea, 0.25);
+            brilloExterior.drawCircle(0, 0, radioBase + 6);
+            brilloExterior.endFill();
+
+            const cuerpo = new PIXI.Graphics();
+            cuerpo.beginFill(0x1a202c); // Casi negro
+            cuerpo.drawCircle(0, 0, radioBase);
+            cuerpo.endFill();
+
+            const runa = new PIXI.Graphics();
+            runa.lineStyle(2, 0x0bc5ea);
+            runa.moveTo(-radioBase * 0.3, -radioBase * 0.3);
+            runa.lineTo(radioBase * 0.3, radioBase * 0.3);
+            runa.moveTo(radioBase * 0.3, -radioBase * 0.3);
+            runa.lineTo(-radioBase * 0.3, radioBase * 0.3);
+            runa.moveTo(0, -radioBase * 0.5);
+            runa.lineTo(0, radioBase * 0.5);
+            runa.endFill();
+
+            visualHeroe.addChild(brilloExterior, cuerpo, runa);
         } else {
             // DISEÑO CABALLERO: Escudo de acero plateado con yelmo y detalles dorados
             const brilloExterior = new PIXI.Graphics();
@@ -252,6 +352,279 @@ export class Nivel_1 {
 
         this.uiManager.actualizar(this.player);
         this.app.ticker.add((delta) => this.update(delta));
+    }
+
+    configurarEventosRed() {
+        if (!this.networkManager) return;
+
+        const roomInicial = this.subMapaActual || 'principal';
+
+        const inicializarRedNivel = () => {
+            if (this.networkManager && this.networkManager.isConnected) {
+                console.log(`🌐 Inicializando sala de red '${roomInicial}' para Nivel_1...`);
+                this.networkManager.sendChangeRoom(roomInicial);
+                if (this.enemigos && this.enemigos.length > 0) {
+                    this.networkManager.sendRegisterEnemies(roomInicial, this.enemigos);
+                }
+            }
+        };
+
+        // Ejecutar inmediatamente si el socket ya estaba abierto desde el lobby
+        if (this.networkManager.isConnected) {
+            inicializarRedNivel();
+        }
+
+        this.networkManager.onInitCallback = (packet) => {
+            console.log("🌐 Conectado a la sala C#. Mis datos inicializados.");
+            inicializarRedNivel();
+            if (packet.players) {
+                this.syncPlayersFromServer(packet.players);
+            }
+            if (packet.enemies) {
+                this.syncEnemiesFromServer(packet.enemies, packet);
+            }
+        };
+
+        this.networkManager.onPlayerJoinCallback = (packet) => {
+            if (packet.id !== this.networkManager.myId) {
+                console.log(`👤 Nuevo jugador remoto ingresó: ${packet.id}`);
+                this.spawnRemotePlayer(packet);
+                this.uiManager.mostrarMensajeFlotante(`👤 ¡Jugador ${packet.id.substring(0, 4)} se unió!`, this.player.x, this.player.y - 40);
+            }
+        };
+
+        this.networkManager.onPlayerLeaveCallback = (packet) => {
+            if (this.remotePlayers.has(packet.id)) {
+                const rp = this.remotePlayers.get(packet.id);
+                if (rp && rp.sprite) rp.sprite.destroy({ children: true });
+                this.remotePlayers.delete(packet.id);
+                console.log(`🚪 Jugador remoto se retiró: ${packet.id}`);
+            }
+        };
+
+        this.networkManager.onMoveCallback = (packet) => {
+            if (packet.id === this.networkManager.myId) return;
+            if (!this.remotePlayers.has(packet.id)) {
+                this.spawnRemotePlayer(packet);
+            }
+            const rp = this.remotePlayers.get(packet.id);
+            if (rp) {
+                rp.targetX = packet.x;
+                rp.targetY = packet.y;
+                if (packet.angle !== undefined) rp.targetAngle = packet.angle;
+                if (packet.clase && packet.clase !== rp.clase) {
+                    rp.clase = packet.clase;
+                }
+            }
+        };
+
+        this.networkManager.onBoxMoveCallback = (packet) => {
+            if (this.cajas && this.cajas[packet.boxId]) {
+                this.cajas[packet.boxId].gridX = packet.gridX;
+                this.cajas[packet.boxId].gridY = packet.gridY;
+            }
+        };
+
+        this.networkManager.onEnemyHitCallback = (packet) => {
+            if (this.enemyManager && this.enemyManager.enemies) {
+                const targetId = parseInt(packet.targetId);
+                const enemy = this.enemyManager.enemies.find(e => e.id === targetId || String(e.id) === String(packet.targetId));
+                if (enemy) {
+                    if (packet.hp !== undefined && packet.hp >= 0) {
+                        enemy.vidaActual = packet.hp;
+                    }
+                    if ((packet.isDead || enemy.vidaActual <= 0) && !enemy.isDead) {
+                        enemy.morir();
+                    }
+                }
+            }
+
+            if (packet.levelCompleted || packet.remainingEnemies === 0) {
+                this.verificarVictoria();
+            }
+        };
+
+        this.networkManager.onEnemySyncCallback = (packet) => {
+            if (packet.enemies) {
+                this.syncEnemiesFromServer(packet.enemies, packet);
+            }
+        };
+
+        this.networkManager.onRoomStateCallback = (packet) => {
+            if (packet.players) {
+                this.syncPlayersFromServer(packet.players);
+            }
+            if (packet.enemies) {
+                this.syncEnemiesFromServer(packet.enemies, packet);
+            }
+            if (packet.boxes && this.cajas) {
+                packet.boxes.forEach(b => {
+                    if (this.cajas[b.id]) {
+                        this.cajas[b.id].gridX = b.gridX;
+                        this.cajas[b.id].gridY = b.gridY;
+                    }
+                });
+            }
+        };
+
+        this.networkManager.onStateSyncCallback = (packet) => {
+            // Sincronización Server-Authoritative de cajas Sokoban
+            if (packet.boxes && this.cajas) {
+                packet.boxes.forEach(b => {
+                    if (this.cajas[b.id]) {
+                        this.cajas[b.id].gridX = b.gridX;
+                        this.cajas[b.id].gridY = b.gridY;
+                    }
+                });
+            }
+
+            // Sincronización Server-Authoritative de posiciones de enemigos
+            if (packet.enemies) {
+                this.syncEnemiesFromServer(packet.enemies, packet);
+            }
+
+            if (packet.players) {
+                this.syncPlayersFromServer(packet.players);
+            }
+        };
+    }
+
+    syncPlayersFromServer(playersList) {
+        if (!playersList) return;
+        const activeServerIds = new Set(playersList.map(p => p.id));
+
+        // Limpiar jugadores remotos que ya no pertenecen a esta sala
+        this.remotePlayers.forEach((rp, id) => {
+            if (!activeServerIds.has(id)) {
+                if (rp && rp.sprite) rp.sprite.destroy({ children: true });
+                this.remotePlayers.delete(id);
+            }
+        });
+
+        playersList.forEach(p => {
+            if (p.id !== this.networkManager.myId) {
+                if (!this.remotePlayers.has(p.id)) {
+                    this.spawnRemotePlayer(p);
+                } else {
+                    const rp = this.remotePlayers.get(p.id);
+                    rp.targetX = p.x;
+                    rp.targetY = p.y;
+                    if (p.angle !== undefined) rp.targetAngle = p.angle;
+                }
+            }
+        });
+    }
+
+    syncEnemiesFromServer(enemiesList, packet = null) {
+        if (!enemiesList || !this.enemyManager || !this.enemyManager.enemies) return;
+        enemiesList.forEach(sEnemy => {
+            const localEnemy = this.enemyManager.enemies.find(e => e.id === sEnemy.id || String(e.id) === String(sEnemy.id));
+            if (localEnemy) {
+                localEnemy.serverControlled = true;
+                localEnemy.targetX = sEnemy.x;
+                localEnemy.targetY = sEnemy.y;
+                if (sEnemy.hp !== undefined) localEnemy.vidaActual = sEnemy.hp;
+                if (sEnemy.isDead && !localEnemy.isDead) {
+                    localEnemy.morir();
+                }
+            }
+        });
+
+        if (packet && (packet.levelCompleted || packet.remainingEnemies === 0)) {
+            this.verificarVictoria();
+        }
+    }
+
+    onBoxPushed(boxIndex, gridX, gridY) {
+        if (this.networkManager && this.networkManager.isConnected) {
+            this.networkManager.sendBoxMove(boxIndex, gridX, gridY);
+        }
+    }
+
+    spawnRemotePlayer(data) {
+        if (!data || !data.id) return;
+        if (this.networkManager && data.id === this.networkManager.myId) return; // No generar avatar remoto para nuestro propio jugador
+        if (this.remotePlayers.has(data.id)) return;
+
+        const hasValidPos = Boolean(data.x && data.x > 10 && data.y && data.y > 10);
+        const spawnX = hasValidPos ? data.x : (this.player ? this.player.x : 100);
+        const spawnY = hasValidPos ? data.y : (this.player ? this.player.y : 100);
+
+        const container = this.crearVisualHeroeRemoto(data.clase || 'knight');
+        container.x = spawnX;
+        container.y = spawnY;
+        container.visible = hasValidPos;
+
+        // Añadir etiqueta de ID
+        const textTag = new PIXI.Text(`[P] ${data.id.substring(0, 4)}`, {
+            fontFamily: 'Arial', fontSize: 11, fill: 0x00ffff, fontWeight: 'bold'
+        });
+        textTag.anchor.set(0.5, 2.2);
+        container.addChild(textTag);
+
+        this.capaEntidades.addChild(container);
+        this.remotePlayers.set(data.id, {
+            id: data.id,
+            x: spawnX,
+            y: spawnY,
+            targetX: spawnX,
+            targetY: spawnY,
+            targetAngle: 0,
+            clase: data.clase || 'knight',
+            sprite: container
+        });
+    }
+
+    crearVisualHeroeRemoto(clase) {
+        const radioBase = this.tileSize * 0.36;
+        const container = new PIXI.Container();
+
+        const sombra = new PIXI.Graphics();
+        sombra.beginFill(0x000000, 0.3);
+        sombra.drawEllipse(0, radioBase * 0.8, radioBase * 0.9, radioBase * 0.3);
+        sombra.endFill();
+        container.addChild(sombra);
+
+        const cuerpo = new PIXI.Graphics();
+        if (clase === 'mage') cuerpo.beginFill(0x805ad5);
+        else if (clase === 'archer') cuerpo.beginFill(0x2f855a);
+        else if (clase === 'shaman') cuerpo.beginFill(0xc05621);
+        else if (clase === 'summoner') cuerpo.beginFill(0x1a202c);
+        else cuerpo.beginFill(0x4a5568);
+
+        cuerpo.drawCircle(0, 0, radioBase);
+        cuerpo.endFill();
+
+        const brillo = new PIXI.Graphics();
+        brillo.lineStyle(2, 0x00ffff);
+        brillo.drawCircle(0, 0, radioBase + 2);
+        container.addChild(cuerpo, brillo);
+
+        return container;
+    }
+
+    actualizarJugadoresRemotos(dt) {
+        // Interpolación exponencial fluida independiente de la tasa de refresco
+        const lerpFactor = 1.0 - Math.exp(-18 * dt);
+        this.remotePlayers.forEach(rp => {
+            if (rp.targetX !== undefined && rp.targetY !== undefined) {
+                if (rp.targetX > 10 && rp.targetY > 10 && rp.sprite && !rp.sprite.visible) {
+                    rp.sprite.visible = true;
+                    rp.x = rp.targetX;
+                    rp.y = rp.targetY;
+                }
+                rp.x += (rp.targetX - rp.x) * lerpFactor;
+                rp.y += (rp.targetY - rp.y) * lerpFactor;
+
+                if (rp.sprite) {
+                    rp.sprite.x = rp.x;
+                    rp.sprite.y = rp.y;
+                    if (rp.targetAngle !== undefined) {
+                        rp.sprite.rotation += (rp.targetAngle - rp.sprite.rotation) * lerpFactor;
+                    }
+                }
+            }
+        });
     }
 
     // ========================================================
@@ -415,49 +788,153 @@ export class Nivel_1 {
             console.log("¡Martillo Arrojado!");
         } 
         else {
-            // ESPADA BÁSICA (Ataque melee de arco de tajo)
-            const radioSlash = 80;
-            const arcoSlash = 1.6;
+            const claseJugador = window.playerState.clase || 'knight';
 
-            const slashGfx = new PIXI.Graphics();
-            slashGfx.lineStyle(4, 0xf6e05e, 0.95);
-            slashGfx.arc(0, 0, radioSlash - 10, angulo - arcoSlash/2, angulo + arcoSlash/2);
-            slashGfx.lineStyle(1, 0xffffff, 0.5);
-            slashGfx.arc(0, 0, radioSlash - 5, angulo - arcoSlash/2, angulo + arcoSlash/2);
-            
-            slashGfx.x = this.player.x;
-            slashGfx.y = this.player.y;
-            this.capaEntidades.addChild(slashGfx);
+            if (claseJugador === 'mage') {
+                // MAGO: Dispara esfera mística que rebota 3 veces en las paredes
+                const spriteBala = new PIXI.Graphics();
+                spriteBala.beginFill(0xb794f4, 0.4);
+                spriteBala.drawCircle(0, 0, 10);
+                spriteBala.endFill();
+                spriteBala.beginFill(0x805ad5, 0.9);
+                spriteBala.drawCircle(0, 0, 6);
+                spriteBala.endFill();
+                spriteBala.beginFill(0xffffff, 0.9);
+                spriteBala.drawCircle(-2, -2, 2);
+                spriteBala.endFill();
 
-            let duracion = 0.12;
-            const animarSlash = () => {
-                duracion -= 0.016;
-                slashGfx.alpha = Math.max(0, duracion / 0.12);
-                if (duracion <= 0) {
-                    this.app.ticker.remove(animarSlash);
-                    slashGfx.destroy();
-                }
-            };
-            this.app.ticker.add(animarSlash);
+                const b = {
+                    x: this.player.x,
+                    y: this.player.y,
+                    vx: Math.cos(angulo) * (velocidadBala * 0.95),
+                    vy: Math.sin(angulo) * (velocidadBala * 0.95),
+                    sprite: spriteBala,
+                    danio: Math.round(28 * factorDanio),
+                    rebotadora: true,
+                    rebotesRestantes: 3
+                };
+                b.sprite.x = b.x;
+                b.sprite.y = b.y;
+                this.capaEntidades.addChild(b.sprite);
+                this.projectiles.push(b);
+                console.log("¡Orbe Mágico Rebotador!");
+            }
+            else if (claseJugador === 'archer') {
+                // ARQUERO: Dispara flechas veloces de cazador
+                const spriteBala = new PIXI.Graphics();
+                spriteBala.lineStyle(2, 0x48bb78);
+                spriteBala.beginFill(0xffffff);
+                spriteBala.drawPolygon([-10, -2, 10, 0, -10, 2]);
+                spriteBala.endFill();
+                spriteBala.rotation = angulo;
 
-            for (let j = this.enemyManager.enemies.length - 1; j >= 0; j--) {
-                const enemigo = this.enemyManager.enemies[j];
-                const dx = enemigo.x - this.player.x;
-                const dy = enemigo.y - this.player.y;
-                const dist = Math.hypot(dx, dy);
+                const b = {
+                    x: this.player.x,
+                    y: this.player.y,
+                    vx: Math.cos(angulo) * (velocidadBala * 1.25),
+                    vy: Math.sin(angulo) * (velocidadBala * 1.25),
+                    sprite: spriteBala,
+                    danio: Math.round(30 * factorDanio)
+                };
+                b.sprite.x = b.x;
+                b.sprite.y = b.y;
+                this.capaEntidades.addChild(b.sprite);
+                this.projectiles.push(b);
+                console.log("¡Flecha Certera!");
+            }
+            else if (claseJugador === 'shaman') {
+                // CHAMÁN: Dispara esfera de energía espiritual de la naturaleza
+                const spriteBala = new PIXI.Graphics();
+                spriteBala.beginFill(0xed8936, 0.3);
+                spriteBala.drawCircle(0, 0, 9);
+                spriteBala.endFill();
+                spriteBala.beginFill(0xdd6b20, 0.9);
+                spriteBala.drawCircle(0, 0, 5);
+                spriteBala.endFill();
 
-                if (dist <= radioSlash + 15) {
-                    const angEnemigo = Math.atan2(dy, dx);
-                    let diffAng = angEnemigo - angulo;
-                    while (diffAng < -Math.PI) diffAng += Math.PI * 2;
-                    while (diffAng > Math.PI) diffAng -= Math.PI * 2;
+                const b = {
+                    x: this.player.x,
+                    y: this.player.y,
+                    vx: Math.cos(angulo) * (velocidadBala * 0.9),
+                    vy: Math.sin(angulo) * (velocidadBala * 0.9),
+                    sprite: spriteBala,
+                    danio: Math.round(26 * factorDanio)
+                };
+                b.sprite.x = b.x;
+                b.sprite.y = b.y;
+                this.capaEntidades.addChild(b.sprite);
+                this.projectiles.push(b);
+                console.log("¡Esfera Espiritual!");
+            }
+            else if (claseJugador === 'summoner') {
+                // INVOCADOR: Dispara proyectil de energía de alma cyan
+                const spriteBala = new PIXI.Graphics();
+                spriteBala.beginFill(0x0bc5ea, 0.4);
+                spriteBala.drawCircle(0, 0, 8);
+                spriteBala.endFill();
+                spriteBala.beginFill(0x00a3c4, 0.9);
+                spriteBala.drawCircle(0, 0, 5);
+                spriteBala.endFill();
 
-                    if (Math.abs(diffAng) <= arcoSlash / 2 + 0.3) {
-                        enemigo.recibirGolpe(Math.round(35 * factorDanio));
+                const b = {
+                    x: this.player.x,
+                    y: this.player.y,
+                    vx: Math.cos(angulo) * (velocidadBala * 1.0),
+                    vy: Math.sin(angulo) * (velocidadBala * 1.0),
+                    sprite: spriteBala,
+                    danio: Math.round(24 * factorDanio)
+                };
+                b.sprite.x = b.x;
+                b.sprite.y = b.y;
+                this.capaEntidades.addChild(b.sprite);
+                this.projectiles.push(b);
+                console.log("¡Orbe de Alma!");
+            }
+            else {
+                // GUERRERO / CABALLERO: Ataque melee de tajo con espada
+                const radioSlash = 80;
+                const arcoSlash = 1.6;
+
+                const slashGfx = new PIXI.Graphics();
+                slashGfx.lineStyle(4, 0xf6e05e, 0.95);
+                slashGfx.arc(0, 0, radioSlash - 10, angulo - arcoSlash/2, angulo + arcoSlash/2);
+                slashGfx.lineStyle(1, 0xffffff, 0.5);
+                slashGfx.arc(0, 0, radioSlash - 5, angulo - arcoSlash/2, angulo + arcoSlash/2);
+                
+                slashGfx.x = this.player.x;
+                slashGfx.y = this.player.y;
+                this.capaEntidades.addChild(slashGfx);
+
+                let duracion = 0.12;
+                const animarSlash = () => {
+                    duracion -= 0.016;
+                    slashGfx.alpha = Math.max(0, duracion / 0.12);
+                    if (duracion <= 0) {
+                        this.app.ticker.remove(animarSlash);
+                        slashGfx.destroy();
+                    }
+                };
+                this.app.ticker.add(animarSlash);
+
+                for (let j = this.enemyManager.enemies.length - 1; j >= 0; j--) {
+                    const enemigo = this.enemyManager.enemies[j];
+                    const dx = enemigo.x - this.player.x;
+                    const dy = enemigo.y - this.player.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (dist <= radioSlash + 15) {
+                        const angEnemigo = Math.atan2(dy, dx);
+                        let diffAng = angEnemigo - angulo;
+                        while (diffAng < -Math.PI) diffAng += Math.PI * 2;
+                        while (diffAng > Math.PI) diffAng -= Math.PI * 2;
+
+                        if (Math.abs(diffAng) <= arcoSlash / 2 + 0.3) {
+                            enemigo.recibirGolpe(Math.round(35 * factorDanio));
+                        }
                     }
                 }
+                console.log("¡Tajo de espada!");
             }
-            console.log("¡Tajo de espada!");
         }
     }
 
@@ -481,7 +958,14 @@ export class Nivel_1 {
     // ========================================================
 
     update(delta) {
-        if (this.gameOver || this.isPaused) return;
+        if (this.isPaused) return;
+        
+        if (this.gameOver) {
+            // Continuar renderizando la cámara y UI pero no actualizar lógicas de físicas/inputs
+            this.actualizarCamara();
+            this.renderizador.actualizarVista(this.camara.x, this.camara.y);
+            return;
+        }
 
         const dt = delta / this.app.ticker.FPS;
 
@@ -529,6 +1013,28 @@ export class Nivel_1 {
         this.actualizarPuzzles(dt);
         this.enemyManager.update(dt, this.player, this);
         this.actualizarProyectiles(dt);
+        this.actualizarJugadoresRemotos(dt);
+        this.skillManager.update(dt);
+        
+        // Enviar nuestra posición al servidor C# cada frame
+        if (this.networkManager && this.networkManager.isConnected && this.player) {
+            const ang = Math.atan2(this.mouseY - (window.innerHeight / 2), this.mouseX - (window.innerWidth / 2));
+            this.networkManager.sendMove(
+                this.player.x,
+                this.player.y,
+                ang,
+                window.playerState.clase || 'knight',
+                this.player.vidaActual
+            );
+        }
+        
+        // --- Actualizar Línea de Visión (Field of View Circular) ---
+        const radioPixeles = 16 * this.tileSize;
+        this.mascaraVision.clear();
+        this.mascaraVision.beginFill(0xffffff);
+        this.mascaraVision.drawCircle(this.player.x, this.player.y, radioPixeles);
+        this.mascaraVision.endFill();
+        // ------------------------------------------------
 
         // Detección de colisión de daño por contacto con enemigos
         if (!this.player.isDead && !this.player.isInvulnerable) {
@@ -551,6 +1057,17 @@ export class Nivel_1 {
         let tileId = 0;
         if (fila >= 0 && fila < this.mapaMatriz.length && col >= 0 && col < this.mapaMatriz[0].length) {
             tileId = this.mapaMatriz[fila][col];
+        }
+
+        // --- Bloque Meta (2) ---
+        if (tileId === 2 && !this.gameOver && !this.player.isDead) {
+            this.gameOver = true;
+            console.log("🏆 ¡Meta alcanzada! Nivel completado.");
+            if (typeof this.eventBus === 'function') {
+                this.eventBus('LEVEL_VICTORY');
+            } else if (this.eventBus && typeof this.eventBus.emit === 'function') {
+                this.eventBus.emit('LEVEL_VICTORY');
+            }
         }
 
         // --- Inmunidad temporal a congelación ---
@@ -999,6 +1516,14 @@ export class Nivel_1 {
         this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, subMapa.enemigos);
         this.enemyManager.engine = this;
         this.enemyManager.inicializar();
+
+        // 7. Notificar cambio de sala y registrar enemigos del sub-mapa en servidor C#
+        if (this.networkManager && this.networkManager.isConnected) {
+            this.networkManager.sendChangeRoom(nombreMapa);
+            if (subMapa.enemigos && subMapa.enemigos.length > 0) {
+                this.networkManager.sendRegisterEnemies(nombreMapa, subMapa.enemigos);
+            }
+        }
 
         this.actualizarHUDHtml();
     }
@@ -1620,12 +2145,8 @@ export class Nivel_1 {
                     this.laserGraphics.lineTo(nextX, nextY);
 
                     if (pGridX === nextGridX && pGridY === nextGridY && !this.player.isDead && !this.player.isInvulnerable) {
-                        if (!this.lastLaserDamageTime || Date.now() - this.lastLaserDamageTime > 500) {
-                            this.lastLaserDamageTime = Date.now();
-                            const damage = Math.round(this.player.vidaMax * 0.05);
-                            this.player.recibirDanio(damage);
-                            this.uiManager.mostrarMensajeFlotante(`-${damage} HP ⚡ LÁSER`, this.player.x, this.player.y - 30);
-                        }
+                        this.player.isDead = true;
+                        this.uiManager.mostrarMensajeFlotante(`⚡ ¡LÁSER MORTAL!`, this.player.x, this.player.y - 30);
                     }
 
                     const espejo = (this.espejos || []).find(e => e.gridX === nextGridX && e.gridY === nextGridY);
@@ -1752,7 +2273,15 @@ export class Nivel_1 {
             this.capaPuzzles = null;
         }
 
-        const managers = [this.inputManager, this.renderizador, this.uiManager, this.enemyManager];
+        // Limpiar los sprites de jugadores remotos
+        if (this.remotePlayers) {
+            this.remotePlayers.forEach(rp => {
+                if (rp.sprite) rp.sprite.destroy({ children: true });
+            });
+            this.remotePlayers.clear();
+        }
+
+        const managers = [this.inputManager, this.renderizador, this.uiManager, this.enemyManager, this.networkManager];
         for (const manager of managers) {
             if (manager && typeof manager.destroy === 'function') {
                 manager.destroy();

@@ -29,6 +29,9 @@ export class GameFactory {
 
                                 <div class="recurso-item"><div class="recurso-circulo">🪙</div><span class="recurso-cantidad" id="txtLobbyMonedas">150</span></div>
                                 <div class="recurso-item"><div class="recurso-circulo">💎</div><span class="recurso-cantidad" id="txtLobbyGemas">5</span></div>
+                                <div id="lobbyOnlineWidget" style="background: rgba(20, 18, 31, 0.85); padding: 8px 14px; border-radius: 12px; border: 2px solid #2ecc71; color: white; display: flex; align-items: center; gap: 6px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.4); font-size: 0.9rem;">
+                                    <span style="color: #2ecc71; font-size: 1rem; text-shadow: 0 0 8px #2ecc71;">🟢</span> ONLINE: <span id="txtLobbyOnline" style="color: #2ecc71; font-size: 1rem;">1</span>
+                                </div>
                                 <button id="btnInventarioLobby" style="background: #d69e2e; color: #1a202c; border: none; border-radius: 12px; font-size: 1.5rem; width: 45px; height: 45px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.4); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; z-index: 10;">🎒</button>
                             </div>
                             
@@ -127,22 +130,32 @@ export class GameFactory {
                             const cartel = document.getElementById('cartelAviso');
                             const botonesNivel = document.querySelectorAll('.btn-nivel');
 
-                            // LÓGICA DE CLASES AVATAR (Caballero y Mago)
+                            // LÓGICA DE CLASES AVATAR (5 Clases)
                             if (avatarDiv && btnCambiarAvatar) {
-                                const catalogoAvatares = ['knight-oficial-avatar', 'mage-oficial-avatar'];
-                                let avatarActual = window.playerState.clase === 'mage' ? 'mage-oficial-avatar' : 'knight-oficial-avatar';
-                                avatarDiv.className = avatarActual;
+                                const clases = [
+                                    { id: 'knight', css: 'knight-oficial-avatar' },
+                                    { id: 'mage', css: 'mage-oficial-avatar' },
+                                    { id: 'archer', css: 'archer-oficial-avatar' },
+                                    { id: 'shaman', css: 'shaman-oficial-avatar' },
+                                    { id: 'summoner', css: 'summoner-oficial-avatar' }
+                                ];
+                                
+                                let currentIndex = clases.findIndex(c => c.id === window.playerState.clase);
+                                if (currentIndex === -1) currentIndex = 0;
+                                
+                                avatarDiv.className = clases[currentIndex].css;
 
                                 btnCambiarAvatar.addEventListener('click', () => {
-                                    let indiceActual = catalogoAvatares.indexOf(avatarActual);
-                                    indiceActual = (indiceActual + 1) % catalogoAvatares.length;
-                                    avatarActual = catalogoAvatares[indiceActual];
+                                    currentIndex = (currentIndex + 1) % clases.length;
+                                    const nuevaClase = clases[currentIndex];
 
-                                    avatarDiv.className = avatarActual;
-                                    window.playerState.clase = avatarActual === 'knight-oficial-avatar' ? 'knight' : 'mage';
+                                    avatarDiv.className = nuevaClase.css;
+                                    window.playerState.clase = nuevaClase.id;
                                     console.log(`Clase del jugador cambiada a: ${window.playerState.clase}`);
 
-                                    gsap.fromTo(avatarDiv, { scale: 0.8, rotation: -10 }, { duration: 0.4, scale: 1, rotation: 0, ease: "back.out(1.5)" });
+                                    if (typeof gsap !== 'undefined') {
+                                        gsap.fromTo(avatarDiv, { scale: 0.8, rotation: -10 }, { duration: 0.4, scale: 1, rotation: 0, ease: "back.out(1.5)" });
+                                    }
                                 });
                             }
 
@@ -199,6 +212,16 @@ export class GameFactory {
                                 txtLobbyLvl.innerText = lvl;
                                 txtLobbyXpVal.innerText = `${xp.toFixed(2)} / ${req.toFixed(2)} XP`;
                                 barLobbyXpFill.style.width = `${Math.min(100, (xp / req) * 100)}%`;
+                            }
+
+                            // --- CONTADOR ONLINE EN TIEMPO REAL ---
+                            const updateLobbyOnline = (cnt) => {
+                                const el = document.getElementById('txtLobbyOnline');
+                                if (el) el.innerText = cnt || (window.networkManagerInstance?.onlineCount || 1);
+                            };
+                            if (window.networkManagerInstance) {
+                                window.networkManagerInstance.onOnlineCountChangeCallback = updateLobbyOnline;
+                                updateLobbyOnline(window.networkManagerInstance.onlineCount);
                             }
 
                             const modalInv = document.getElementById('modalInventarioTienda');
@@ -344,8 +367,8 @@ export class GameFactory {
                             }
 
                             window.equiparEnSlotLibre = (key) => {
-                                if ((key.startsWith('daga') || key.startsWith('martillo')) && window.playerState.slots.includes(key)) {
-                                    alert("Esta arma ya está equipada en un slot.");
+                                if (window.playerState.slots.includes(key)) {
+                                    alert("Este objeto ya está equipado en un slot.");
                                     return;
                                 }
 

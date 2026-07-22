@@ -42,9 +42,10 @@ export class EnemyManager {
             }
         }
         
-        // 3. Posicionamiento 
-        enemigo.x = data.gridX * this.tileSize + (this.tileSize / 2);
-        enemigo.y = data.gridY * this.tileSize + (this.tileSize / 2);
+        // 3. Posicionamiento e ID determinista coincidente con el servidor
+        enemigo.id = data.id !== undefined ? Number(data.id) : (this.enemies.length + 1);
+        enemigo.x = (data.gridX || 0) * this.tileSize + (this.tileSize / 2);
+        enemigo.y = (data.gridY || 0) * this.tileSize + (this.tileSize / 2);
 
         // ==========================================
         // 4. ¡LA SOLUCIÓN! DARLES CUERPO GRÁFICO (PIXI.Graphics)
@@ -160,6 +161,7 @@ export class EnemyManager {
         }
 
         enemigo.sprite = cuerpoEnemigo;
+        enemigo.manager = this;
         
         // Los agregamos a la escena para que se puedan ver
         this.capaEntidades.addChild(enemigo.sprite);
@@ -180,10 +182,13 @@ export class EnemyManager {
             return;
         }
 
+        let enemyCounter = 1;
         for (const data of this.configEnemigos) {
             const cantidad = data.cantidad || 1;
             for (let k = 0; k < cantidad; k++) {
                 const clonedData = { ...data };
+                clonedData.id = data.id !== undefined ? Number(data.id) : enemyCounter;
+                enemyCounter++;
                 const enemigo = this.fabricaDeEnemigos(clonedData);
                 if (cantidad > 1) {
                     enemigo.x += (Math.random() - 0.5) * 16;

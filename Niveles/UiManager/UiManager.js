@@ -10,10 +10,17 @@ export class UIManager {
         this.barraXpFondo = null;
         this.barraXpRelleno = null;
         this.textoXp = null;
+        
+        this.barraUltFondo = null;
+        this.barraUltRelleno = null;
+        this.textoUlt = null;
 
         this.vidaCacheada = -1;
         this.xpCacheada = -1;
         this.lvlCacheada = -1;
+        this.ultCacheada = -1;
+        this.cd1Cacheado = -1;
+        this.cd2Cacheado = -1;
         this.parpadeoTimer = 0;
 
         this.inicializarElementos();
@@ -82,6 +89,68 @@ export class UIManager {
         this.textoXp.y = 49;
         this.textoXp.anchor.set(0.5, 0);
         this.capaUI.addChild(this.textoXp);
+        
+        // 7. Barra de Ultimate - Fondo gris
+        this.barraUltFondo = new PIXI.Graphics();
+        this.barraUltFondo.beginFill(0x333333, 0.8);
+        this.barraUltFondo.drawRoundedRect(0, 0, 200, 14, 4);
+        this.barraUltFondo.endFill();
+        this.barraUltFondo.x = 20;
+        this.barraUltFondo.y = 66; // Bajo la barra de XP
+        this.capaUI.addChild(this.barraUltFondo);
+
+        // 8. Barra de Ultimate - Relleno amarillo/oro
+        this.barraUltRelleno = new PIXI.Graphics();
+        this.barraUltRelleno.x = 20;
+        this.barraUltRelleno.y = 66;
+        this.capaUI.addChild(this.barraUltRelleno);
+
+        // 9. Texto Ultimate superpuesto
+        this.textoUlt = new PIXI.Text('ULTIMATE [R]: 0%', {
+            fontFamily: 'Arial',
+            fontSize: 10,
+            fill: 0xf1c40f,
+            fontWeight: 'bold',
+            dropShadow: true,
+            dropShadowColor: '#000000',
+            dropShadowBlur: 2,
+            dropShadowDistance: 1
+        });
+        this.textoUlt.x = 20 + 100;
+        this.textoUlt.y = 67;
+        this.textoUlt.anchor.set(0.5, 0);
+        this.capaUI.addChild(this.textoUlt);
+
+        // 10. Indicadores Q y E (Skills)
+        this.contenedorSkills = new PIXI.Container();
+        this.contenedorSkills.x = 20;
+        this.contenedorSkills.y = 86;
+
+        this.textoQ = new PIXI.Text('[Q] Skill 1: LISTO', {
+            fontFamily: 'Arial', fontSize: 10, fill: 0x2ecc71, fontWeight: 'bold',
+            dropShadow: true, dropShadowColor: '#000', dropShadowBlur: 2
+        });
+        this.textoQ.x = 0;
+        this.textoQ.y = 0;
+
+        this.textoE = new PIXI.Text('[E] Skill 2: LISTO', {
+            fontFamily: 'Arial', fontSize: 10, fill: 0x2ecc71, fontWeight: 'bold',
+            dropShadow: true, dropShadowColor: '#000', dropShadowBlur: 2
+        });
+        this.textoE.x = 100;
+        this.textoE.y = 0;
+
+        this.contenedorSkills.addChild(this.textoQ, this.textoE);
+        this.capaUI.addChild(this.contenedorSkills);
+
+        // 11. Indicador de Jugadores Online
+        this.textoOnlineInGame = new PIXI.Text('🟢 ONLINE: 1', {
+            fontFamily: 'Arial', fontSize: 12, fill: 0x2ecc71, fontWeight: 'bold',
+            dropShadow: true, dropShadowColor: '#000', dropShadowBlur: 3
+        });
+        this.textoOnlineInGame.x = 20;
+        this.textoOnlineInGame.y = 104;
+        this.capaUI.addChild(this.textoOnlineInGame);
     }
 
     actualizar(player) {
@@ -99,6 +168,46 @@ export class UIManager {
             this.actualizarBarraXp(lvl, xp);
             this.xpCacheada = xp;
             this.lvlCacheada = lvl;
+        }
+        
+        const engine = window.orquestador?.currentEngine;
+        if (engine && engine.skillManager) {
+            const ult = engine.skillManager.ultimateCharge;
+            if (ult !== this.ultCacheada) {
+                this.actualizarBarraUltimate(ult);
+                this.ultCacheada = ult;
+            }
+
+            const cd1 = engine.skillManager.cooldowns.skill1;
+            const cd2 = engine.skillManager.cooldowns.skill2;
+            this.actualizarCooldownsSkills(cd1, cd2);
+        }
+
+        if (this.textoOnlineInGame && window.networkManagerInstance) {
+            const totalOnline = window.networkManagerInstance.onlineCount || 1;
+            const inRoomCount = (engine && engine.remotePlayers) ? (engine.remotePlayers.size + 1) : 1;
+            this.textoOnlineInGame.text = `🟢 ONLINE: ${totalOnline} (En esta sala: ${inRoomCount})`;
+        }
+    }
+
+    actualizarCooldownsSkills(cd1, cd2) {
+        if (this.textoQ) {
+            if (cd1 > 0) {
+                this.textoQ.text = `[Q] Skill: ${cd1.toFixed(1)}s`;
+                this.textoQ.style.fill = 0xe74c3c; // Rojo
+            } else {
+                this.textoQ.text = `[Q] Skill: LISTO`;
+                this.textoQ.style.fill = 0x2ecc71; // Verde
+            }
+        }
+        if (this.textoE) {
+            if (cd2 > 0) {
+                this.textoE.text = `[E] Skill: ${cd2.toFixed(1)}s`;
+                this.textoE.style.fill = 0xe74c3c;
+            } else {
+                this.textoE.text = `[E] Skill: LISTO`;
+                this.textoE.style.fill = 0x2ecc71;
+            }
         }
     }
 
@@ -122,6 +231,33 @@ export class UIManager {
 
         // Texto
         this.textoXp.text = `LVL ${lvl} - XP: ${xp.toFixed(2)}/${req.toFixed(2)}`;
+    }
+
+    actualizarBarraUltimate(carga) {
+        this.barraUltRelleno.clear();
+
+        const porcentaje = Math.max(0, Math.min(1, carga / 100));
+        const anchoRelleno = porcentaje * 200;
+
+        let colorBarra = 0xf39c12; // Naranja/Amarillo
+        if (porcentaje >= 1) colorBarra = 0xf1c40f; // Amarillo brillante si está lista
+
+        this.barraUltRelleno.beginFill(colorBarra);
+        this.barraUltRelleno.drawRoundedRect(0, 0, anchoRelleno, 14, 4);
+        this.barraUltRelleno.endFill();
+
+        // Brillito superior
+        this.barraUltRelleno.beginFill(0xffffff, 0.2);
+        this.barraUltRelleno.drawRoundedRect(2, 1, anchoRelleno - 4, 5, 2);
+        this.barraUltRelleno.endFill();
+
+        this.textoUlt.text = porcentaje >= 1 ? `¡ULTIMATE LISTA! [PRESIONA R]` : `ULTIMATE [R]: ${carga.toFixed(1)}%`;
+        
+        if (porcentaje >= 1) {
+            this.barraUltRelleno.alpha = 0.7 + Math.abs(Math.sin(performance.now() / 150)) * 0.3; // Pulso brillante
+        } else {
+            this.barraUltRelleno.alpha = 1;
+        }
     }
 
     actualizarBarraVida(player) {
@@ -203,6 +339,9 @@ export class UIManager {
         if (this.barraXpFondo) { this.barraXpFondo.destroy(true); this.barraXpFondo = null; }
         if (this.barraXpRelleno) { this.barraXpRelleno.destroy(true); this.barraXpRelleno = null; }
         if (this.textoXp) { this.textoXp.destroy(true); this.textoXp = null; }
+        if (this.barraUltFondo) { this.barraUltFondo.destroy(true); this.barraUltFondo = null; }
+        if (this.barraUltRelleno) { this.barraUltRelleno.destroy(true); this.barraUltRelleno = null; }
+        if (this.textoUlt) { this.textoUlt.destroy(true); this.textoUlt = null; }
 
         if (this.capaUI) {
             this.capaUI.removeChildren();
