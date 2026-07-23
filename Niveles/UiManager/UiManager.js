@@ -75,7 +75,7 @@ export class UIManager {
         this.capaUI.addChild(this.barraXpRelleno);
 
         // 6. Texto XP superpuesto
-        this.textoXp = new PIXI.Text('LVL 1 - XP: 0.00/2.00', {
+        this.textoXp = new PIXI.Text('LVL 1 - XP: 0.000/2.000', {
             fontFamily: 'Arial',
             fontSize: 10,
             fill: 0x00d2ff,
@@ -151,6 +151,133 @@ export class UIManager {
         this.textoOnlineInGame.x = 20;
         this.textoOnlineInGame.y = 104;
         this.capaUI.addChild(this.textoOnlineInGame);
+
+        // 12. Consola de Registro / Chat Flotante en Pantalla (Arrastrable y Minimizable)
+        const consolaVieja = document.getElementById('gameChatConsole');
+        if (consolaVieja) consolaVieja.remove();
+
+        this.consoleContainer = document.createElement('div');
+        this.consoleContainer.id = 'gameChatConsole';
+        this.consoleContainer.style = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 340px;
+            background: rgba(15, 12, 22, 0.88);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(214, 158, 46, 0.5);
+            border-radius: 12px;
+            z-index: 998;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            color: #f1ebd9;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.7);
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        `;
+
+        // Cabecera arrastrable con botón para minimizar
+        const header = document.createElement('div');
+        header.id = 'consoleHeader';
+        header.style = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(45, 30, 60, 0.95);
+            cursor: grab;
+            user-select: none;
+            font-weight: bold;
+            font-size: 0.78rem;
+            color: #f1c40f;
+            border-bottom: 1px solid rgba(214, 158, 46, 0.4);
+        `;
+        header.innerHTML = `
+            <span style="display:flex; align-items:center; gap:6px;">📜 Consola de Partida</span>
+            <button id="btnToggleConsole" style="
+                background: rgba(255,255,255,0.15);
+                border: none;
+                color: #ffffff;
+                border-radius: 4px;
+                width: 22px;
+                height: 22px;
+                cursor: pointer;
+                font-weight: bold;
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">-</button>
+        `;
+
+        this.consoleBody = document.createElement('div');
+        this.consoleBody.id = 'consoleBody';
+        this.consoleBody.style = `
+            max-height: 130px;
+            padding: 8px 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: max-height 0.2s ease;
+        `;
+
+        this.consoleContainer.appendChild(header);
+        this.consoleContainer.appendChild(this.consoleBody);
+        document.body.appendChild(this.consoleContainer);
+
+        // Lógica de Minimizar
+        let isMinimized = false;
+        const btnToggle = header.querySelector('#btnToggleConsole');
+        btnToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isMinimized = !isMinimized;
+            if (isMinimized) {
+                this.consoleBody.style.display = 'none';
+                btnToggle.innerText = '+';
+            } else {
+                this.consoleBody.style.display = 'flex';
+                btnToggle.innerText = '-';
+            }
+        });
+
+        // Lógica de Arrastre (Drag & Drop)
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target === btnToggle) return;
+            isDragging = true;
+            header.style.cursor = 'grabbing';
+            const rect = this.consoleContainer.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            
+            this.consoleContainer.style.bottom = 'auto';
+            this.consoleContainer.style.left = `${initialLeft}px`;
+            this.consoleContainer.style.top = `${initialTop}px`;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            this.consoleContainer.style.left = `${Math.max(0, Math.min(window.innerWidth - 340, initialLeft + dx))}px`;
+            this.consoleContainer.style.top = `${Math.max(0, Math.min(window.innerHeight - 40, initialTop + dy))}px`;
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                header.style.cursor = 'grab';
+            }
+        });
+
+        this.agregarMensajeConsola("🎮 Bienvenido a la partida. ¡Buena suerte, héroe!", "#f6e05e");
     }
 
     actualizar(player) {
@@ -229,8 +356,8 @@ export class UIManager {
         this.barraXpRelleno.drawRoundedRect(2, 1, anchoRelleno - 4, 5, 2);
         this.barraXpRelleno.endFill();
 
-        // Texto
-        this.textoXp.text = `LVL ${lvl} - XP: ${xp.toFixed(2)}/${req.toFixed(2)}`;
+        // Texto (BUGFIX: mostrar 3 decimales de XP)
+        this.textoXp.text = `LVL ${lvl} - XP: ${xp.toFixed(3)}/${req.toFixed(3)}`;
     }
 
     actualizarBarraUltimate(carga) {
@@ -298,26 +425,30 @@ export class UIManager {
     }
 
     mostrarMensajeFlotante(texto, x, y) {
+        // Dispersión aleatoria para evitar que múltiples textos de daño se encimen
+        const offsetX = (Math.random() - 0.5) * 20;
+        const offsetY = (Math.random() - 0.5) * 10;
+
         const mensaje = new PIXI.Text(texto, {
             fontFamily: 'Arial',
-            fontSize: 20,
+            fontSize: 18,
             fill: 0xFFFF00,
             fontWeight: 'bold',
             dropShadow: true,
             dropShadowColor: '#000000',
-            dropShadowBlur: 2,
+            dropShadowBlur: 3,
             dropShadowDistance: 1
         });
 
-        mensaje.x = x;
-        mensaje.y = y;
+        mensaje.x = x + offsetX;
+        mensaje.y = y + offsetY;
         this.capaEntidades.addChild(mensaje);
 
         const ticker = window.orquestador?.currentEngine?.app?.ticker || PIXI.Ticker.shared;
 
         const animarMensaje = () => {
-            mensaje.y -= 1;
-            mensaje.alpha -= 0.02;
+            mensaje.y -= 0.8;
+            mensaje.alpha -= 0.025;
 
             if (mensaje.alpha <= 0) {
                 ticker.remove(animarMensaje);
@@ -328,11 +459,36 @@ export class UIManager {
         ticker.add(animarMensaje);
     }
 
+    agregarMensajeConsola(texto, color = '#f1ebd9') {
+        if (!this.consoleBody) return;
+        const msg = document.createElement('div');
+        msg.style.color = color;
+        msg.style.lineHeight = '1.3';
+        msg.style.textShadow = '0 1px 2px rgba(0,0,0,0.8)';
+        msg.style.wordBreak = 'break-word';
+        const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        msg.innerHTML = `<span style="opacity:0.65; font-size:0.7rem; margin-right:6px;">[${hora}]</span>${texto}`;
+        this.consoleBody.appendChild(msg);
+
+        // Limitar a 40 mensajes máximos
+        while (this.consoleBody.children.length > 40) {
+            this.consoleBody.removeChild(this.consoleBody.firstChild);
+        }
+
+        // Auto-scroll al fondo
+        this.consoleBody.scrollTop = this.consoleBody.scrollHeight;
+    }
+
     reajustarUI(ancho, alto) {
         // Los elementos ya usan posiciones absolutas, no necesitan ajuste extra
     }
 
     destroy() {
+        if (this.consoleContainer) {
+            this.consoleContainer.remove();
+            this.consoleContainer = null;
+        }
+
         if (this.barraVidaFondo) { this.barraVidaFondo.destroy(true); this.barraVidaFondo = null; }
         if (this.barraVidaRelleno) { this.barraVidaRelleno.destroy(true); this.barraVidaRelleno = null; }
         if (this.textoVida) { this.textoVida.destroy(true); this.textoVida = null; }

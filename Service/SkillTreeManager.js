@@ -268,7 +268,7 @@ export class SkillTreeManager {
     }
 
     skillInvocarBestia() {
-        this.nivel.uiManager.mostrarMensajeFlotante("¡Lobo Invocado!", this.player.x, this.player.y - 30);
+        this.nivel.uiManager.mostrarMensajeFlotante("¡Lobo Invocado! 🐺", this.player.x, this.player.y - 30);
         const aliado = new AlliedEntity(
             this.player.x + (Math.random() * 40 - 20),
             this.player.y + (Math.random() * 40 - 20),
@@ -278,6 +278,10 @@ export class SkillTreeManager {
             this.nivel.capaEntidades
         );
         this.esbirros.push(aliado);
+
+        if (this.nivel.networkManager && this.nivel.networkManager.isConnected) {
+            this.nivel.networkManager.sendSummonAllied('wolf', aliado.x, aliado.y);
+        }
     }
 
     skillExplosionEsbirro() {
@@ -323,7 +327,7 @@ export class SkillTreeManager {
     }
 
     skillInvocarGolem() {
-        this.nivel.uiManager.mostrarMensajeFlotante("¡Golem Titánico!", this.player.x, this.player.y - 30);
+        this.nivel.uiManager.mostrarMensajeFlotante("¡Golem Titánico! 🗿", this.player.x, this.player.y - 30);
         const golem = new AlliedEntity(
             this.player.x + 30,
             this.player.y + 30,
@@ -333,6 +337,10 @@ export class SkillTreeManager {
             this.nivel.capaEntidades
         );
         this.esbirros.push(golem);
+
+        if (this.nivel.networkManager && this.nivel.networkManager.isConnected) {
+            this.nivel.networkManager.sendSummonAllied('golem', golem.x, golem.y);
+        }
     }
 
     // Helper para crear proyectiles desde habilidades
@@ -358,6 +366,10 @@ export class SkillTreeManager {
         b.sprite.y = b.y;
         this.nivel.capaEntidades.addChild(b.sprite);
         this.nivel.projectiles.push(b);
+
+        if (this.nivel.networkManager && this.nivel.networkManager.isConnected) {
+            this.nivel.networkManager.sendShoot(this.player.x, this.player.y, angulo, 'skill', this.clase);
+        }
     }
 
     updateClassSpecifics(dt) {

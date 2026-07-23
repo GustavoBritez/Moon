@@ -43,7 +43,7 @@ export class EnemyManager {
         }
         
         // 3. Posicionamiento e ID determinista coincidente con el servidor
-        enemigo.id = data.id !== undefined ? Number(data.id) : (this.enemies.length + 1);
+        enemigo.id = data.id !== undefined ? (isNaN(Number(data.id)) ? data.id : Number(data.id)) : (this.enemies.length + 1);
         enemigo.x = (data.gridX || 0) * this.tileSize + (this.tileSize / 2);
         enemigo.y = (data.gridY || 0) * this.tileSize + (this.tileSize / 2);
 
@@ -187,7 +187,7 @@ export class EnemyManager {
             const cantidad = data.cantidad || 1;
             for (let k = 0; k < cantidad; k++) {
                 const clonedData = { ...data };
-                clonedData.id = data.id !== undefined ? Number(data.id) : enemyCounter;
+                clonedData.id = data.id !== undefined ? (isNaN(Number(data.id)) ? data.id : Number(data.id)) : enemyCounter;
                 enemyCounter++;
                 const enemigo = this.fabricaDeEnemigos(clonedData);
                 if (cantidad > 1) {

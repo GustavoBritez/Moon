@@ -89,9 +89,20 @@ export class EnemigoBase {
         if (this.isDead) return;
 
         if (this.serverControlled) {
-            // Interpolación suave (lerp) hacia la posición oficial enviada por el servidor C#
-            this.x += (this.targetX - this.x) * Math.min(1, dt * 12);
-            this.y += (this.targetY - this.y) * Math.min(1, dt * 12);
+            // Interpolación suave (lerp) anti-glitches hacia la posición oficial del servidor
+            const dist = Math.hypot(this.targetX - this.x, this.targetY - this.y);
+            if (dist > 160) {
+                this.x = this.targetX;
+                this.y = this.targetY;
+            } else if (dist > 1.2) {
+                const lerpFactor = 1.0 - Math.exp(-22 * dt);
+                this.x += (this.targetX - this.x) * lerpFactor;
+                this.y += (this.targetY - this.y) * lerpFactor;
+            } else {
+                this.x = this.targetX;
+                this.y = this.targetY;
+            }
+
             if (this.sprite) {
                 this.sprite.x = this.x;
                 this.sprite.y = this.y;
@@ -101,12 +112,28 @@ export class EnemigoBase {
 
         this.recalcularTimer -= dt;
 
-        const dx = player.x - this.x;
-        const dy = player.y - this.y;
+        // Buscar el jugador vivo más cercano (local o remoto)
+        let targetPlayer = player;
+        let minDistSq = (player.x - this.x) ** 2 + (player.y - this.y) ** 2;
+
+        if (engine && engine.remotePlayers) {
+            engine.remotePlayers.forEach(rp => {
+                if (!rp.isDead && rp.x && rp.y) {
+                    const dSq = (rp.x - this.x) ** 2 + (rp.y - this.y) ** 2;
+                    if (dSq < minDistSq) {
+                        minDistSq = dSq;
+                        targetPlayer = rp;
+                    }
+                }
+            });
+        }
+
+        const dx = targetPlayer.x - this.x;
+        const dy = targetPlayer.y - this.y;
         const distSq = dx * dx + dy * dy;
 
-        // Activar aggro si el jugador está a menos de 240px (5 bloques)
-        if (distSq < 240 * 240) {
+        // Activar aggro si el jugador está a menos de 280px (~7 bloques)
+        if (distSq < 280 * 280) {
             this.hasAggro = true;
         }
 
@@ -127,8 +154,15 @@ export class EnemigoBase {
             this.recalcularTimer = 0.2;
         }
 
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
+        // Resolver movimiento con física de colisiones contra paredes
+        if (engine && engine.collisionManager) {
+            const pos = engine.collisionManager.resolverMovimiento(this, this.vx, this.vy, dt);
+            this.x = pos.x;
+            this.y = pos.y;
+        } else {
+            this.x += this.vx * dt;
+            this.y += this.vy * dt;
+        }
 
         if (this.sprite) {
             this.sprite.x = this.x;
@@ -136,35 +170,53 @@ export class EnemigoBase {
         }
     }
 
-    morir() {
+    morir(isNetworkSync = false) {
+        if (this.alreadyProcessedDeath) return;
+        this.alreadyProcessedDeath = true;
         this.isDead = true;
         if (this.sprite) this.sprite.visible = false;
 
-        // Cargar Ultimate
+        // BUGFIX EXPLOIT: Si la muerte proviene de una sincronización pasiva de red o recarga de sala, 
+        // se oculta el enemigo PERO NO SE OTORGA XP, ULTIMATE NI RECOMPENSAS al jugador local.
+        if (isNetworkSync) {
+            return;
+        }
+
+        // Cargar Ultimate ÚNICAMENTE al matar enemigo activamente en combate local
         if (this.manager && this.manager.engine && this.manager.engine.skillManager) {
-            this.manager.engine.skillManager.addUltimateCharge(0.2);
+            const ultChargeByEnemy = {
+                'BASE': 15,
+                'BAKU': 20,
+                'EXPLOSIVE_SHOOTER': 25,
+                'SHOOTER_CHILD': 10,
+                'MONSTER_SPAWNER': 25,
+                'NECROMANCER': 30,
+                'ORC_BOSS': 50
+            };
+            const chargeGain = ultChargeByEnemy[this.tipo] || 15;
+            this.manager.engine.skillManager.addUltimateCharge(chargeGain);
         }
 
         // Economía: Recompensa de Lunas (LN) si es un Boss
         if (this.manager && this.manager.engine && this.manager.engine.economyManager) {
             if (this.tipo === 'ORC_BOSS' || this.tipo === 'NECROMANCER') {
-                const lunasGanadas = this.manager.engine.economyManager.minarLunas(10); // 10 LN base por boss
+                const lunasGanadas = this.manager.engine.economyManager.minarLunas(10);
                 if (lunasGanadas > 0) {
-                    this.manager.engine.uiManager.mostrarMensajeFlotante(`+${lunasGanadas.toFixed(2)} LN 🌙`, this.x, this.y - 35);
+                    this.manager.engine.uiManager?.mostrarMensajeFlotante(`+${lunasGanadas.toFixed(2)} LN 🌙`, this.x, this.y - 35);
                 }
             }
         }
 
-        // Otorgar experiencia (XP) al jugador
+        // Otorgar experiencia (XP) al jugador ÚNICAMENTE al eliminar enemigo en combate activo
         if (window.playerState) {
             const xpPorTipo = {
-                'BASE': 0.0001,
-                'BAKU': 0.0002,
-                'EXPLOSIVE_SHOOTER': 0.0003,
-                'SHOOTER_CHILD': 0.0002,
-                'MONSTER_SPAWNER': 0.0002,
-                'NECROMANCER': 0.0003,
-                'ORC_BOSS': 0.0005
+                'BASE': 0.001,
+                'BAKU': 0.002,
+                'EXPLOSIVE_SHOOTER': 0.003,
+                'SHOOTER_CHILD': 0.001,
+                'MONSTER_SPAWNER': 0.003,
+                'NECROMANCER': 0.004,
+                'ORC_BOSS': 0.008
             };
             const xpGanada = xpPorTipo[this.tipo] || 0.001;
             let lvl = window.playerState.nivel || 1;
@@ -173,10 +225,10 @@ export class EnemigoBase {
                 window.playerState.xpActual += xpGanada;
                 let req = Math.pow(2, lvl);
 
-                // Mostrar mensaje flotante de XP
                 const engine = window.orquestador?.currentEngine;
                 if (engine && engine.uiManager) {
-                    engine.uiManager.mostrarMensajeFlotante(`+${xpGanada.toFixed(2)} XP ✨`, this.x, this.y - 15);
+                    engine.uiManager.mostrarMensajeFlotante(`+${xpGanada.toFixed(3)} XP ✨`, this.x, this.y - 15);
+                    engine.uiManager.agregarMensajeConsola(`⚔️ Derrotaste a ${this.tipo}: +${xpGanada.toFixed(3)} XP`, '#2ecc71');
                 }
 
                 // Verificar subida de nivel
@@ -188,6 +240,7 @@ export class EnemigoBase {
 
                     if (engine && engine.uiManager && engine.player) {
                         engine.uiManager.mostrarMensajeFlotante(`✨ ¡SUBIDA DE NIVEL! LVL ${lvl} ✨`, engine.player.x, engine.player.y - 50);
+                        engine.uiManager.agregarMensajeConsola(`🎉 ¡FELICITACIONES! Has alcanzado el Nivel ${lvl}!`, '#f1c40f');
                     }
                 }
 
@@ -567,6 +620,11 @@ export class MonsterSpawner extends EnemigoBase {
     update(dt, player, engine) {
         if (this.isDead) return;
 
+        // Solamente el cliente maestro administra el timer del Spawner para evitar duplicados por red
+        if (engine && typeof engine.isMasterClient === 'function' && !engine.isMasterClient()) {
+            return;
+        }
+
         // No se mueve, así que no llamamos a super.update
         this.spawnTimer -= dt;
         if (this.spawnTimer <= 0) {
@@ -619,7 +677,9 @@ export class MonsterSpawner extends EnemigoBase {
         const scaleDef = 1 + (0.01 * this.spawnCycle);
         const scaleDmg = 1 + (0.03 * this.spawnCycle);
 
+        const spawnerId = this.id || `spawner_${Math.floor(this.x)}_${Math.floor(this.y)}`;
         const dataEnemigo = {
+            id: `skel_${spawnerId}_${Date.now()}_${Math.floor(Math.random()*10000)}`,
             tipo: 'BASE', // Esqueleto base
             gridX: spawnCell.gridX,
             gridY: spawnCell.gridY,
@@ -635,6 +695,11 @@ export class MonsterSpawner extends EnemigoBase {
         if (esqueleto.sprite) {
             esqueleto.sprite.x = esqueleto.x;
             esqueleto.sprite.y = esqueleto.y;
+        }
+
+        // Transmitir invocación de esqueleto a los demás jugadores
+        if (engine.networkManager && engine.networkManager.isConnected) {
+            engine.networkManager.sendSpawnEnemy(engine.subMapaActual || 'principal', dataEnemigo);
         }
 
         // Efecto visual de invocación (destello morado)
@@ -658,7 +723,7 @@ export class MonsterSpawner extends EnemigoBase {
         };
         ticker.add(animarDestello);
 
-        console.log("¡Portal generó un esqueleto escalado!");
+        // console.log("¡Portal generó un esqueleto escalado!");
     }
 }
 

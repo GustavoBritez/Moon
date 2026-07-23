@@ -71,9 +71,12 @@ public class Packet
     [JsonPropertyName("roomId")]
     public string RoomId { get; set; } = string.Empty;
 
-    // Para REGISTER_ENEMIES: lista de configuraciones de enemigos del nivel
+    // Para SPAWN_ENEMY / REGISTER_ENEMIES: configuraciones de enemigos
     [JsonPropertyName("enemyConfigs")]
     public List<EnemyConfig>? EnemyConfigs { get; set; }
+
+    [JsonPropertyName("enemyData")]
+    public EnemyConfig? EnemyConfigData { get; set; }
 
     [JsonPropertyName("remainingEnemies")]
     public int RemainingEnemies { get; set; }
@@ -115,7 +118,7 @@ public class PlayerState
 public class EnemyState
 {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     [JsonPropertyName("tipo")]
     public string Tipo { get; set; } = "BASE";
@@ -144,11 +147,11 @@ public class EnemyState
     public bool HasAggro { get; set; }
 }
 
-// Configuración inicial de un enemigo enviada por el cliente al registrar la sala
+// Configuración inicial o dinámica de un enemigo
 public class EnemyConfig
 {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     [JsonPropertyName("type")]
     public string Type { get; set; } = "BASE";

@@ -535,11 +535,11 @@ export class GameFactory {
                         const conectarBotonMovil = (btnId, tecla) => {
                             const btn = document.getElementById(btnId);
                             if (btn) {
-                                btn.addEventListener('touchstart', (e) => { e.preventDefault(); engine.keys[tecla] = true; });
-                                btn.addEventListener('touchend', (e) => { e.preventDefault(); engine.keys[tecla] = false; });
-                                btn.addEventListener('mousedown', () => engine.keys[tecla] = true);
-                                btn.addEventListener('mouseup', () => engine.keys[tecla] = false);
-                                btn.addEventListener('mouseleave', () => engine.keys[tecla] = false);
+                                btn.addEventListener('touchstart', (e) => { e.preventDefault(); if (engine.inputManager) engine.inputManager.keys[tecla] = true; });
+                                btn.addEventListener('touchend', (e) => { e.preventDefault(); if (engine.inputManager) engine.inputManager.keys[tecla] = false; });
+                                btn.addEventListener('mousedown', () => { if (engine.inputManager) engine.inputManager.keys[tecla] = true; });
+                                btn.addEventListener('mouseup', () => { if (engine.inputManager) engine.inputManager.keys[tecla] = false; });
+                                btn.addEventListener('mouseleave', () => { if (engine.inputManager) engine.inputManager.keys[tecla] = false; });
                             }
                         };
 

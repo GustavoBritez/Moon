@@ -67,7 +67,7 @@ export class TilemapRenderer {
         let decoracion = '';
 
         switch (tipoNumero) {
-            case 2:
+            case 2: // Meta
                 decoracion = `
                     <g opacity="0.95">
                         <circle cx="32" cy="32" r="10" fill="rgba(255,255,255,0.18)"/>
@@ -75,7 +75,7 @@ export class TilemapRenderer {
                         <path d="M32 16 L35 27 L46 32 L35 37 L32 48 L29 37 L18 32 L29 27 Z" fill="rgba(255,255,255,0.45)"/>
                     </g>`;
                 break;
-            case 4:
+            case 4: // Hielo (Grietas)
                 decoracion = `
                     <g opacity="0.58">
                         <path d="M10 44 L20 28 L28 36 L38 18 L48 30 L56 22" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -83,21 +83,68 @@ export class TilemapRenderer {
                         <path d="M44 43 L53 31 L58 39" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
                     </g>`;
                 break;
-            case 9:
+            case 7: // Agua Congelada / Agua (Ondas de Bézier)
                 decoracion = `
-                    <g opacity="0.8">
-                        <circle cx="32" cy="34" r="14" fill="rgba(255,190,110,0.18)"/>
-                        <circle cx="32" cy="34" r="7" fill="rgba(255,255,255,0.15)"/>
-                        <path d="M18 50 C24 41, 27 36, 32 28 C37 36, 40 41, 46 50" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-linecap="round"/>
+                    <g opacity="0.65">
+                        <path d="M12 22 Q22 16, 32 22 T52 22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M10 34 Q20 28, 30 34 T50 34" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.75"/>
+                        <path d="M14 46 Q24 40, 34 46 T54 46" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
                     </g>`;
                 break;
-            case 19:
+            case 8: // Piedra Volcánica (Tierra Agrietada con Magma Naranja)
+                decoracion = `
+                    <g opacity="0.85">
+                        <path d="M12 16 L24 28 L20 44 M24 28 L40 24 L52 40 M40 24 L48 14" fill="none" stroke="#ff4500" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 16 L24 28 L20 44 M24 28 L40 24 L52 40 M40 24 L48 14" fill="none" stroke="#ffaa00" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>`;
+                break;
+            case 9: // Lava (Burbujas Hirvientes)
+                decoracion = `
+                    <g opacity="0.85">
+                        <circle cx="20" cy="24" r="7" fill="#ff7700" opacity="0.7"/>
+                        <circle cx="20" cy="24" r="4" fill="#ffdd00"/>
+                        <circle cx="44" cy="36" r="9" fill="#ff4500" opacity="0.6"/>
+                        <circle cx="44" cy="36" r="5" fill="#ffaa00"/>
+                        <circle cx="28" cy="46" r="5" fill="#ffdd00" opacity="0.8"/>
+                        <circle cx="48" cy="18" r="3" fill="#ffffff" opacity="0.9"/>
+                    </g>`;
+                break;
+            case 12: // Pasto (Hierba Alta)
+                decoracion = `
+                    <g opacity="0.75">
+                        <path d="M14 50 Q12 32, 18 20 Q22 34, 24 50 Z" fill="#20bf6b"/>
+                        <path d="M26 50 Q28 26, 36 14 Q38 30, 38 50 Z" fill="#26de81"/>
+                        <path d="M40 50 Q42 34, 48 22 Q50 36, 50 50 Z" fill="#20bf6b"/>
+                    </g>`;
+                break;
+            case 15: // Veneno (Burbujas Tóxicas)
+            case 18: // Ácido
+                decoracion = `
+                    <g opacity="0.85">
+                        <circle cx="22" cy="30" r="8" fill="none" stroke="#7bed9f" stroke-width="2"/>
+                        <circle cx="22" cy="30" r="4" fill="#2ed573" opacity="0.6"/>
+                        <circle cx="42" cy="22" r="5" fill="none" stroke="#7bed9f" stroke-width="1.5"/>
+                        <circle cx="36" cy="44" r="9" fill="#2ed573" opacity="0.4"/>
+                        <circle cx="36" cy="44" r="4" fill="#7bed9f"/>
+                    </g>`;
+                break;
+            case 16: // Cristales Mágicos (Opacidades Cruzadas)
+                decoracion = `
+                    <g opacity="0.9">
+                        <polygon points="20,48 28,18 34,48" fill="#a55eea" opacity="0.4"/>
+                        <polygon points="30,50 38,12 46,50" fill="#45aaf2" opacity="0.6"/>
+                        <polygon points="12,52 20,28 26,52" fill="#26de81" opacity="0.8"/>
+                        <line x1="38" y1="12" x2="33" y2="40" stroke="#ffffff" stroke-width="1.5" opacity="0.7"/>
+                    </g>`;
+                break;
+            case 19: // Portales (Runas Rúnicas / Círculos Discontinuos)
             case 21:
                 decoracion = `
                     <g opacity="0.95">
-                        <circle cx="32" cy="32" r="18" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="3"/>
-                        <circle cx="32" cy="32" r="11" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
-                        <path d="M21 26 C26 18, 39 18, 43 27 C37 24, 29 24, 21 26 Z" fill="rgba(255,255,255,0.18)"/>
+                        <circle cx="32" cy="32" r="20" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-dasharray="6,4"/>
+                        <circle cx="32" cy="32" r="12" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+                        <circle cx="32" cy="32" r="5" fill="#ffffff" opacity="0.9"/>
+                        <path d="M32 8 L32 56 M8 32 L56 32" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="3,3"/>
                     </g>`;
                 break;
             case 20: // Cofre
@@ -297,6 +344,18 @@ export class TilemapRenderer {
         return TILE_DICT[idTile];
     }
 
+    reconstruirTile(col, fila, nuevoTileId) {
+        if (!this.matriz || fila < 0 || fila >= this.matriz.length || col < 0 || col >= this.matriz[0].length) return;
+        this.matriz[fila][col] = nuevoTileId;
+
+        const index = fila * this.colsPantalla + col;
+        const sprite = this.poolBloques[index];
+        if (sprite) {
+            const visual = TILE_DICT[nuevoTileId] || TILE_DICT[0];
+            sprite.texture = this.obtenerTexturaTile(nuevoTileId, visual);
+        }
+    }
+
     redimensionarPantalla(nuevoAncho, nuevoAlto) {
         for (const sprite of this.poolBloques) {
             sprite.destroy();
@@ -325,19 +384,19 @@ export const TILE_DICT = {
 
     // Bioma: Hielo (4-7)
     4: { name: 'Hielo', color: 0xa4ebf3, solido: false, friccion: 0.2 }, // Resbala
-    5: { name: 'Nieve', color: 0xffffff, solido: false, multiplicadorVel: 0.95 }, // Ralentización del 5%
+    5: { name: 'Nieve', color: 0xffffff, solido: false, multiplicadorVel: 0.60 }, // Ralentización del 40%
     6: { name: 'Pared_Hielo', color: 0x2980b9, solido: true },
     7: { name: 'Agua_Congelada', color: 0x1abc9c, solido: false, daño: 1 }, // Frío
 
     // Bioma: Volcánico (8-11)
     8: { name: 'Piedra_Volcanica', color: 0x34495e, solido: false },
     9: { name: 'Lava', color: 0xe67e22, solido: false, daño: 15 }, // Quema
-    10: { name: 'Ceniza', color: 0x111111, solido: false, multiplicadorVel: 0.99 }, // Ralentización del 1%
+    10: { name: 'Ceniza', color: 0x111111, solido: false, multiplicadorVel: 0.75 }, // Ralentización del 25%
     11: { name: 'Muro_Obsidiana', color: 0x000000, solido: true },
 
     // Bioma: Pantano/Bosque (12-15)
     12: { name: 'Pasto', color: 0x2ecc71, solido: false },
-    13: { name: 'Pantano', color: 0x145a32, solido: false, multiplicadorVel: 0.98 }, // Ralentización del 2%
+    13: { name: 'Pantano', color: 0x145a32, solido: false, multiplicadorVel: 0.50 }, // Ralentización del 50%
     14: { name: 'Tronco', color: 0x8e44ad, solido: true },
     15: { name: 'Veneno', color: 0x00ff00, solido: false, daño: 5 },
 

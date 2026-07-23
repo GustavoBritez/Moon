@@ -72,6 +72,10 @@ export class AppOrchestrator {
                 }
                 this.currentEngine = null;
 
+                // BUGFIX: Resetear el estado para que procesarVictoria no sea bloqueado
+                // en la próxima partida por el estado anterior (VICTORY/DEFEAT)
+                this.gameState = "LOADING";
+
                 // Construimos el nuevo nivel
                 this.renderLevel(levelId);
             }
@@ -109,7 +113,10 @@ export class AppOrchestrator {
     }
 
     procesarVictoria(esVictoria = true) {
+        // BUGFIX: Solo bloquear si estamos en el mismo ciclo de PLAYING.
+        // Si el estado es LOADING, significa que se está cargando un nivel nuevo y no debe bloquearse.
         if (this.gameState === "VICTORY" || this.gameState === "DEFEAT") return;
+        if (this.gameState === "LOADING") return;
         this.gameState = esVictoria ? "VICTORY" : "DEFEAT";
         
         if (esVictoria) {

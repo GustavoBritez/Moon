@@ -55,9 +55,30 @@ export class Nivel_1 {
                 this.seleccionarSlot(index);
             } else if (e.key === 'Escape' || e.key === 'Esc') {
                 this.togglePause();
+            } else if (e.key.toLowerCase() === 'h') {
+                this.hKeyPressed = true;
+            } else if (e.key === 'Shift' || e.key === 'ShiftLeft' || e.key === 'ShiftRight' || e.key.toLowerCase() === 'shift') {
+                this.activarTurbo();
             }
         };
+
+        this.handleKeyUp = (e) => {
+            if (e.key.toLowerCase() === 'h') {
+                this.hKeyPressed = false;
+                this.reviveProgress = 0;
+                this.reviveTarget = null;
+                this.ocultarBarraRevive();
+            }
+        };
+
         window.addEventListener('keydown', this.handleKeyDown);
+        window.addEventListener('keyup', this.handleKeyUp);
+
+        // Variables del sistema de revivir
+        this.hKeyPressed = false;
+        this.reviveProgress = 0;     // segundos acumulados
+        this.reviveTime = 2.0;        // segundos necesarios para revivir
+        this.reviveTarget = null;     // jugador remoto siendo revivido
 
         // 1. Inicializar el motor gráfico PixiJS
         this.app = new PIXI.Application({
@@ -108,6 +129,10 @@ export class Nivel_1 {
         this.receptores = JSON.parse(JSON.stringify(mapaInicial.receptores || []));
         this.secuencias = JSON.parse(JSON.stringify(mapaInicial.secuencias || []));
         this.cofres = []; // Arregla el crasheo al completar Holdout
+
+        // Persistencia de estado de salas (evita reinicios y respawns al cambiar de mapa)
+        this.savedRoomStates = new Map();
+        this.subMapaActual = 'principal';
 
         // 4. Mánagers
         this.inputManager = new InputManager();
@@ -425,21 +450,56 @@ export class Nivel_1 {
             }
         };
 
+        this.networkManager.onShootCallback = (packet) => {
+            if (packet.id === this.networkManager.myId) return;
+            this.spawnRemoteProjectile(packet);
+        };
+
+        this.networkManager.onSummonAlliedCallback = (packet) => {
+            if (packet.id === this.networkManager.myId) return;
+            const aliadoRemoto = new AlliedEntity(
+                packet.x,
+                packet.y,
+                packet.tipo || 'wolf',
+                null,
+                this.enemyManager,
+                this.capaEntidades
+            );
+            if (!this.remoteAllies) this.remoteAllies = [];
+            this.remoteAllies.push(aliadoRemoto);
+            this.uiManager.mostrarMensajeFlotante(`🐾 ¡Lobo aliado de ${packet.id.substring(0, 4)} invocado!`, packet.x, packet.y - 30);
+            this.uiManager.agregarMensajeConsola(`🐾 Jugador ${packet.id.substring(0, 4)} invocó un ${packet.tipo === 'wolf' ? 'Lobo' : 'Gólem'} Aliado`, '#9b59b6');
+        };
+
+        this.networkManager.onSpawnEnemyCallback = (packet) => {
+            if (!packet || !packet.enemyData) return;
+            const targetIdStr = String(packet.enemyData.id);
+            const existe = this.enemyManager && this.enemyManager.enemies ? this.enemyManager.enemies.some(e => String(e.id) === targetIdStr) : false;
+            if (!existe && this.enemyManager) {
+                const esqueleto = this.enemyManager.spawnEnemy(packet.enemyData);
+                esqueleto.hasAggro = true;
+                if (esqueleto.sprite) {
+                    esqueleto.sprite.x = esqueleto.x;
+                    esqueleto.sprite.y = esqueleto.y;
+                }
+            }
+        };
+
         this.networkManager.onEnemyHitCallback = (packet) => {
             if (this.enemyManager && this.enemyManager.enemies) {
-                const targetId = parseInt(packet.targetId);
-                const enemy = this.enemyManager.enemies.find(e => e.id === targetId || String(e.id) === String(packet.targetId));
+                const targetIdStr = String(packet.targetId);
+                const enemy = this.enemyManager.enemies.find(e => String(e.id) === targetIdStr);
                 if (enemy) {
                     if (packet.hp !== undefined && packet.hp >= 0) {
                         enemy.vidaActual = packet.hp;
                     }
                     if ((packet.isDead || enemy.vidaActual <= 0) && !enemy.isDead) {
-                        enemy.morir();
+                        enemy.morir(true);
                     }
                 }
             }
 
-            if (packet.levelCompleted || packet.remainingEnemies === 0) {
+            if (packet.levelCompleted) {
                 this.verificarVictoria();
             }
         };
@@ -489,6 +549,80 @@ export class Nivel_1 {
         };
     }
 
+    isMasterClient() {
+        if (!this.networkManager || !this.networkManager.isConnected) return true;
+        if (!this.remotePlayers || this.remotePlayers.size === 0) return true;
+
+        const myId = String(this.networkManager.myId || '');
+        let isLowest = true;
+        this.remotePlayers.forEach((rp, remoteId) => {
+            if (String(remoteId) < myId) {
+                isLowest = false;
+            }
+        });
+        return isLowest;
+    }
+
+    syncEnemiesFromServer(serverEnemies) {
+        if (!serverEnemies || !Array.isArray(serverEnemies) || !this.enemyManager || !this.enemyManager.enemies) return;
+
+        serverEnemies.forEach(se => {
+            if (!se) return;
+            const targetIdStr = String(se.id !== undefined ? se.id : (se.Id !== undefined ? se.Id : ''));
+            if (!targetIdStr) return;
+
+            let localEnemy = this.enemyManager.enemies.find(e => String(e.id) === targetIdStr);
+            if (!localEnemy && this.enemyManager.pool) {
+                localEnemy = this.enemyManager.pool.find(e => String(e.id) === targetIdStr);
+            }
+
+            if (localEnemy) {
+                const hp = se.hp !== undefined ? se.hp : se.Hp;
+                const isDead = se.isDead !== undefined ? se.isDead : se.IsDead;
+
+                if (hp !== undefined && !isNaN(hp)) localEnemy.vidaActual = hp;
+
+                if ((isDead || localEnemy.vidaActual <= 0) && !localEnemy.isDead) {
+                    localEnemy.morir(true);
+                }
+
+                const sx = se.x !== undefined ? se.x : se.X;
+                const sy = se.y !== undefined ? se.y : se.Y;
+                if (sx !== undefined && sy !== undefined && !isNaN(sx) && !isNaN(sy) && (sx > 0 || sy > 0)) {
+                    localEnemy.targetX = sx;
+                    localEnemy.targetY = sy;
+                    localEnemy.serverControlled = true;
+                }
+            } else if (!se.isDead && !se.IsDead && ((se.hp !== undefined && se.hp > 0) || (se.Hp !== undefined && se.Hp > 0) || se.hp === undefined)) {
+                // Si el servidor reporta un enemigo activo que este cliente no posee, crearlo dinámicamente
+                const sx = se.x !== undefined ? se.x : se.X;
+                const sy = se.y !== undefined ? se.y : se.Y;
+                const hp = se.hp !== undefined ? se.hp : se.Hp;
+                const vel = se.velocidad !== undefined ? se.velocidad : se.Velocidad;
+
+                const nuevoEnemigo = this.enemyManager.spawnEnemy({
+                    id: targetIdStr,
+                    tipo: se.tipo || se.Tipo || 'BASE',
+                    gridX: Math.floor((sx || 0) / this.tileSize),
+                    gridY: Math.floor((sy || 0) / this.tileSize),
+                    vida: hp || 100,
+                    velocidad: vel || 85
+                });
+                if (nuevoEnemigo) {
+                    nuevoEnemigo.hasAggro = true;
+                    if (sx !== undefined && sy !== undefined && !isNaN(sx) && !isNaN(sy)) {
+                        nuevoEnemigo.x = sx;
+                        nuevoEnemigo.y = sy;
+                        if (nuevoEnemigo.sprite) {
+                            nuevoEnemigo.sprite.x = sx;
+                            nuevoEnemigo.sprite.y = sy;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     syncPlayersFromServer(playersList) {
         if (!playersList) return;
         const activeServerIds = new Set(playersList.map(p => p.id));
@@ -525,12 +659,12 @@ export class Nivel_1 {
                 localEnemy.targetY = sEnemy.y;
                 if (sEnemy.hp !== undefined) localEnemy.vidaActual = sEnemy.hp;
                 if (sEnemy.isDead && !localEnemy.isDead) {
-                    localEnemy.morir();
+                    localEnemy.morir(true);
                 }
             }
         });
 
-        if (packet && (packet.levelCompleted || packet.remainingEnemies === 0)) {
+        if (packet && packet.levelCompleted) {
             this.verificarVictoria();
         }
     }
@@ -543,21 +677,31 @@ export class Nivel_1 {
 
     spawnRemotePlayer(data) {
         if (!data || !data.id) return;
-        if (this.networkManager && data.id === this.networkManager.myId) return; // No generar avatar remoto para nuestro propio jugador
+        if (this.networkManager && data.id === this.networkManager.myId) return;
         if (this.remotePlayers.has(data.id)) return;
 
         const hasValidPos = Boolean(data.x && data.x > 10 && data.y && data.y > 10);
         const spawnX = hasValidPos ? data.x : (this.player ? this.player.x : 100);
         const spawnY = hasValidPos ? data.y : (this.player ? this.player.y : 100);
 
-        const container = this.crearVisualHeroeRemoto(data.clase || 'knight');
+        const claseNombre = (data.clase || 'knight').toLowerCase();
+        const container = this.crearVisualHeroeRemoto(claseNombre);
         container.x = spawnX;
         container.y = spawnY;
         container.visible = hasValidPos;
 
-        // Añadir etiqueta de ID
-        const textTag = new PIXI.Text(`[P] ${data.id.substring(0, 4)}`, {
-            fontFamily: 'Arial', fontSize: 11, fill: 0x00ffff, fontWeight: 'bold'
+        const etiquetasClase = {
+            'mage': '🧙‍♂️ Mago',
+            'archer': '🏹 Arquero',
+            'summoner': '🔮 Invocador',
+            'shaman': '🔥 Chamán',
+            'knight': '⚔️ Caballero'
+        };
+
+        // Añadir etiqueta de ID y Clase
+        const textTag = new PIXI.Text(`[P] ${data.id.substring(0, 4)} (${etiquetasClase[claseNombre] || 'Héroe'})`, {
+            fontFamily: 'Arial', fontSize: 11, fill: 0x00ffff, fontWeight: 'bold',
+            dropShadow: true, dropShadowColor: '#000', dropShadowBlur: 3
         });
         textTag.anchor.set(0.5, 2.2);
         container.addChild(textTag);
@@ -570,42 +714,198 @@ export class Nivel_1 {
             targetX: spawnX,
             targetY: spawnY,
             targetAngle: 0,
-            clase: data.clase || 'knight',
+            clase: claseNombre,
             sprite: container
         });
     }
 
     crearVisualHeroeRemoto(clase) {
-        const radioBase = this.tileSize * 0.36;
+        const radioBase = this.tileSize * 0.38;
         const container = new PIXI.Container();
 
+        // Sombra suave bajo los pies
         const sombra = new PIXI.Graphics();
-        sombra.beginFill(0x000000, 0.3);
-        sombra.drawEllipse(0, radioBase * 0.8, radioBase * 0.9, radioBase * 0.3);
+        sombra.beginFill(0x000000, 0.35);
+        sombra.drawEllipse(0, radioBase * 0.85, radioBase * 0.95, radioBase * 0.32);
         sombra.endFill();
         container.addChild(sombra);
 
-        const cuerpo = new PIXI.Graphics();
-        if (clase === 'mage') cuerpo.beginFill(0x805ad5);
-        else if (clase === 'archer') cuerpo.beginFill(0x2f855a);
-        else if (clase === 'shaman') cuerpo.beginFill(0xc05621);
-        else if (clase === 'summoner') cuerpo.beginFill(0x1a202c);
-        else cuerpo.beginFill(0x4a5568);
+        // 1. Cabeza base de Héroe (Blanco Nieve como el personaje local)
+        const cabeza = new PIXI.Graphics();
+        cabeza.beginFill(0xffffff);
+        cabeza.drawCircle(0, 0, radioBase);
+        cabeza.endFill();
 
-        cuerpo.drawCircle(0, 0, radioBase);
-        cuerpo.endFill();
+        // 2. Orejas felinas/héroe
+        const orejas = new PIXI.Graphics();
+        orejas.beginFill(0xffffff);
+        orejas.drawPolygon([-radioBase * 0.8, -radioBase * 0.2, -radioBase * 0.5, -radioBase * 1.1, -radioBase * 0.1, -radioBase * 0.6]);
+        orejas.drawPolygon([radioBase * 0.1, -radioBase * 0.6, radioBase * 0.5, -radioBase * 1.1, radioBase * 0.8, -radioBase * 0.2]);
+        orejas.endFill();
 
-        const brillo = new PIXI.Graphics();
-        brillo.lineStyle(2, 0x00ffff);
-        brillo.drawCircle(0, 0, radioBase + 2);
-        container.addChild(cuerpo, brillo);
+        const interiorOrejas = new PIXI.Graphics();
+        interiorOrejas.beginFill(0xffb6c1);
+        interiorOrejas.drawPolygon([-radioBase * 0.7, -radioBase * 0.3, -radioBase * 0.5, -radioBase * 0.9, -radioBase * 0.2, -radioBase * 0.6]);
+        interiorOrejas.drawPolygon([radioBase * 0.2, -radioBase * 0.6, radioBase * 0.5, -radioBase * 0.9, radioBase * 0.7, -radioBase * 0.3]);
+        interiorOrejas.endFill();
 
+        // 3. Ojos oscuros y mejillas sonrojadas
+        const ojoIzq = new PIXI.Graphics();
+        ojoIzq.beginFill(0x2d3748);
+        ojoIzq.drawEllipse(-radioBase * 0.35, -radioBase * 0.1, 3, 4);
+        ojoIzq.endFill();
+
+        const ojoDer = new PIXI.Graphics();
+        ojoDer.beginFill(0x2d3748);
+        ojoDer.drawEllipse(radioBase * 0.35, -radioBase * 0.1, 3, 4);
+        ojoDer.endFill();
+
+        const mejillaIzq = new PIXI.Graphics();
+        mejillaIzq.beginFill(0xe53e3e, 0.6);
+        mejillaIzq.drawCircle(-radioBase * 0.5, radioBase * 0.15, 3.5);
+        mejillaIzq.endFill();
+
+        const mejillaDer = new PIXI.Graphics();
+        mejillaDer.beginFill(0xe53e3e, 0.6);
+        mejillaDer.drawCircle(radioBase * 0.5, radioBase * 0.15, 3.5);
+        mejillaDer.endFill();
+
+        container.addChild(orejas, interiorOrejas, cabeza, ojoIzq, ojoDer, mejillaIzq, mejillaDer);
+
+        // 4. Accesorios y Sombreros por Clase
+        const accesorio = new PIXI.Graphics();
+        if (clase === 'mage') {
+            // Gorro de Mago Arcano
+            accesorio.beginFill(0x6b46c1);
+            accesorio.drawPolygon([-radioBase * 0.8, -radioBase * 0.4, 0, -radioBase * 1.5, radioBase * 0.8, -radioBase * 0.4]);
+            accesorio.endFill();
+            accesorio.beginFill(0xf6e05e);
+            accesorio.drawCircle(0, -radioBase * 0.9, 3);
+            accesorio.endFill();
+        } else if (clase === 'archer') {
+            // Capucha Verde con Pluma
+            accesorio.beginFill(0x27ae60);
+            accesorio.drawRect(-radioBase * 0.6, -radioBase * 0.9, radioBase * 1.2, radioBase * 0.4, 3);
+            accesorio.endFill();
+            accesorio.beginFill(0xffffff);
+            accesorio.drawRect(radioBase * 0.3, -radioBase * 1.3, 4, 12);
+            accesorio.endFill();
+        } else if (clase === 'summoner') {
+            // Cuernos Místicos del Invocador
+            accesorio.beginFill(0x8b5cf6);
+            accesorio.drawPolygon([-10, -8, -6, -18, -2, -8]);
+            accesorio.drawPolygon([2, -8, 6, -18, 10, -8]);
+            accesorio.endFill();
+        } else if (clase === 'shaman') {
+            // Adorno Máscara Totémica
+            accesorio.beginFill(0xd69e2e);
+            accesorio.drawRect(-8, -12, 16, 6);
+            accesorio.endFill();
+        } else {
+            // CABALLERO: Yelmo / Visor Dorado
+            accesorio.beginFill(0x718096);
+            accesorio.drawRect(-radioBase * 0.7, -radioBase * 0.7, radioBase * 1.4, radioBase * 0.5, 3);
+            accesorio.endFill();
+            accesorio.beginFill(0xd69e2e);
+            accesorio.drawRect(-radioBase * 0.5, -radioBase * 0.5, radioBase * 1.0, radioBase * 0.25);
+            accesorio.endFill();
+        }
+
+        container.addChild(accesorio);
         return container;
     }
 
+    spawnRemoteProjectile(data) {
+        if (!data || data.x === undefined || data.y === undefined) return;
+        const speed = data.speed || 400;
+        const angle = data.angle || 0;
+        const clase = (data.clase || 'archer').toLowerCase();
+        const weapon = data.weapon || 'espada_basica';
+
+        // ⚔️ RANGO IGUALADO: Renderizar Tajo de Espada de 85px en lugar de proyectil
+        if (weapon === 'espada_basica' || (clase === 'knight' && weapon !== 'daga_doble' && weapon !== 'martillo_rebote')) {
+            const radioSlash = 85;
+            const slashGfx = new PIXI.Graphics();
+            slashGfx.lineStyle(3, 0xffffff, 0.9);
+            slashGfx.beginFill(0xf1c40f, 0.45);
+            slashGfx.arc(0, 0, radioSlash, -Math.PI / 4, Math.PI / 4);
+            slashGfx.lineTo(0, 0);
+            slashGfx.endFill();
+            slashGfx.x = data.x;
+            slashGfx.y = data.y;
+            slashGfx.rotation = angle;
+            this.capaEntidades.addChild(slashGfx);
+
+            let alphaTimer = 0.15;
+            const ticker = this.app?.ticker || PIXI.Ticker.shared;
+            const animarSlashRemoto = () => {
+                alphaTimer -= 0.016;
+                slashGfx.alpha = Math.max(0, alphaTimer / 0.15);
+                if (alphaTimer <= 0) {
+                    ticker.remove(animarSlashRemoto);
+                    slashGfx.destroy();
+                }
+            };
+            ticker.add(animarSlashRemoto);
+            return;
+        }
+
+        const gfx = new PIXI.Graphics();
+        if (clase === 'mage') {
+            // Esfera Arcana brillante
+            gfx.beginFill(0x9b59b6, 0.95);
+            gfx.drawCircle(0, 0, 7);
+            gfx.endFill();
+            gfx.lineStyle(2, 0x00ffff, 0.9);
+            gfx.drawCircle(0, 0, 10);
+        } else if (clase === 'archer') {
+            // Flecha con punta afilada y plumas
+            gfx.beginFill(0xd35400);
+            gfx.drawPolygon([-10, -2, 8, 0, -10, 2]);
+            gfx.endFill();
+            gfx.beginFill(0x27ae60);
+            gfx.drawPolygon([6, -4, 12, 0, 6, 4]);
+            gfx.endFill();
+        } else if (weapon === 'daga_doble') {
+            // Daga Doble
+            gfx.lineStyle(1.5, 0xffffff);
+            gfx.beginFill(0x95a5a6);
+            gfx.drawPolygon([-8, -2, 8, 0, -8, 2]);
+            gfx.endFill();
+        } else if (weapon === 'martillo_rebote') {
+            // Martillo Pesado
+            gfx.lineStyle(1.5, 0xd69e2e);
+            gfx.beginFill(0x57606f);
+            gfx.drawRect(-4, -10, 8, 20);
+            gfx.drawRect(-12, -10, 24, 8);
+            gfx.endFill();
+        } else {
+            // Proyectil Mágico Estándar
+            gfx.beginFill(0x3182ce);
+            gfx.drawCircle(0, 0, 6);
+            gfx.endFill();
+        }
+
+        gfx.x = data.x;
+        gfx.y = data.y;
+        gfx.rotation = angle;
+        this.capaEntidades.addChild(gfx);
+
+        const proj = {
+            sprite: gfx,
+            x: data.x,
+            y: data.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            owner: 'REMOTE_PLAYER'
+        };
+
+        this.projectiles.push(proj);
+    }
+
     actualizarJugadoresRemotos(dt) {
-        // Interpolación exponencial fluida independiente de la tasa de refresco
-        const lerpFactor = 1.0 - Math.exp(-18 * dt);
+        // Interpolación exponencial fluida independiente de la tasa de refresco (Anti-Glitches)
+        const lerpFactor = 1.0 - Math.exp(-22 * dt);
         this.remotePlayers.forEach(rp => {
             if (rp.targetX !== undefined && rp.targetY !== undefined) {
                 if (rp.targetX > 10 && rp.targetY > 10 && rp.sprite && !rp.sprite.visible) {
@@ -613,14 +913,28 @@ export class Nivel_1 {
                     rp.x = rp.targetX;
                     rp.y = rp.targetY;
                 }
-                rp.x += (rp.targetX - rp.x) * lerpFactor;
-                rp.y += (rp.targetY - rp.y) * lerpFactor;
+
+                const dist = Math.hypot(rp.targetX - rp.x, rp.targetY - rp.y);
+                if (dist > 160) {
+                    // Teletransporte instantáneo para portales sin arrastre por paredes
+                    rp.x = rp.targetX;
+                    rp.y = rp.targetY;
+                } else if (dist > 1.2) {
+                    rp.x += (rp.targetX - rp.x) * lerpFactor;
+                    rp.y += (rp.targetY - rp.y) * lerpFactor;
+                } else {
+                    rp.x = rp.targetX;
+                    rp.y = rp.targetY;
+                }
 
                 if (rp.sprite) {
                     rp.sprite.x = rp.x;
                     rp.sprite.y = rp.y;
                     if (rp.targetAngle !== undefined) {
-                        rp.sprite.rotation += (rp.targetAngle - rp.sprite.rotation) * lerpFactor;
+                        // Corrección de envolvente angular para evitar giros bruscos de 360 grados
+                        let diffAngle = rp.targetAngle - rp.sprite.rotation;
+                        diffAngle = Math.atan2(Math.sin(diffAngle), Math.cos(diffAngle));
+                        rp.sprite.rotation += diffAngle * lerpFactor;
                     }
                 }
             }
@@ -721,6 +1035,10 @@ export class Nivel_1 {
 
         const angulo = Math.atan2(dy, dx);
         const velocidadBala = 600;
+
+        if (this.networkManager && this.networkManager.isConnected) {
+            this.networkManager.sendShoot(this.player.x, this.player.y, angulo, arma, this.skillManager?.clase || 'knight');
+        }
 
         // Actualizar dinámicamente fireRate del ticker según arma
         if (arma === 'daga_doble') this.fireRate = 0.10;
@@ -1246,10 +1564,136 @@ export class Nivel_1 {
         this.verificarCofres();
         this.verificarVictoria();
         this.verificarDerrota();
+        this.actualizarRevivir(dt);
         this.actualizarCamara();
 
         this.renderizador.actualizarVista(this.camara.x, this.camara.y);
         this.uiManager.actualizar(this.player);
+    }
+
+    // ========================================================
+    // SISTEMA DE REVIVIR CON H
+    // ========================================================
+
+    actualizarRevivir(dt) {
+        if (!this.remotePlayers || this.player.isDead) return;
+
+        const RADIO_REVIVIR = this.tileSize * 2; // 2 tiles de radio
+
+        // Marcar en ROJO los jugadores remotos muertos
+        this.remotePlayers.forEach(rp => {
+            if (rp.isDead && rp.sprite) {
+                // Tinte rojo para indicar que está muerto
+                rp.sprite.children.forEach(child => {
+                    if (!rp._redTintApplied) child.tint = 0xff2222;
+                });
+                rp._redTintApplied = true;
+            } else if (!rp.isDead && rp._redTintApplied && rp.sprite) {
+                // Restaurar color original al revivir
+                rp.sprite.children.forEach(child => {
+                    child.tint = 0xffffff;
+                });
+                rp._redTintApplied = false;
+            }
+        });
+
+        if (!this.hKeyPressed) {
+            if (this.reviveProgress > 0) {
+                this.reviveProgress = 0;
+                this.reviveTarget = null;
+                this.ocultarBarraRevive();
+            }
+            return;
+        }
+
+        // Buscar jugador remoto muerto más cercano dentro del radio
+        let nearestDead = null;
+        let nearestDist = Infinity;
+
+        this.remotePlayers.forEach(rp => {
+            if (rp.isDead) {
+                const dx = rp.x - this.player.x;
+                const dy = rp.y - this.player.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < RADIO_REVIVIR && dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestDead = rp;
+                }
+            }
+        });
+
+        if (!nearestDead) {
+            // No hay nadie muerto cerca — resetear progreso
+            if (this.reviveProgress > 0) {
+                this.reviveProgress = 0;
+                this.reviveTarget = null;
+                this.ocultarBarraRevive();
+            }
+            return;
+        }
+
+        // Si cambió el objetivo, reiniciar progreso
+        if (this.reviveTarget && this.reviveTarget !== nearestDead) {
+            this.reviveProgress = 0;
+        }
+        this.reviveTarget = nearestDead;
+        this.reviveProgress += dt;
+
+        // Mostrar barra de progreso
+        const pct = Math.min(1, this.reviveProgress / this.reviveTime);
+        this.mostrarBarraRevive(pct, nearestDead);
+
+        if (this.reviveProgress >= this.reviveTime) {
+            // ¡REVIVIR!
+            nearestDead.isDead = false;
+            nearestDead.vidaActual = 50; // Revive con 50% de vida
+            this.reviveProgress = 0;
+            this.reviveTarget = null;
+            this.ocultarBarraRevive();
+            this.uiManager.mostrarMensajeFlotante("❤️ ¡REVIVIDO!", nearestDead.x, nearestDead.y - 40);
+            console.log(`❤️ Reviviste al jugador ${nearestDead.id}`);
+        }
+    }
+
+    mostrarBarraRevive(pct, rp) {
+        let barEl = document.getElementById('reviveProgressBar');
+        if (!barEl) {
+            const cont = document.createElement('div');
+            cont.id = 'reviveProgressBar';
+            cont.style = `
+                position: fixed;
+                bottom: 110px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(20, 18, 31, 0.88);
+                border: 2px solid #e53e3e;
+                border-radius: 12px;
+                padding: 10px 20px;
+                color: white;
+                font-family: 'Outfit', sans-serif;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(229, 62, 62, 0.5);
+                z-index: 1000;
+                pointer-events: none;
+                min-width: 220px;
+            `;
+            cont.innerHTML = `
+                <div style="font-size:0.95rem; margin-bottom:6px; color:#fc8181;">❤️ Reviviendo compañero... <strong>[H]</strong></div>
+                <div style="background:#3b1a1a; border-radius:8px; overflow:hidden; height:14px; width:100%;">
+                    <div id="reviveProgressFill" style="height:100%; background:#e53e3e; width:0%; transition:width 0.1s; border-radius:8px;"></div>
+                </div>
+            `;
+            document.body.appendChild(cont);
+            barEl = cont;
+        }
+        barEl.style.display = 'block';
+        const fill = document.getElementById('reviveProgressFill');
+        if (fill) fill.style.width = `${Math.round(pct * 100)}%`;
+    }
+
+    ocultarBarraRevive() {
+        const barEl = document.getElementById('reviveProgressBar');
+        if (barEl) barEl.style.display = 'none';
     }
 
     actualizarProyectiles(dt) {
@@ -1377,20 +1821,36 @@ export class Nivel_1 {
     }
 
     verificarVictoria() {
-        // Si no quedan enemigos y el juego no ha terminado...
-        if (this.enemyManager.enemies.length === 0 && !this.gameOver) {
-            this.gameOver = true;
+        if (this.player && this.player.isDead) return;
+        if (this.gameOver) return;
 
-            console.log("🏆 ¡Todos los enemigos eliminados! Nivel completado.");
+        // 1. Si la sala actual todavía tiene enemigos vivos, NO hay victoria
+        const enemigosVivosEnSala = (this.enemyManager?.enemies || []).filter(e => !e.isDead).length;
+        if (enemigosVivosEnSala > 0) return;
 
-            // Verificamos si lo que nos pasó el GameFactory es una función (Callback)
-            if (typeof this.eventBus === 'function') {
-                this.eventBus('LEVEL_VICTORY'); // La ejecutamos directamente
+        // 2. Si es un paquete de mapas con sub-mapas, verificar que NO queden enemigos vivos en NINGÚN sub-mapa
+        if (this.pack) {
+            for (const [nombreSala, configSubMapa] of Object.entries(this.pack)) {
+                if (this.savedRoomStates && this.savedRoomStates.has(nombreSala)) {
+                    const estadoGuardado = this.savedRoomStates.get(nombreSala);
+                    const vivosEnEstado = (estadoGuardado.enemigos || []).filter(e => !e.isDead && (e.vida === undefined || e.vida > 0)).length;
+                    if (vivosEnEstado > 0) return; // Quedan enemigos en esta sala
+                } else if (nombreSala !== this.subMapaActual) {
+                    // Si la sala nunca fue visitada y su config original tiene enemigos, aún no hay victoria
+                    const enemigosIniciales = configSubMapa.enemigos || [];
+                    if (enemigosIniciales.length > 0) return;
+                }
             }
-            // Por si en el futuro decides cambiar la arquitectura a un EventBus real
-            else if (this.eventBus && typeof this.eventBus.emit === 'function') {
-                this.eventBus.emit('LEVEL_VICTORY');
-            }
+        }
+
+        // 3. ¡Todos los enemigos de todas las salas han sido totalmente eliminados!
+        this.gameOver = true;
+        console.log("🏆 ¡Todos los enemigos de todas las salas eliminados! Nivel completado.");
+
+        if (typeof this.eventBus === 'function') {
+            this.eventBus('LEVEL_VICTORY');
+        } else if (this.eventBus && typeof this.eventBus.emit === 'function') {
+            this.eventBus.emit('LEVEL_VICTORY');
         }
     }
 
@@ -1430,6 +1890,9 @@ export class Nivel_1 {
     verificarPortales() {
         if (!this.portales || this.portales.length === 0) return;
 
+        // BUGFIX: Cooldown de 1.5s para evitar bucles infinitos de teletransporte (ping-pong)
+        if (this.portalCooldownTimer && Date.now() - this.portalCooldownTimer < 1500) return;
+
         // Obtener la posición de la celda del héroe
         const col = Math.floor(this.player.x / this.tileSize);
         const fila = Math.floor(this.player.y / this.tileSize);
@@ -1437,21 +1900,14 @@ export class Nivel_1 {
         // Buscar si hay un portal en la coordenada actual
         const portal = this.portales.find(p => p.gridX === col && p.gridY === fila);
         if (portal) {
-            // VERIFICACIÓN DUNGEON RAMPAGE: ¿Quedan enemigos vivos en la sala?
-            if (this.enemyManager && this.enemyManager.enemies.length > 0) {
-                if (!this.portalAvisoTimer || Date.now() - this.portalAvisoTimer > 1500) {
-                    this.uiManager.mostrarMensajeFlotante("¡Puertas Selladas! 🚫 Elimina los monstruos", this.player.x, this.player.y - 40);
-                    this.portalAvisoTimer = Date.now();
-                }
-                return; // Bloquea el teletransporte
-            }
-
-            // Verificar que tenga un destino y que estemos en un nivel cargado como pack
+            // BUGFIX 4: Portales siempre transportan independientemente de los enemigos vivos
             if (portal.destinoMapa && portal.destinoPortal && this.pack) {
                 const subMapaDestino = this.pack[portal.destinoMapa];
                 if (subMapaDestino) {
                     const portalDestino = (subMapaDestino.portales || []).find(p => p.etiqueta === portal.destinoPortal);
                     if (portalDestino) {
+                        this.portalCooldownTimer = Date.now();
+                        this.uiManager?.agregarMensajeConsola(`🚪 Cruzaste el portal hacia '${portal.destinoMapa}'`, '#9b59b6');
                         this.cargarSubMapa(portal.destinoMapa, portalDestino.gridX, portalDestino.gridY);
                     } else {
                         console.warn(`No se encontró el portal de destino '${portal.destinoPortal}' en el mapa '${portal.destinoMapa}'.`);
@@ -1463,32 +1919,88 @@ export class Nivel_1 {
         }
     }
 
+    guardarEstadoSalaActual() {
+        if (!this.subMapaActual) return;
+        if (!this.savedRoomStates) this.savedRoomStates = new Map();
+
+        const enemigosVivos = [];
+        if (this.enemyManager && this.enemyManager.enemies) {
+            this.enemyManager.enemies.forEach(en => {
+                if (!en.isDead) {
+                    enemigosVivos.push({
+                        id: en.id,
+                        type: en.tipo || en.type,
+                        tipo: en.tipo || en.type,
+                        x: en.x,
+                        y: en.y,
+                        gridX: Math.floor(en.x / this.tileSize),
+                        gridY: Math.floor(en.y / this.tileSize),
+                        vida: en.vidaActual,
+                        vidaMaxima: en.vidaMaxima,
+                        velocidad: en.velocidad,
+                        defensa: en.defensaBase,
+                        danioBase: en.danioBase,
+                        tipoDanio: en.tipoDanio,
+                        hasAggro: en.hasAggro
+                    });
+                }
+            });
+        }
+
+        this.savedRoomStates.set(this.subMapaActual, {
+            matriz: this.mapaMatriz.map(f => f.slice()),
+            enemigos: enemigosVivos,
+            cofres: JSON.parse(JSON.stringify(this.cofres || [])),
+            cajas: JSON.parse(JSON.stringify(this.cajas || [])),
+            mecanismos: JSON.parse(JSON.stringify(this.mecanismos || [])),
+            holdouts: JSON.parse(JSON.stringify(this.holdouts || [])),
+            espejos: JSON.parse(JSON.stringify(this.espejos || [])),
+            lasers: JSON.parse(JSON.stringify(this.lasers || []))
+        });
+    }
+
     cargarSubMapa(nombreMapa, destGridX, destGridY) {
         console.log(`Teletransportando a: Mapa [${nombreMapa}], Posición [${destGridX}, ${destGridY}]`);
-        const subMapa = this.pack[nombreMapa];
-        if (!subMapa) return;
+        const subMapaConfig = this.pack[nombreMapa];
+        if (!subMapaConfig) return;
+
+        // 1. Guardar estado exacto de la sala actual de la que salimos
+        this.guardarEstadoSalaActual();
 
         this.subMapaActual = nombreMapa;
-        this.mapaMatriz = subMapa.matriz.map((fila) => fila.slice());
-        this.portales = subMapa.portales || [];
-        this.cofres = subMapa.cofres || [];
+        const estadoGuardado = this.savedRoomStates?.get(nombreMapa);
 
-        // Cargar arrays de puzzles del sub-mapa
-        this.cajas = JSON.parse(JSON.stringify(subMapa.cajas || []));
-        this.mecanismos = JSON.parse(JSON.stringify(subMapa.mecanismos || []));
-        this.holdouts = JSON.parse(JSON.stringify(subMapa.holdouts || []));
-        this.lasers = JSON.parse(JSON.stringify(subMapa.lasers || []));
-        this.espejos = JSON.parse(JSON.stringify(subMapa.espejos || []));
-        this.receptores = JSON.parse(JSON.stringify(subMapa.receptores || []));
-        this.secuencias = JSON.parse(JSON.stringify(subMapa.secuencias || []));
+        // Si la sala ya fue visitada previamente, restaurar su estado (mantiene enemigos muertos, HP de heridos y mapa modificado)
+        if (estadoGuardado) {
+            this.mapaMatriz = estadoGuardado.matriz.map(f => f.slice());
+            this.cofres = estadoGuardado.cofres;
+            this.cajas = estadoGuardado.cajas;
+            this.mecanismos = estadoGuardado.mecanismos;
+            this.holdouts = estadoGuardado.holdouts;
+            this.espejos = estadoGuardado.espejos;
+            this.lasers = estadoGuardado.lasers;
+            this.portales = subMapaConfig.portales || [];
+        } else {
+            this.mapaMatriz = subMapaConfig.matriz.map((fila) => fila.slice());
+            this.portales = subMapaConfig.portales || [];
+            this.cofres = subMapaConfig.cofres || [];
+            this.cajas = JSON.parse(JSON.stringify(subMapaConfig.cajas || []));
+            this.mecanismos = JSON.parse(JSON.stringify(subMapaConfig.mecanismos || []));
+            this.holdouts = JSON.parse(JSON.stringify(subMapaConfig.holdouts || []));
+            this.lasers = JSON.parse(JSON.stringify(subMapaConfig.lasers || []));
+            this.espejos = JSON.parse(JSON.stringify(subMapaConfig.espejos || []));
+            this.receptores = JSON.parse(JSON.stringify(subMapaConfig.receptores || []));
+            this.secuencias = JSON.parse(JSON.stringify(subMapaConfig.secuencias || []));
+        }
 
         // Inicializar vistas de puzzles
         this.inicializarPuzzles();
 
-        // 1. Limpiar enemigos actuales
-        this.enemyManager.destroy();
+        // 2. Limpiar proyectiles y sprites de enemigos actuales (sin llamar a morir)
+        if (this.enemyManager) {
+            this.enemyManager.destroy();
+        }
 
-        // 2. Limpiar proyectiles actuales
         for (const proj of this.projectiles) {
             if (proj.sprite) {
                 proj.sprite.destroy();
@@ -1496,32 +2008,56 @@ export class Nivel_1 {
         }
         this.projectiles = [];
 
-        // 3. Actualizar la matriz física de colisiones
+        // 3. Actualizar colisiones y renderizador de baldosas
         this.collisionManager.mapaMatriz = this.mapaMatriz;
-
-        // 4. Actualizar la matriz del renderizador y forzar la reconstrucción visual del pool de baldosas
         this.renderizador.matriz = this.mapaMatriz;
         this.renderizador.inicializarPool(window.innerWidth, window.innerHeight);
 
-        // 5. Mover a Kitty a la celda del portal destino y centrar en ella
-        this.player.x = destGridX * this.tileSize + (this.tileSize / 2);
-        this.player.y = destGridY * this.tileSize + (this.tileSize / 2);
+        // 4. Mover a Kitty a la celda libre adyacente del portal destino
+        let spawnX = destGridX;
+        let spawnY = destGridY;
+        const offsets = [{ x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 }];
+        for (const off of offsets) {
+            const tx = destGridX + off.x;
+            const ty = destGridY + off.y;
+            if (this.mapaMatriz[ty] && this.mapaMatriz[ty][tx] === 0) {
+                spawnX = tx;
+                spawnY = ty;
+                break;
+            }
+        }
+
+        this.player.x = spawnX * this.tileSize + (this.tileSize / 2);
+        this.player.y = spawnY * this.tileSize + (this.tileSize / 2);
         this.player.actualizarPosicionVisual();
 
-        // Centrar cámara instantáneamente en la nueva posición
         this.camara.x = this.player.x;
         this.camara.y = this.player.y;
 
-        // 6. Cargar y spawnear los nuevos enemigos del sub-mapa
-        this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, subMapa.enemigos);
+        // 5. Cargar enemigos: Si la sala ya fue visitada, restaurar ÚNICAMENTE los enemigos vivos guardados con su HP exacto
+        const listaEnemigosACargar = estadoGuardado ? estadoGuardado.enemigos : subMapaConfig.enemigos;
+        this.enemyManager = new EnemyManager(this.capaEntidades, this.tileSize, listaEnemigosACargar);
         this.enemyManager.engine = this;
-        this.enemyManager.inicializar();
 
-        // 7. Notificar cambio de sala y registrar enemigos del sub-mapa en servidor C#
+        if (estadoGuardado) {
+            listaEnemigosACargar.forEach(data => {
+                const en = this.enemyManager.fabricaDeEnemigos(data);
+                en.x = data.x;
+                en.y = data.y;
+                en.vidaActual = data.vida;
+                en.hasAggro = data.hasAggro || false;
+                en.actualizarPosicionVisual();
+                this.enemyManager.enemies.push(en);
+            });
+        } else {
+            this.enemyManager.inicializar();
+        }
+
+        // 6. Notificar cambio de sala al servidor C# autoritario
         if (this.networkManager && this.networkManager.isConnected) {
             this.networkManager.sendChangeRoom(nombreMapa);
-            if (subMapa.enemigos && subMapa.enemigos.length > 0) {
-                this.networkManager.sendRegisterEnemies(nombreMapa, subMapa.enemigos);
+            if (subMapaConfig.enemigos && subMapaConfig.enemigos.length > 0) {
+                this.networkManager.sendRegisterEnemies(nombreMapa, subMapaConfig.enemigos);
             }
         }
 
@@ -1649,6 +2185,8 @@ export class Nivel_1 {
 
             if (mensajes.length > 0) {
                 this.uiManager.mostrarMensajeFlotante(`🎁 ${mensajes.join(' ')}`, this.player.x, this.player.y - 30);
+                this.uiManager.agregarMensajeConsola(`🎁 Cofre Abierto: ${mensajes.join(' ')}`, '#f1c40f');
+                this.actualizarHUDHtml();
             } else {
                 this.uiManager.mostrarMensajeFlotante("¡Cofre vacío!", this.player.x, this.player.y - 30);
             }
@@ -1964,59 +2502,83 @@ export class Nivel_1 {
             }
 
             if (ho.activo) {
-                ho.tiempoRestante -= dt;
-                ho.text.text = `🛡️ ${Math.max(0, Math.ceil(ho.tiempoRestante))}s`;
-                
-                const pulseScale = 1.0 + Math.sin(Date.now() / 150) * 0.05;
-                ho.circle.scale.set(pulseScale);
-                ho.circle.pivot.set(cx, cy);
-                ho.circle.position.set(cx, cy);
-
-                if (!ho.lastSpawnTime) ho.lastSpawnTime = Date.now();
-                if (Date.now() - ho.lastSpawnTime > 2500) {
-                    ho.lastSpawnTime = Date.now();
-                    const angle = Math.random() * Math.PI * 2;
-                    const spawnDist = radius * 0.8;
-                    const enemyX = cx + Math.cos(angle) * spawnDist;
-                    const enemyY = cy + Math.sin(angle) * spawnDist;
-                    const eGridX = Math.floor(enemyX / this.tileSize);
-                    const eGridY = Math.floor(enemyY / this.tileSize);
-                    
-                    if (this.mapaMatriz[eGridY]?.[eGridX] === 0) {
-                        const esq = this.enemyManager.spawnEnemy('BASE', eGridX, eGridY);
-                        if (esq) {
-                            esq.vidaMax = Math.round(esq.vidaMax * 1.3);
-                            esq.vida = esq.vidaMax;
-                            esq.danioBase = Math.round(esq.danioBase * 1.25);
-                        }
+                if (!jugadorAdentro) {
+                    // BUGFIX 8: Penalización por abandonar la zona de defensa activa
+                    if (ho.data.penalidad === 'LOSE_LEVEL') {
+                        ho.activo = false;
+                        this.player.isDead = true;
+                        this.uiManager.mostrarMensajeFlotante("💀 ¡SALISTE DE LA ZONA! Has muerto.", cx, cy - 20);
+                        this.uiManager.agregarMensajeConsola("💀 ¡Penalización Activada! El jugador abandonó la zona de defensa y ha muerto.", "#ff4757");
+                    } else {
+                        // RESTART_MINIGAME
+                        ho.tiempoRestante = ho.data.tiempo;
+                        this.uiManager.mostrarMensajeFlotante("⚠️ ¡SALISTE DE LA ZONA! Reiniciado...", cx, cy - 20);
+                        this.uiManager.agregarMensajeConsola("⚠️ ¡Saliste de la zona de defensa! Tiempo de supervivencia reiniciado.", "#e67e22");
                     }
-                }
+                } else {
+                    ho.tiempoRestante -= dt;
+                    ho.text.text = `🛡️ ${Math.max(0, Math.ceil(ho.tiempoRestante))}s`;
+                    
+                    const pulseScale = 1.0 + Math.sin(Date.now() / 150) * 0.05;
+                    ho.circle.scale.set(pulseScale);
+                    ho.circle.pivot.set(cx, cy);
+                    ho.circle.position.set(cx, cy);
 
-                if (ho.tiempoRestante <= 0) {
-                    ho.activo = false;
-                    ho.completado = true;
-                    ho.text.text = '✅';
-                    ho.circle.tint = 0x44bd32;
-                    this.uiManager.mostrarMensajeFlotante("🎉 ¡ZONA DEFENDIDA! Puertas abiertas", cx, cy - 20);
-
-                    for (let r = 0; r < this.mapaMatriz.length; r++) {
-                        for (let c = 0; c < this.mapaMatriz[0].length; c++) {
-                            if (this.mapaMatriz[r][c] === 24) {
-                                this.mapaMatriz[r][c] = 0;
-                                this.renderizador.reconstruirTile(c, r, 0);
+                    if (!ho.lastSpawnTime) ho.lastSpawnTime = Date.now();
+                    if (Date.now() - ho.lastSpawnTime > 2500) {
+                        ho.lastSpawnTime = Date.now();
+                        const angle = Math.random() * Math.PI * 2;
+                        const spawnDist = radius * 0.8;
+                        const enemyX = cx + Math.cos(angle) * spawnDist;
+                        const enemyY = cy + Math.sin(angle) * spawnDist;
+                        const eGridX = Math.floor(enemyX / this.tileSize);
+                        const eGridY = Math.floor(enemyY / this.tileSize);
+                        
+                        if (this.mapaMatriz[eGridY]?.[eGridX] === 0) {
+                            const esq = this.enemyManager.spawnEnemy({ type: 'BASE', gridX: eGridX, gridY: eGridY });
+                            if (esq) {
+                                esq.vidaMaxima = Math.round(esq.vidaMaxima * 1.3);
+                                esq.vidaActual = esq.vidaMaxima;
+                                esq.danioBase = Math.round(esq.danioBase * 1.25);
                             }
                         }
                     }
 
-                    const hGridX = ho.data.gridX;
-                    const hGridY = ho.data.gridY;
-                    this.mapaMatriz[hGridY][hGridX] = 20;
-                    this.renderizador.reconstruirTile(hGridX, hGridY, 20);
-                    this.cofres.push({
-                        gridX: hGridX,
-                        gridY: hGridY,
-                        items: { monedas: 50, gemas: 10, pocion_vida: 2, escudo_hierro: 1 }
-                    });
+                    if (ho.tiempoRestante <= 0) {
+                        ho.activo = false;
+                        ho.completado = true;
+                        ho.text.text = '✅';
+                        ho.circle.tint = 0x44bd32;
+
+                        // BUGFIX 5: Recompensas automáticas y notificaciones al completar la supervivencia
+                        window.playerState.monedas = (window.playerState.monedas || 0) + 50;
+                        window.playerState.gemas = (window.playerState.gemas || 0) + 10;
+                        window.playerState.inventario.pocion_vida = (window.playerState.inventario.pocion_vida || 0) + 2;
+                        window.playerState.inventario.escudo_hierro = (window.playerState.inventario.escudo_hierro || 0) + 1;
+
+                        this.uiManager.mostrarMensajeFlotante("🎉 ¡ZONA DEFENDIDA! +50🪙 +10💎 +2🧪 +1🛡️", cx, cy - 20);
+                        this.uiManager.agregarMensajeConsola("🎉 ¡SUPERVIVENCIA COMPLETADA! Recompensas recibidas: +50 🪙, +10 💎, +2 🧪, +1 🛡️", "#2ecc71");
+                        this.actualizarHUDHtml();
+
+                        for (let r = 0; r < this.mapaMatriz.length; r++) {
+                            for (let c = 0; c < this.mapaMatriz[0].length; c++) {
+                                if (this.mapaMatriz[r][c] === 24) {
+                                    this.mapaMatriz[r][c] = 0;
+                                    this.renderizador.reconstruirTile(c, r, 0);
+                                }
+                            }
+                        }
+
+                        const hGridX = ho.data.gridX;
+                        const hGridY = ho.data.gridY;
+                        this.mapaMatriz[hGridY][hGridX] = 20;
+                        this.renderizador.reconstruirTile(hGridX, hGridY, 20);
+                        this.cofres.push({
+                            gridX: hGridX,
+                            gridY: hGridY,
+                            items: { monedas: 50, gemas: 10, pocion_vida: 2, escudo_hierro: 1 }
+                        });
+                    }
                 }
             }
         }
@@ -2084,7 +2646,12 @@ export class Nivel_1 {
             } else {
                 const pisaOtroPaso = seqInfo.data.pasos.some((p, i) => i !== seqInfo.inputIndex && pGridX === p.x && pGridY === p.y);
                 if (pisaOtroPaso) {
-                    this.uiManager.mostrarMensajeFlotante("⚡ ¡Secuencia Incorrecta! Reiniciando...", this.player.x, this.player.y - 30);
+                    // BUGFIX: Cooldown para no spamear el mensaje de error del Simon Dice
+                    const ahora = Date.now();
+                    if (!seqInfo.ultimoErrorTime || ahora - seqInfo.ultimoErrorTime > 2000) {
+                        seqInfo.ultimoErrorTime = ahora;
+                        this.uiManager.mostrarMensajeFlotante("⚡ ¡Secuencia Incorrecta! Reiniciando...", this.player.x, this.player.y - 30);
+                    }
                     
                     this.player.isPoisoned = true;
                     this.player.poisonTimer = 3.0;
@@ -2226,6 +2793,9 @@ export class Nivel_1 {
         if (this.handleKeyDown) {
             window.removeEventListener('keydown', this.handleKeyDown);
         }
+        if (this.handleKeyUp) {
+            window.removeEventListener('keyup', this.handleKeyUp);
+        }
 
         if (this.hudElement) {
             this.hudElement.remove();
@@ -2235,6 +2805,11 @@ export class Nivel_1 {
         const freezeEl = document.getElementById('freezeMiniGame');
         if (freezeEl) {
             freezeEl.remove();
+        }
+
+        const reviveBarEl = document.getElementById('reviveProgressBar');
+        if (reviveBarEl) {
+            reviveBarEl.remove();
         }
 
         if (this.laserGraphics) {

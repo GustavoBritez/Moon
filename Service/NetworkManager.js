@@ -101,6 +101,12 @@ export class NetworkManager {
             case "ROOM_STATE":
                 if (this.onRoomStateCallback) this.onRoomStateCallback(packet);
                 break;
+            case "SUMMON_ALLIED":
+                if (this.onSummonAlliedCallback) this.onSummonAlliedCallback(packet);
+                break;
+            case "SPAWN_ENEMY":
+                if (this.onSpawnEnemyCallback) this.onSpawnEnemyCallback(packet);
+                break;
         }
     }
 
@@ -116,14 +122,34 @@ export class NetworkManager {
         });
     }
 
-    sendShoot(x, y, angle, weapon) {
+    sendShoot(x, y, angle, weapon, clase) {
         if (!this.isConnected) return;
         this.send({
             type: "SHOOT",
             x: x,
             y: y,
             angle: angle,
-            weapon: weapon
+            weapon: weapon,
+            clase: clase
+        });
+    }
+
+    sendSummonAllied(tipo, x, y) {
+        if (!this.isConnected) return;
+        this.send({
+            type: "SUMMON_ALLIED",
+            tipo: tipo,
+            x: x,
+            y: y
+        });
+    }
+
+    sendSpawnEnemy(roomId, enemyData) {
+        if (!this.isConnected) return;
+        this.send({
+            type: "SPAWN_ENEMY",
+            roomId: roomId,
+            enemyData: enemyData
         });
     }
 

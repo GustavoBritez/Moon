@@ -42,7 +42,7 @@ public class ClientConnection
 public class DungeonRoom
 {
     public string RoomId { get; }
-    public ConcurrentDictionary<int, EnemyState> Enemies { get; } = new();
+    public ConcurrentDictionary<string, EnemyState> Enemies { get; } = new();
     public ConcurrentDictionary<int, BoxState> Boxes { get; } = new();
     public bool IsInitialized { get; set; }
 
@@ -63,10 +63,11 @@ public class DungeonRoom
         for (int i = 0; i < configs.Count; i++)
         {
             var cfg = configs[i];
+            string idStr = !string.IsNullOrEmpty(cfg.Id) ? cfg.Id : (i + 1).ToString();
             var enemy = new EnemyState
             {
-                Id = cfg.Id > 0 ? cfg.Id : i + 1,
-                Tipo = cfg.Tipo ?? cfg.Type ?? "BASE",
+                Id = idStr,
+                Tipo = !string.IsNullOrEmpty(cfg.Tipo) ? cfg.Tipo : (!string.IsNullOrEmpty(cfg.Type) ? cfg.Type : "BASE"),
                 X = cfg.GridX * tileSize + (tileSize / 2f),
                 Y = cfg.GridY * tileSize + (tileSize / 2f),
                 Hp = cfg.Vida > 0 ? cfg.Vida : 100,
@@ -349,42 +350,64 @@ public class GameRoom
                 await BroadcastInRoomExceptAsync(conn.State.RoomId, conn.Id, boxNotice);
                 break;
 
-            case "ENEMY_HIT":
-                if (int.TryParse(packet.TargetId, out int enemyId))
+            case "SPAWN_ENEMY":
+                packet.Id = conn.Id;
+                var spawnConfig = packet.EnemyConfigData ?? (packet.EnemyConfigs != null && packet.EnemyConfigs.Count > 0 ? packet.EnemyConfigs[0] : null);
+                if (spawnConfig != null)
                 {
-                    var hitRoom = GetOrCreateRoom(conn.State.RoomId);
-                    if (hitRoom.Enemies.TryGetValue(enemyId, out var enemy))
+                    var spawnRoom = GetOrCreateRoom(conn.State.RoomId);
+                    spawnRoom.IsInitialized = true;
+                    string idStr = !string.IsNullOrEmpty(spawnConfig.Id) ? spawnConfig.Id : Guid.NewGuid().ToString("N")[..8];
+                    var spawnedEnemy = new EnemyState
                     {
-                        // Aplicar daño validado por el servidor
-                        if (packet.Damage > 0)
-                        {
-                            enemy.Hp = MathF.Max(0, enemy.Hp - packet.Damage);
-                        }
-
-                        if (enemy.Hp <= 0)
-                        {
-                            enemy.Hp = 0;
-                            enemy.IsDead = true;
-                        }
-
-                        int remaining = hitRoom.Enemies.Values.Count(e => !e.IsDead);
-                        bool completed = hitRoom.IsInitialized && hitRoom.Enemies.Count > 0 && remaining == 0;
-
-                        // Broadcast a TODOS los jugadores de esta sala (incluyendo al remitente)
-                        var hitNotice = new Packet
-                        {
-                            Type = "ENEMY_HIT_SYNC",
-                            RoomId = conn.State.RoomId,
-                            TargetId = enemyId.ToString(),
-                            Damage = packet.Damage,
-                            Hp = enemy.Hp,
-                            IsDead = enemy.IsDead,
-                            RemainingEnemies = remaining,
-                            LevelCompleted = completed
-                        };
-                        await BroadcastInRoomAsync(conn.State.RoomId, hitNotice);
-                    }
+                        Id = idStr,
+                        Tipo = !string.IsNullOrEmpty(spawnConfig.Tipo) ? spawnConfig.Tipo : (!string.IsNullOrEmpty(spawnConfig.Type) ? spawnConfig.Type : "BASE"),
+                        X = spawnConfig.GridX * _tileSize + (_tileSize / 2f),
+                        Y = spawnConfig.GridY * _tileSize + (_tileSize / 2f),
+                        Hp = spawnConfig.Vida > 0 ? spawnConfig.Vida : 70,
+                        MaxHp = spawnConfig.Vida > 0 ? spawnConfig.Vida : 70,
+                        Velocidad = spawnConfig.Velocidad > 0 ? spawnConfig.Velocidad : 85,
+                        IsDead = false
+                    };
+                    spawnRoom.Enemies[spawnedEnemy.Id] = spawnedEnemy;
                 }
+                await BroadcastInRoomExceptAsync(conn.State.RoomId, conn.Id, packet);
+                break;
+
+            case "ENEMY_HIT":
+                var hitRoom = GetOrCreateRoom(conn.State.RoomId);
+                float finalHp = packet.Hp >= 0 ? packet.Hp : 0;
+                bool isDead = packet.IsDead || finalHp <= 0;
+                string targetId = packet.TargetId ?? string.Empty;
+
+                if (!string.IsNullOrEmpty(targetId) && hitRoom.Enemies.TryGetValue(targetId, out var enemyHit))
+                {
+                    if (packet.Damage > 0)
+                    {
+                        enemyHit.Hp = MathF.Max(0, enemyHit.Hp - packet.Damage);
+                    }
+                    if (packet.Hp >= 0) enemyHit.Hp = packet.Hp;
+                    if (enemyHit.Hp <= 0) enemyHit.IsDead = true;
+                    finalHp = enemyHit.Hp;
+                    isDead = enemyHit.IsDead;
+                }
+
+                int remaining = hitRoom.Enemies.Values.Count(e => !e.IsDead);
+                bool completed = hitRoom.IsInitialized && hitRoom.Enemies.Count > 0 && remaining == 0;
+
+                // Broadcast a TODOS los jugadores de esta sala (incluyendo al remitente)
+                var hitNotice = new Packet
+                {
+                    Type = "ENEMY_HIT_SYNC",
+                    RoomId = conn.State.RoomId,
+                    TargetId = targetId,
+                    Damage = packet.Damage,
+                    Hp = finalHp,
+                    IsDead = isDead,
+                    RemainingEnemies = remaining,
+                    LevelCompleted = completed
+                };
+                await BroadcastInRoomAsync(conn.State.RoomId, hitNotice);
                 break;
         }
     }
