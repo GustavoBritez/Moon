@@ -83,6 +83,10 @@ public class Packet
 
     [JsonPropertyName("levelCompleted")]
     public bool LevelCompleted { get; set; }
+
+    // Para sincronización de proyectiles rebotadores
+    [JsonPropertyName("bulletId")]
+    public string BulletId { get; set; } = string.Empty;
 }
 
 public class PlayerState
@@ -170,6 +174,9 @@ public class EnemyConfig
 
     [JsonPropertyName("velocidad")]
     public float Velocidad { get; set; } = 80;
+
+    [JsonPropertyName("cantidad")]
+    public int Cantidad { get; set; } = 1;
 }
 
 public class BoxState

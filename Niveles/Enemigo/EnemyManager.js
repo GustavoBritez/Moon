@@ -161,6 +161,8 @@ export class EnemyManager {
         }
 
         enemigo.sprite = cuerpoEnemigo;
+        enemigo.sprite.x = enemigo.x;
+        enemigo.sprite.y = enemigo.y;
         enemigo.manager = this;
         
         // Los agregamos a la escena para que se puedan ver
@@ -193,7 +195,12 @@ export class EnemyManager {
                 if (cantidad > 1) {
                     enemigo.x += (Math.random() - 0.5) * 16;
                     enemigo.y += (Math.random() - 0.5) * 16;
-                    enemigo.actualizarPosicionVisual();
+                    if (typeof enemigo.actualizarPosicionVisual === 'function') {
+                        enemigo.actualizarPosicionVisual();
+                    } else if (enemigo.sprite) {
+                        enemigo.sprite.x = enemigo.x;
+                        enemigo.sprite.y = enemigo.y;
+                    }
                 }
                 this.enemies.push(enemigo);
             }

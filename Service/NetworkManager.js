@@ -86,6 +86,9 @@ export class NetworkManager {
             case "SHOOT":
                 if (this.onShootCallback) this.onShootCallback(packet);
                 break;
+            case "SHOOT_UPDATE":
+                if (this.onShootUpdateCallback) this.onShootUpdateCallback(packet);
+                break;
             case "BOX_MOVE":
                 if (this.onBoxMoveCallback) this.onBoxMoveCallback(packet);
                 break;
@@ -122,7 +125,7 @@ export class NetworkManager {
         });
     }
 
-    sendShoot(x, y, angle, weapon, clase) {
+    sendShoot(x, y, angle, weapon, clase, bulletId) {
         if (!this.isConnected) return;
         this.send({
             type: "SHOOT",
@@ -130,7 +133,20 @@ export class NetworkManager {
             y: y,
             angle: angle,
             weapon: weapon,
-            clase: clase
+            clase: clase,
+            bulletId: bulletId || ''
+        });
+    }
+
+    sendShootUpdate(bulletId, x, y, vx, vy) {
+        if (!this.isConnected) return;
+        this.send({
+            type: "SHOOT_UPDATE",
+            bulletId: bulletId,
+            x: x,
+            y: y,
+            vx: vx,
+            vy: vy
         });
     }
 
@@ -191,17 +207,24 @@ export class NetworkManager {
     /**
      * Notifica al servidor que el jugador cambió de sala (cruzó un portal).
      */
-    sendChangeRoom(roomId) {
+    sendChangeRoom(roomId, enemyConfigs = null, x = 0, y = 0) {
         if (!this.isConnected) return;
+        this.currentRoomId = roomId;
         console.log(`🚪 Cambiando a sala: '${roomId}'`);
         this.send({
             type: "CHANGE_ROOM",
-            roomId: roomId
+            roomId: roomId,
+            x: x,
+            y: y,
+            enemyConfigs: enemyConfigs || null
         });
     }
 
     send(data) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            if (this.currentRoomId && !data.roomId) {
+                data.roomId = this.currentRoomId;
+            }
             this.socket.send(JSON.stringify(data));
         }
     }

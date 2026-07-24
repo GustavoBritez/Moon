@@ -60,25 +60,45 @@ public class DungeonRoom
         if (IsInitialized) return;
         IsInitialized = true;
 
+        int enemyCounter = 1;
+        var rnd = new Random();
+
         for (int i = 0; i < configs.Count; i++)
         {
             var cfg = configs[i];
-            string idStr = !string.IsNullOrEmpty(cfg.Id) ? cfg.Id : (i + 1).ToString();
-            var enemy = new EnemyState
+            int count = cfg.Cantidad > 0 ? cfg.Cantidad : 1;
+
+            for (int k = 0; k < count; k++)
             {
-                Id = idStr,
-                Tipo = !string.IsNullOrEmpty(cfg.Tipo) ? cfg.Tipo : (!string.IsNullOrEmpty(cfg.Type) ? cfg.Type : "BASE"),
-                X = cfg.GridX * tileSize + (tileSize / 2f),
-                Y = cfg.GridY * tileSize + (tileSize / 2f),
-                Hp = cfg.Vida > 0 ? cfg.Vida : 100,
-                MaxHp = cfg.Vida > 0 ? cfg.Vida : 100,
-                Velocidad = cfg.Velocidad > 0 ? cfg.Velocidad : 80,
-                IsDead = false
-            };
-            Enemies[enemy.Id] = enemy;
+                string idStr = !string.IsNullOrEmpty(cfg.Id) && count == 1 ? cfg.Id : enemyCounter.ToString();
+                enemyCounter++;
+
+                float posX = cfg.GridX * tileSize + (tileSize / 2f);
+                float posY = cfg.GridY * tileSize + (tileSize / 2f);
+
+                if (count > 1)
+                {
+                    posX += ((float)rnd.NextDouble() - 0.5f) * 16f;
+                    posY += ((float)rnd.NextDouble() - 0.5f) * 16f;
+                }
+
+                var enemy = new EnemyState
+                {
+                    Id = idStr,
+                    Tipo = !string.IsNullOrEmpty(cfg.Tipo) ? cfg.Tipo : (!string.IsNullOrEmpty(cfg.Type) ? cfg.Type : "BASE"),
+                    X = posX,
+                    Y = posY,
+                    Hp = cfg.Vida > 0 ? cfg.Vida : 100,
+                    MaxHp = cfg.Vida > 0 ? cfg.Vida : 100,
+                    Velocidad = cfg.Velocidad > 0 ? cfg.Velocidad : 80,
+                    IsDead = false
+                };
+                Enemies[enemy.Id] = enemy;
+            }
         }
 
         Console.WriteLine($"  [Sala '{RoomId}'] Inicializada con {Enemies.Count} enemigos.");
+        Console.Out.Flush();
     }
 
     /// <summary>
@@ -185,15 +205,16 @@ public class GameRoom
             State = new PlayerState
             {
                 Id = Guid.NewGuid().ToString("N")[..6],
-                RoomId = "principal"
+                RoomId = "lobby"
             }
         };
         conn.Id = conn.State.Id;
 
         _clients[conn.Id] = conn;
         Console.WriteLine($"[+] Jugador conectado: {conn.Id}. Total: {_clients.Count}");
+        Console.Out.Flush();
 
-        // Enviar respuesta INIT con ID asignado
+        // Enviar respuesta INIT con ID asignado y jugadores únicamente de su sala
         var currentRoom = GetOrCreateRoom(conn.State.RoomId);
         var initPacket = new Packet
         {
@@ -202,12 +223,12 @@ public class GameRoom
             RoomId = conn.State.RoomId,
             Enemies = currentRoom.IsInitialized ? currentRoom.Enemies.Values.ToList() : null,
             Boxes = currentRoom.Boxes.Values.ToList(),
-            Players = GetPlayersList(),
+            Players = GetPlayersInRoom(conn.State.RoomId),
             OnlineCount = _clients.Count
         };
         await conn.SendPacketAsync(initPacket);
 
-        // Notificar a todos sobre la llegada del nuevo jugador
+        // Notificar a los miembros de la sala sobre la llegada del nuevo jugador
         var joinPacket = new Packet
         {
             Type = "PLAYER_JOIN",
@@ -219,7 +240,7 @@ public class GameRoom
             OnlineCount = _clients.Count,
             RoomId = conn.State.RoomId
         };
-        await BroadcastExceptAsync(conn.Id, joinPacket);
+        await BroadcastInRoomExceptAsync(conn.State.RoomId, conn.Id, joinPacket);
 
         // Iniciar loop de recepción para esta conexión
         await ReceiveLoopAsync(conn);
@@ -227,22 +248,46 @@ public class GameRoom
 
     private async Task ReceiveLoopAsync(ClientConnection conn)
     {
-        var buffer = new byte[8192];
+        var buffer = new byte[16384];
+        using var ms = new MemoryStream();
+
         try
         {
             while (conn.Socket.State == WebSocketState.Open)
             {
-                var result = await conn.Socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                ms.SetLength(0);
+                WebSocketReceiveResult result;
+                do
+                {
+                    result = await conn.Socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        break;
+                    }
+                    ms.Write(buffer, 0, result.Count);
+                }
+                while (!result.EndOfMessage);
+
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     break;
                 }
 
-                var jsonStr = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                var packet = JsonSerializer.Deserialize<Packet>(jsonStr);
-                if (packet != null)
+                if (ms.Length > 0)
                 {
-                    await ProcessPacketAsync(conn, packet);
+                    var jsonStr = Encoding.UTF8.GetString(ms.ToArray());
+                    try
+                    {
+                        var packet = JsonSerializer.Deserialize<Packet>(jsonStr);
+                        if (packet != null)
+                        {
+                            await ProcessPacketAsync(conn, packet);
+                        }
+                    }
+                    catch (JsonException jsonEx)
+                    {
+                        Console.WriteLine($"[⚠️] Error parseando JSON de {conn.Id}: {jsonEx.Message}");
+                    }
                 }
             }
         }
@@ -287,10 +332,49 @@ public class GameRoom
                 // El jugador cambió de sala (cruzó un portal o entró a la mazmorra)
                 var oldRoom = conn.State.RoomId;
                 conn.State.RoomId = packet.RoomId;
-                Console.WriteLine($"  [🚪] Jugador {conn.Id} cambió de sala '{oldRoom}' → '{packet.RoomId}'");
+                if (packet.X > 0 && packet.Y > 0)
+                {
+                    conn.State.X = packet.X;
+                    conn.State.Y = packet.Y;
+                }
+
+                Console.WriteLine($"  [🚪] Jugador {conn.Id} en sala '{packet.RoomId}'");
+                Console.Out.Flush();
+
+                if (oldRoom != packet.RoomId)
+                {
+                    // Notificar a los miembros de la sala anterior que el jugador se retiró
+                    var leaveOldPacket = new Packet
+                    {
+                        Type = "PLAYER_LEAVE",
+                        Id = conn.Id,
+                        RoomId = oldRoom,
+                        OnlineCount = _clients.Count
+                    };
+                    await BroadcastInRoomExceptAsync(oldRoom, conn.Id, leaveOldPacket);
+
+                    // Notificar a los miembros de la nueva sala que el jugador ingresó
+                    var joinNewPacket = new Packet
+                    {
+                        Type = "PLAYER_JOIN",
+                        Id = conn.Id,
+                        Clase = conn.State.Clase,
+                        X = conn.State.X,
+                        Y = conn.State.Y,
+                        Hp = conn.State.Hp,
+                        RoomId = packet.RoomId,
+                        OnlineCount = _clients.Count
+                    };
+                    await BroadcastInRoomExceptAsync(packet.RoomId, conn.Id, joinNewPacket);
+                }
 
                 // Enviarle el estado actual completo de la nueva sala
                 var newRoom = GetOrCreateRoom(packet.RoomId);
+                if (!newRoom.IsInitialized && packet.EnemyConfigs != null && packet.EnemyConfigs.Count > 0)
+                {
+                    newRoom.InitializeFromConfig(packet.EnemyConfigs, _tileSize);
+                }
+
                 var roomStatePacket = new Packet
                 {
                     Type = "ROOM_STATE",
@@ -321,13 +405,29 @@ public class GameRoom
                     Hp = packet.Hp,
                     RoomId = conn.State.RoomId
                 };
-                await BroadcastExceptAsync(conn.Id, moveNotice);
+                await BroadcastInRoomExceptAsync(conn.State.RoomId, conn.Id, moveNotice);
+                break;
+
+            case "SUMMON_ALLIED":
+                packet.Id = conn.Id;
+                packet.RoomId = conn.State.RoomId;
+                await BroadcastInRoomExceptAsync(conn.State.RoomId, conn.Id, packet);
                 break;
 
             case "SHOOT":
                 packet.Id = conn.Id;
                 packet.RoomId = conn.State.RoomId;
-                await BroadcastExceptAsync(conn.Id, packet);
+                // Preservar clase del jugador desde su estado guardado si el paquete no la trae
+                if (string.IsNullOrEmpty(packet.Clase) || packet.Clase == "knight")
+                    packet.Clase = !string.IsNullOrEmpty(conn.State.Clase) ? conn.State.Clase : "knight";
+                await BroadcastInRoomExceptAsync(conn.State.RoomId, conn.Id, packet);
+                break;
+
+            case "SHOOT_UPDATE":
+                // Actualización de rebote de proyectil: retransmitir a todos en la sala excepto al remitente
+                packet.Id = conn.Id;
+                packet.RoomId = conn.State.RoomId;
+                await BroadcastInRoomExceptAsync(conn.State.RoomId, conn.Id, packet);
                 break;
 
             case "BOX_MOVE":
